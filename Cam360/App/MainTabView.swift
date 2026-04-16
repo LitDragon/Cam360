@@ -3,8 +3,6 @@ import SwiftUI
 struct MainTabView: View {
     @ObservedObject var router: AppRouter
 
-    let container: AppContainer
-
     var body: some View {
         ZStack(alignment: .bottom) {
             AppColor.background.edgesIgnoringSafeArea(.all)
@@ -25,19 +23,13 @@ struct MainTabView: View {
     private var currentScreen: some View {
         switch router.selectedMainTab {
         case .dashboard:
-            DashboardView(
-                deviceStore: container.deviceListStore,
-                livePreviewStore: container.livePreviewStore
-            )
+            DashboardView()
         case .gallery:
-            GalleryView(
-                playbackStore: container.playbackStore,
-                downloadsStore: container.downloadsStore
-            )
+            GalleryView()
         case .events:
             EventsView()
         case .settings:
-            SettingsView(store: container.settingsStore)
+            SettingsView()
         }
     }
 }
