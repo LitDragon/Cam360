@@ -5,7 +5,7 @@
 ## 1. 使用方式
 
 - 新会话默认先读本文件。
-- 如果任务涉及架构、跨模块改动、路由、状态归属、存储、测试策略，继续读 [AGENTS.md](AGENTS.md) 和 [iOS行车记录仪应用项目技术架构文档_可落地版.md](iOS行车记录仪应用项目技术架构文档_可落地版.md)。
+- 如果任务涉及架构、跨模块改动、路由、状态归属、存储、测试策略，继续读 [AGENTS.md](AGENTS.md) 和 [Cam360技术架构文档.md](Cam360技术架构文档.md)。
 - 如果只是单文件 UI 文案、小样式、小 bugfix，通常读完本文件即可开始。
 
 ## 2. 当前项目状态
@@ -37,65 +37,11 @@
 
 ## 4. 仓库目录指南
 
-```text
-Cam360/
-├── App/            生命周期、启动分流、根路由、依赖组合、主 Tab
-├── Core/           跨 Feature 复用的薄能力；M0 仅允许 DesignSystem / Shared / Storage
-├── Features/       按功能拆目录；默认 View + Store + Route + Components(可选)
-├── Resources/      Info.plist、启动资源等
-├── Cam360Tests/    单元测试
-└── Cam360UITests/  UI 冒烟测试
-```
-
-当前主界面 top-level tab：
-
-- `dashboard`
-- `gallery`
-- `events`
-- `settings`
-
-约定：
-
-- `dashboard` 承接设备总览、快捷动作和预览入口
-- `gallery` 承接回放、下载和媒体列表入口
+详见 [AGENTS.md](AGENTS.md) 项目地图章节。
 
 ## 5. 核心架构约束
 
-### 5.1 总体原则
-
-- 优先修根因，保持最小 diff。
-- 保持本地一致性，不做无关重构、重命名、格式化扫荡。
-- Preserve existing behavior，除非需求明确要求改变。
-- 不要发明仓库里不存在的基础设施、抽象层或协议体系。
-
-### 5.2 分层边界
-
-- `App` 层负责生命周期、启动分流、根路由、容器组装。
-- `Feature` 层负责页面渲染、用户动作转发、当前 Feature 的 UI 状态。
-- `Core` 层只放跨 Feature 复用的稳定薄能力，不承接页面编排。
-
-### 5.3 状态归属
-
-- 瞬时 UI 状态归 `Feature Store`。
-- 本地持久化状态当前归 `UserDefaults` / 文件系统。
-- 设备运行态、媒体运行态在 M1+ 才能进入统一服务层，不要在 M0 的 View 里假装实现。
-
-### 5.4 依赖与所有权
-
-- Feature 不直接持有底层连接、播放器或下载任务控制权。
-- 共享依赖统一从 `AppContainer` 组合后下发。
-- 不在页面里直接操作 socket、transport、播放器、下载器。
-- 不把所有逻辑塞进一个超大 ViewModel / Store。
-- 不为每个动作强行造一个 `UseCase`。
-
-### 5.5 M1+ 预留规则
-
-一旦开始落地真实设备链路，必须遵守：
-
-- 统一 `DeviceSession`，只允许一个权威设备会话状态源。
-- UI 必须明确区分“已连热点”和“设备已可控制”。
-- 未进入 ready 态之前，不得发送业务命令。
-- 旧回调、旧超时、旧任务在新会话建立后必须失效。
+详见 [AGENTS.md](AGENTS.md) 工作规则章节。
 
 ## 6. 当前实现事实
 
