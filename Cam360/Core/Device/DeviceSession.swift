@@ -54,7 +54,7 @@ final class DeviceSession: ObservableObject {
             if case .ready(let info) = stateForRecovery(from: state) {
                 previousStateBeforeRecovery = .ready(info)
             }
-            return .recovering(previousStateBeforeRecovery ?? .idle)
+            return .recovering(previousState: previousStateBeforeRecovery ?? .idle)
 
         case (.recovering, .recoverySucceeded):
             return previousStateBeforeRecovery ?? .idle
