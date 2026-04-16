@@ -1,6 +1,7 @@
 import SwiftUI
 
 enum AppColor {
+    static let main = Color("Main")
     static let brand = Color("Brand")
     static let success = Color("Success")
     static let warning = Color("Warning")
