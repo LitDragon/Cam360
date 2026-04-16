@@ -25,11 +25,6 @@ final class Cam360SnapshotTests: XCTestCase {
     }
 
     @MainActor
-    func testEventsSnapshot() {
-        assertMainSnapshot(for: .events)
-    }
-
-    @MainActor
     func testSettingsSnapshot() {
         assertMainSnapshot(for: .settings)
     }

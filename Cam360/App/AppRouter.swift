@@ -3,32 +3,27 @@ import Combine
 enum MainTab: String, CaseIterable, Codable {
     case dashboard
     case gallery
-    case events
     case settings
 
     var title: String {
         switch self {
         case .dashboard:
-            return "概览"
+            return "首页"
         case .gallery:
             return "相册"
-        case .events:
-            return "事件"
         case .settings:
-            return "设置"
+            return "更多"
         }
     }
 
     var systemImageName: String {
         switch self {
         case .dashboard:
-            return "square.grid.2x2"
+            return "house.fill"
         case .gallery:
             return "photo.on.rectangle.angled"
-        case .events:
-            return "bell.badge"
         case .settings:
-            return "gearshape"
+            return "ellipsis.circle"
         }
     }
 

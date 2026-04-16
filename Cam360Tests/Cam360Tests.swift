@@ -30,8 +30,8 @@ struct Cam360Tests {
     func routerTransitionsArePredictable() {
         let router = AppRouter(route: .onboarding)
 
-        router.showMain(tab: .events)
-        #expect(router.route == .main(.events))
+        router.showMain(tab: .gallery)
+        #expect(router.route == .main(.gallery))
 
         router.selectedMainTab = .settings
         #expect(router.route == .main(.settings))

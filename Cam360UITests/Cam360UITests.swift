@@ -29,7 +29,6 @@ final class Cam360UITests: XCTestCase {
 
         assertTab(identifier: "main-tab-dashboard", on: app, screenIdentifier: "screen-dashboard")
         assertTab(identifier: "main-tab-gallery", on: app, screenIdentifier: "screen-gallery")
-        assertTab(identifier: "main-tab-events", on: app, screenIdentifier: "screen-events")
         assertTab(identifier: "main-tab-settings", on: app, screenIdentifier: "screen-settings")
     }
 

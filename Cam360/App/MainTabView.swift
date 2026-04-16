@@ -26,8 +26,6 @@ struct MainTabView: View {
             DashboardView()
         case .gallery:
             GalleryView()
-        case .events:
-            EventsView()
         case .settings:
             SettingsView()
         }
