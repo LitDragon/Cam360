@@ -19,7 +19,7 @@ struct DeviceCell: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(AppSpacing.lg)
-        .background(Color.white)
+        .background(AppColor.surface)
         .cornerRadius(AppRadius.small)
     }
 }

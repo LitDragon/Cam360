@@ -1,19 +1,19 @@
 import SwiftUI
 
 enum AppColor {
-    static let brand = Color(red: 37.0 / 255.0, green: 99.0 / 255.0, blue: 235.0 / 255.0)
-    static let success = Color(red: 22.0 / 255.0, green: 163.0 / 255.0, blue: 74.0 / 255.0)
-    static let warning = Color(red: 245.0 / 255.0, green: 158.0 / 255.0, blue: 11.0 / 255.0)
-    static let danger = Color(red: 220.0 / 255.0, green: 38.0 / 255.0, blue: 38.0 / 255.0)
-    static let textPrimary = Color(red: 15.0 / 255.0, green: 23.0 / 255.0, blue: 42.0 / 255.0)
-    static let textSecondary = Color(red: 100.0 / 255.0, green: 116.0 / 255.0, blue: 139.0 / 255.0)
-    static let background = Color(red: 248.0 / 255.0, green: 250.0 / 255.0, blue: 252.0 / 255.0)
-    static let surface = Color.white
-    static let surfaceMuted = Color(red: 241.0 / 255.0, green: 245.0 / 255.0, blue: 249.0 / 255.0)
-    static let border = Color(red: 226.0 / 255.0, green: 232.0 / 255.0, blue: 240.0 / 255.0)
-    static let tabInactive = Color(red: 148.0 / 255.0, green: 163.0 / 255.0, blue: 184.0 / 255.0)
-    static let accentSurface = Color(red: 239.0 / 255.0, green: 246.0 / 255.0, blue: 255.0 / 255.0)
-    static let dangerSurface = Color(red: 254.0 / 255.0, green: 226.0 / 255.0, blue: 226.0 / 255.0)
+    static let brand = Color("Brand")
+    static let success = Color("Success")
+    static let warning = Color("Warning")
+    static let danger = Color("Danger")
+    static let textPrimary = Color("TextPrimary")
+    static let textSecondary = Color("TextSecondary")
+    static let background = Color("AppBackground")
+    static let surface = Color("Surface")
+    static let surfaceMuted = Color("SurfaceMuted")
+    static let border = Color("Border")
+    static let tabInactive = Color("TabInactive")
+    static let accentSurface = Color("AccentSurface")
+    static let dangerSurface = Color("DangerSurface")
 }
 
 enum AppTypography {
