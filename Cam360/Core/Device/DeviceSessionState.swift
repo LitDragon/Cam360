@@ -1,6 +1,6 @@
 import Foundation
 
-enum DeviceSessionState: Equatable {
+indirect enum DeviceSessionState: Equatable {
     case idle
     case apConnecting
     case handshaking

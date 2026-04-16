@@ -1,4 +1,5 @@
 import Foundation
+import Combine
 
 final class DeviceSession: ObservableObject {
     @Published private(set) var state: DeviceSessionState = .idle
