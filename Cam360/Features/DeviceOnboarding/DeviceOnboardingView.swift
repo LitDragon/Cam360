@@ -7,10 +7,10 @@ struct DeviceOnboardingView: View {
         PermissionPageView(
             iconName: "wifi",
             title: "连接你的行车记录仪",
-            message: "M0 阶段先完成可运行框架。这里预留热点接入、权限说明和失败分流入口，真实 AP onboarding 在 M1 接入。",
-            primaryTitle: "进入应用框架",
+            message: "当前未接入真实设备发现与连接能力。",
+            primaryTitle: "进入应用",
             primaryAction: store.enterScaffold,
-            secondaryTitle: "清空占位数据",
+            secondaryTitle: "清空本地状态",
             secondaryAction: store.clearPlaceholderData
         )
         .navigationBarTitle("设备接入", displayMode: .inline)

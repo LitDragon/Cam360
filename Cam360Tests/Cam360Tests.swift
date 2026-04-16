@@ -14,12 +14,12 @@ struct Cam360Tests {
     }
 
     @Test
-    func bootstrapWithKnownDevicesShowsMain() {
+    func bootstrapAfterOnboardingShowsMain() {
         let testDefaults = makeUserDefaults()
         defer { clear(testDefaults) }
 
-        let repository = UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults)
-        repository.store([.demo])
+        let preferenceStore = UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults)
+        preferenceStore.hasCompletedOnboarding = true
 
         let bootstrap = AppBootstrap.launch(arguments: ["Cam360Tests"], userDefaults: testDefaults.userDefaults)
 
@@ -47,11 +47,12 @@ struct Cam360Tests {
 
         let repository = UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults)
         let preferenceStore = UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults)
+        let device = makeKnownDevice()
 
-        repository.store([.demo])
+        repository.store([device])
         preferenceStore.hasCompletedOnboarding = true
 
-        #expect(repository.fetchKnownDevices() == [.demo])
+        #expect(repository.fetchKnownDevices() == [device])
         #expect(preferenceStore.hasCompletedOnboarding)
 
         repository.clear()
@@ -71,6 +72,24 @@ struct Cam360Tests {
 
     private func clear(_ testDefaults: TestDefaults) {
         testDefaults.userDefaults.removePersistentDomain(forName: testDefaults.suiteName)
+    }
+}
+
+func makeKnownDevice(
+    id: String = "cam360-test-device",
+    name: String = "Cam360 Test Device"
+) -> KnownDeviceSummary {
+    KnownDeviceSummary(
+        id: id,
+        name: name,
+        hotspotSSID: "Cam360_AP_\(id)",
+        lastConnectedAt: Date(timeIntervalSince1970: 1_713_139_200)
+    )
+}
+
+extension UserDefaults {
+    static var ephemeral: UserDefaults {
+        UserDefaults(suiteName: "Cam360Tests.\(UUID().uuidString)")!
     }
 }
 

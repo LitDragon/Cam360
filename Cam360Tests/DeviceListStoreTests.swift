@@ -6,25 +6,28 @@ struct DeviceListStoreTests {
     @Test
     func initLoadsDevicesFromRepository() {
         let repository = UserDefaultsKnownDeviceRepository(userDefaults: .ephemeral)
-        repository.store([.demo])
+        let device = makeKnownDevice()
+        repository.store([device])
 
         let store = DeviceListStore(knownDeviceRepository: repository)
 
-        #expect(store.devices == [.demo])
+        #expect(store.devices == [device])
     }
 
     @Test
     func reloadRefreshesDeviceList() {
         let repository = UserDefaultsKnownDeviceRepository(userDefaults: .ephemeral)
-        repository.store([.demo])
+        let first = makeKnownDevice(id: "cam-1")
+        let second = makeKnownDevice(id: "cam-2")
+        repository.store([first])
 
         let store = DeviceListStore(knownDeviceRepository: repository)
 
-        repository.store([.demo, .demo])
+        repository.store([first, second])
 
         store.reload()
 
-        #expect(store.devices.count == 1)
+        #expect(store.devices == [first, second])
     }
 
     @Test

@@ -7,7 +7,7 @@ struct DownloadsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: AppSpacing.lg) {
                 SectionCard(title: "下载与导出") {
-                    Text("Application Support、Caches 和导出路径已经在架构文档定型，M0 先保留 UI 容器和状态入口。")
+                    Text("当前未检测到下载或导出任务。")
                         .font(AppTypography.body)
                         .foregroundColor(AppColor.textSecondary)
                 }

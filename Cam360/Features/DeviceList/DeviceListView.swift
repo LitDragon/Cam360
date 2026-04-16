@@ -6,8 +6,8 @@ struct DeviceListView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: AppSpacing.lg) {
-                SectionCard(title: "项目状态") {
-                    Text("设备列表已接入本地仓储占位实现。M1 会把 AP onboarding 和 DeviceSession 接进来。")
+                SectionCard(title: "设备") {
+                    Text("当前只展示本地已保存的设备。")
                         .font(AppTypography.body)
                         .foregroundColor(AppColor.textSecondary)
                 }

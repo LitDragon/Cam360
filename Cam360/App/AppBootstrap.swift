@@ -32,12 +32,11 @@ final class AppBootstrap {
 
         let selectedTab = tabOverride(from: arguments) ?? .dashboard
         if arguments.contains(LaunchArgument.forceMain) {
-            knownDeviceRepository.store([.demo])
             appPreferenceStore.hasCompletedOnboarding = true
         }
 
         let initialRoute = resolveInitialRoute(
-            knownDeviceRepository: knownDeviceRepository,
+            appPreferenceStore: appPreferenceStore,
             selectedTab: selectedTab
         )
         let router = AppRouter(route: initialRoute)
@@ -51,10 +50,10 @@ final class AppBootstrap {
     }
 
     private static func resolveInitialRoute(
-        knownDeviceRepository: KnownDeviceRepository,
+        appPreferenceStore: AppPreferenceStore,
         selectedTab: MainTab
     ) -> AppRoute {
-        knownDeviceRepository.fetchKnownDevices().isEmpty ? .onboarding : .main(selectedTab)
+        appPreferenceStore.hasCompletedOnboarding ? .main(selectedTab) : .onboarding
     }
 
     private static func tabOverride(from arguments: [String]) -> MainTab? {

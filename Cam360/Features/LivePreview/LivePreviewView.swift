@@ -7,7 +7,7 @@ struct LivePreviewView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: AppSpacing.lg) {
                 SectionCard(title: "媒体场景骨架") {
-                    Text("当前只保留页面结构、状态占位和后续服务挂载点，不启动任何真实预览链路。")
+                    Text("当前未接入真实视频流。")
                         .font(AppTypography.body)
                         .foregroundColor(AppColor.textSecondary)
                 }

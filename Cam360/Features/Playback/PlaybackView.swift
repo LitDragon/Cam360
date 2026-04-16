@@ -6,8 +6,8 @@ struct PlaybackView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: AppSpacing.lg) {
-                SectionCard(title: "回放路线") {
-                    Text("后续会在这里接时间轴、片段列表和播放器服务。M0 先固定导航、容器和状态展示。")
+                SectionCard(title: "回放") {
+                    Text("当前没有可展示的回放内容。")
                         .font(AppTypography.body)
                         .foregroundColor(AppColor.textSecondary)
                 }

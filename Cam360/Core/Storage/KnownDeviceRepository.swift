@@ -5,13 +5,6 @@ struct KnownDeviceSummary: Codable, Equatable, Identifiable {
     let name: String
     let hotspotSSID: String
     let lastConnectedAt: Date
-
-    static let demo = KnownDeviceSummary(
-        id: "cam360-demo-device",
-        name: "Cam360 Demo",
-        hotspotSSID: "Cam360_AP",
-        lastConnectedAt: Date(timeIntervalSince1970: 1_713_139_200)
-    )
 }
 
 protocol KnownDeviceRepository {

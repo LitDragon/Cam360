@@ -16,7 +16,6 @@ final class DeviceOnboardingStore: ObservableObject {
     }
 
     func enterScaffold() {
-        knownDeviceRepository.store([.demo])
         appPreferenceStore.hasCompletedOnboarding = true
         router.showMain(tab: .dashboard)
     }

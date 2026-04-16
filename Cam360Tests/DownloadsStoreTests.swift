@@ -4,10 +4,10 @@ import Foundation
 
 struct DownloadsStoreTests {
     @Test
-    func initialStateShowsPlaceholderMessage() {
+    func initialStateShowsEmptyDownloadMessage() {
         let store = DownloadsStore()
 
-        #expect(store.title == "下载任务中心搭建中")
-        #expect(store.message.contains("M4"))
+        #expect(store.title == "没有下载任务")
+        #expect(store.message == "当前没有进行中或已完成的下载。")
     }
 }

@@ -6,14 +6,14 @@ struct GalleryView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            AppTopBar(title: "相册", subtitle: "媒体列表与动作菜单", trailingTitle: "选择")
+            AppTopBar(title: "相册", subtitle: "本地媒体与设备媒体")
 
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: AppSpacing.xl) {
                     EmptyStateView(
                         iconName: "photo.on.rectangle.angled",
-                        title: "暂无媒体文件",
-                        message: "完成设备接入后，相册内容将在此展示。"
+                        title: "还没有媒体",
+                        message: "当前没有可展示的设备媒体或本地文件。"
                     )
 
                     QuickActionCard(
@@ -23,7 +23,7 @@ struct GalleryView: View {
                         tint: AppColor.brand
                     )
 
-                    SectionCard(title: "后续接入点") {
+                    SectionCard(title: "回放") {
                         Text(playbackStore.message)
                             .font(AppTypography.body)
                             .foregroundColor(AppColor.textSecondary)

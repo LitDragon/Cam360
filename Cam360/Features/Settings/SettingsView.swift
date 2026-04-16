@@ -5,7 +5,7 @@ struct SettingsView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            AppTopBar(title: "设置", subtitle: "本地占位配置与壳状态")
+            AppTopBar(title: "设置", subtitle: "本地状态与系统能力")
 
             ScrollView {
                 VStack(alignment: .leading, spacing: AppSpacing.lg) {
@@ -22,12 +22,12 @@ struct SettingsView: View {
                     QuickActionCard(
                         iconName: "lock.shield",
                         title: "权限与系统能力",
-                        message: "系统权限页、帮助页和后续诊断入口会继续沿这套卡片骨架扩展。",
+                        message: "当前仅展示系统能力状态，不执行额外诊断逻辑。",
                         tint: AppColor.brand
                     )
 
-                    SectionCard(title: "项目说明") {
-                        Text("M0 只提供最小设计系统、路由和依赖注入。设备设置读写、诊断和本地偏好细化会在后续里程碑继续补齐。")
+                    SectionCard(title: "说明") {
+                        Text("当前设置页仅包含本地状态展示和重置入口。")
                             .font(AppTypography.body)
                             .foregroundColor(AppColor.textSecondary)
                     }

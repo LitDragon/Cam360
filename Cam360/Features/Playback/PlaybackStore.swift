@@ -1,6 +1,6 @@
 import Combine
 
 final class PlaybackStore: ObservableObject {
-    @Published private(set) var title = "等待设备录像目录"
-    @Published private(set) var message = "时间轴、片段列表和播放器状态会在 M3 接进来，这里先保留入口和空态承载。"
+    @Published private(set) var title = "没有可播放内容"
+    @Published private(set) var message = "当前没有可显示的设备录像或本地媒体。"
 }

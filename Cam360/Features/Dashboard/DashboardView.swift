@@ -6,7 +6,7 @@ struct DashboardView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            AppTopBar(title: "概览", subtitle: "Cam360 主导航骨架")
+            AppTopBar(title: "概览", subtitle: "设备与本地状态")
 
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: AppSpacing.xl) {
@@ -38,15 +38,15 @@ struct DashboardView: View {
                     VStack(spacing: AppSpacing.md) {
                         QuickActionCard(
                             iconName: "photo.on.rectangle.angled",
-                            title: "相册入口已固定",
-                            message: "媒体列表、筛选栏和底部动作菜单已预留到主壳层。",
+                            title: "相册",
+                            message: "当前没有可展示的媒体内容。",
                             tint: AppColor.brand
                         )
 
                         QuickActionCard(
                             iconName: "bell.badge.fill",
-                            title: "事件中心已预留",
-                            message: "事件列表、标签和后续处置链路会沿当前骨架继续接入。",
+                            title: "事件",
+                            message: "当前没有可展示的事件记录。",
                             tint: AppColor.warning
                         )
                     }
@@ -62,19 +62,19 @@ struct DashboardView: View {
 
     private var overviewCard: some View {
         VStack(alignment: .leading, spacing: AppSpacing.lg) {
-            StatusTag(title: "M0 Shell", tone: .accent)
+            StatusTag(title: "本地状态", tone: .accent)
 
-            Text("主导航和通用 UI 组件已先对齐 Figma 的 4-tab 信息架构。")
+            Text("当前应用仅展示本地导航与基础状态。")
                 .font(AppTypography.sectionTitle)
                 .foregroundColor(AppColor.textPrimary)
 
-            Text("设备、相册、事件、设置先固定入口和状态承载，真实会话、播放器和导出链路后续再接。")
+            Text("未接入真实设备数据、媒体目录和事件流。")
                 .font(AppTypography.body)
                 .foregroundColor(AppColor.textSecondary)
 
             HStack(spacing: AppSpacing.lg) {
                 metricView(title: "已知设备", value: "\(deviceStore.devices.count)")
-                metricView(title: "预览状态", value: "待接入")
+                metricView(title: "预览状态", value: "不可用")
             }
         }
         .padding(AppSpacing.xl)
