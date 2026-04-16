@@ -7,6 +7,9 @@
 - `Cam360/Features`: 按功能拆目录；每个功能默认保留 `View + Store + Route + Components(可选)`。
 - `Cam360/Resources`: `Info.plist`、启动页等资源。
 - `Cam360Tests` / `Cam360UITests`: 单元测试与 UI 冒烟测试。
+- `.monkeycode/`: 项目文档与规范存储。
+  - `.monkeycode/docs/`: 整体项目文档。
+  - `.monkeycode/specs/*/`: Feature 需求与设计规格，每一版需求对应一个子目录。
 
 
 ## 工作规则
