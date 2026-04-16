@@ -6,9 +6,6 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXBuildFile section */
-/* End PBXBuildFile section */
-
 /* Begin PBXContainerItemProxy section */
 		790F2FB62F8F9D2300BFAAAB /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -27,15 +24,11 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		790F2FA52F8F9D2100BFAAAB /* Cam360 */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = Cam360;
 			sourceTree = "<group>";
 		};
 		790F2FB82F8F9D2300BFAAAB /* Cam360Tests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = Cam360Tests;
 			sourceTree = "<group>";
 		};
