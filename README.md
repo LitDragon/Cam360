@@ -21,12 +21,5 @@
 - M0 已完成：App 骨架、Router、Container、4-tab 主界面、最小 DesignSystem
 - M1+ 规划中：AP onboarding、DeviceSession、实时预览、回放、下载
 
-## 本地开发
-
-```bash
-# 编译
-xcodebuild -scheme Cam360 -destination 'platform=iOS Simulator,name=iPhone 16' build
-
-# 运行测试
-xcodebuild test -scheme Cam360 -destination 'platform=iOS Simulator,name=iPhone 16'
-```
+## 禁止
+- 做模拟器验证
