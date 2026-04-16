@@ -130,7 +130,7 @@ struct DeviceSessionTests {
 
         session.send(.startRecovery)
 
-        #expect(session.state == .recovering(.idle))
+        #expect(session.state == .recovering(previousState: .idle))
     }
 
     @Test
