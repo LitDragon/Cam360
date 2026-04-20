@@ -2,14 +2,34 @@ import SwiftUI
 
 struct AppTopBar: View {
     let title: String
+    var eyebrow: String? = nil
     var subtitle: String? = nil
+    var leadingSystemImage: String? = nil
+    var leadingAction: (() -> Void)? = nil
     var trailingTitle: String? = nil
     var trailingSystemImage: String? = nil
     var trailingAction: (() -> Void)? = nil
 
     var body: some View {
         HStack(spacing: AppSpacing.lg) {
+            if let leadingSystemImage = leadingSystemImage {
+                Button(action: leadingAction ?? {}) {
+                    Image(systemName: leadingSystemImage)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(AppColor.brand)
+                        .frame(width: 32, height: 32)
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+
             VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                if let eyebrow = eyebrow {
+                    Text(eyebrow.uppercased())
+                        .font(AppTypography.caption)
+                        .foregroundColor(AppColor.textSecondary)
+                        .kerning(0.8)
+                }
+
                 Text(title)
                     .font(AppTypography.navigationTitle)
                     .foregroundColor(AppColor.textPrimary)
