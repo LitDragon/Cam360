@@ -12,14 +12,15 @@ struct AppTopBar: View {
 
     var body: some View {
         HStack(spacing: AppSpacing.lg) {
-            if let leadingSystemImage = leadingSystemImage {
-                Button(action: leadingAction ?? {}) {
-                    Image(systemName: leadingSystemImage)
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(AppColor.brand)
-                        .frame(width: 32, height: 32)
+            if leadingSystemImage != nil {
+                if let leadingAction = leadingAction {
+                    Button(action: leadingAction) {
+                        leadingContent
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                } else {
+                    leadingContent
                 }
-                .buttonStyle(PlainButtonStyle())
             }
 
             VStack(alignment: .leading, spacing: AppSpacing.xs) {
@@ -44,25 +45,14 @@ struct AppTopBar: View {
             Spacer()
 
             if trailingTitle != nil || trailingSystemImage != nil {
-                Button(action: trailingAction ?? {}) {
-                    HStack(spacing: AppSpacing.xs) {
-                        if let trailingTitle = trailingTitle {
-                            Text(trailingTitle)
-                                .font(AppTypography.bodyStrong)
-                        }
-
-                        if let trailingSystemImage = trailingSystemImage {
-                            Image(systemName: trailingSystemImage)
-                                .font(.system(size: 14, weight: .semibold))
-                        }
+                if let trailingAction = trailingAction {
+                    Button(action: trailingAction) {
+                        trailingContent
                     }
-                    .foregroundColor(AppColor.brand)
-                    .padding(.horizontal, AppSpacing.md)
-                    .padding(.vertical, AppSpacing.sm)
-                    .background(AppColor.accentSurface)
-                    .cornerRadius(AppRadius.small)
+                    .buttonStyle(PlainButtonStyle())
+                } else {
+                    trailingContent
                 }
-                .buttonStyle(PlainButtonStyle())
             }
         }
         .padding(.horizontal, AppSpacing.xxl)
@@ -75,5 +65,31 @@ struct AppTopBar: View {
                 .frame(height: 1),
             alignment: .bottom
         )
+    }
+
+    private var leadingContent: some View {
+        Image(systemName: leadingSystemImage ?? "")
+            .font(.system(size: 18, weight: .semibold))
+            .foregroundColor(AppColor.brand)
+            .frame(width: 32, height: 32)
+    }
+
+    private var trailingContent: some View {
+        HStack(spacing: AppSpacing.xs) {
+            if let trailingTitle = trailingTitle {
+                Text(trailingTitle)
+                    .font(AppTypography.bodyStrong)
+            }
+
+            if let trailingSystemImage = trailingSystemImage {
+                Image(systemName: trailingSystemImage)
+                    .font(.system(size: 14, weight: .semibold))
+            }
+        }
+        .foregroundColor(AppColor.brand)
+        .padding(.horizontal, AppSpacing.md)
+        .padding(.vertical, AppSpacing.sm)
+        .background(AppColor.accentSurface)
+        .cornerRadius(AppRadius.small)
     }
 }

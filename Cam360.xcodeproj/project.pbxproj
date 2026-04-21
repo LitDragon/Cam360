@@ -16,17 +16,6 @@
 		};
 /* End PBXContainerItemProxy section */
 
-/* Begin XCRemoteSwiftPackageReference section */
-		LOTTIE_SPM_REF = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/airbnb/lottie-ios";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 4.4.0;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
 /* Begin PBXFileReference section */
 		790F2FA32F8F9D2100BFAAAB /* Cam360.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Cam360.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		790F2FB52F8F9D2300BFAAAB /* Cam360Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Cam360Tests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -62,14 +51,6 @@
 		};
 /* End PBXFrameworksBuildPhase section */
 
-/* Begin XCSwiftPackageProductDependency section */
-		LOTTIE_PROD = {
-			isa = XCSwiftPackageProductDependency;
-			package = LOTTIE_SPM_REF;
-			product = Lottie;
-		};
-/* End XCSwiftPackageProductDependency section */
-
 /* Begin PBXGroup section */
 		790F2F9A2F8F9D2100BFAAAB = {
 			isa = PBXGroup;
@@ -103,7 +84,7 @@
 			buildRules = (
 			);
 			dependencies = (
-				LOTTIE_DEP,
+				LOTTIE_DEP /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				790F2FA52F8F9D2100BFAAAB /* Cam360 */,
@@ -213,10 +194,9 @@
 			target = 790F2FA22F8F9D2100BFAAAB /* Cam360 */;
 			targetProxy = 790F2FB62F8F9D2300BFAAAB /* PBXContainerItemProxy */;
 		};
-		LOTTIE_DEP = {
+		LOTTIE_DEP /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			name = Lottie;
-			product = Lottie;
 		};
 /* End PBXTargetDependency section */
 
@@ -362,6 +342,10 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.qiangui.Cam360;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -391,6 +375,10 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.qiangui.Cam360;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
