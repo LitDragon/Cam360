@@ -39,15 +39,17 @@ struct SettingsNavigationRow: View {
     let title: String
     var subtitle: String? = nil
     var trailingSystemImage: String = "chevron.right"
+    var isEnabled: Bool = true
     var showsDivider: Bool = true
     var action: (() -> Void)? = nil
 
     var body: some View {
-        SettingsRowButton(action: action) {
+        SettingsRowButton(action: action, isEnabled: isEnabled) {
             SettingsRowLayout(
                 iconName: iconName,
                 title: title,
                 subtitle: subtitle,
+                isEnabled: isEnabled,
                 showsDivider: showsDivider
             ) {
                 Image(systemName: trailingSystemImage)
@@ -63,6 +65,7 @@ struct SettingsToggleRow: View {
     let title: String
     var subtitle: String? = nil
     @Binding var isOn: Bool
+    var isEnabled: Bool = true
     var showsDivider: Bool = true
 
     var body: some View {
@@ -70,6 +73,7 @@ struct SettingsToggleRow: View {
             iconName: iconName,
             title: title,
             subtitle: subtitle,
+            isEnabled: isEnabled,
             showsDivider: showsDivider
         ) {
             Group {
@@ -77,10 +81,12 @@ struct SettingsToggleRow: View {
                     Toggle("", isOn: $isOn)
                         .labelsHidden()
                         .toggleStyle(SwitchToggleStyle(tint: AppColor.brand))
+                        .disabled(isEnabled == false)
                 } else {
                     Toggle("", isOn: $isOn)
                         .labelsHidden()
                         .toggleStyle(SwitchToggleStyle())
+                        .disabled(isEnabled == false)
                 }
             }
         }
@@ -94,6 +100,7 @@ struct SettingsStatusRow: View {
     let statusText: String
     var trailingSystemImage: String? = nil
     var statusColor: Color = AppColor.textSecondary
+    var isEnabled: Bool = true
     var showsDivider: Bool = true
 
     var body: some View {
@@ -101,6 +108,7 @@ struct SettingsStatusRow: View {
             iconName: iconName,
             title: title,
             subtitle: subtitle,
+            isEnabled: isEnabled,
             showsDivider: showsDivider
         ) {
             HStack(spacing: AppSpacing.sm) {
@@ -123,6 +131,7 @@ struct SettingsActionRow: View {
     let title: String
     var subtitle: String? = nil
     let actionTitle: String
+    var isEnabled: Bool = true
     var showsDivider: Bool = true
     var action: (() -> Void)? = nil
 
@@ -131,9 +140,10 @@ struct SettingsActionRow: View {
             iconName: iconName,
             title: title,
             subtitle: subtitle,
+            isEnabled: isEnabled,
             showsDivider: showsDivider
         ) {
-            SettingsRowButton(action: action) {
+            SettingsRowButton(action: action, isEnabled: isEnabled) {
                 Text(actionTitle)
                     .font(AppTypography.caption)
                     .foregroundColor(AppColor.brand)
@@ -229,10 +239,313 @@ struct SettingsFootnote: View {
     }
 }
 
+struct SettingsValueRow: View {
+    let iconName: String?
+    let title: String
+    var subtitle: String? = nil
+    let valueText: String
+    var valueColor: Color = AppColor.textSecondary
+    var trailingSystemImage: String? = nil
+    var isEnabled: Bool = true
+    var showsDivider: Bool = true
+    var action: (() -> Void)? = nil
+
+    var body: some View {
+        SettingsRowButton(action: action, isEnabled: isEnabled) {
+            SettingsRowLayout(
+                iconName: iconName,
+                title: title,
+                subtitle: subtitle,
+                isEnabled: isEnabled,
+                showsDivider: showsDivider
+            ) {
+                HStack(spacing: AppSpacing.sm) {
+                    Text(valueText)
+                        .font(AppTypography.body)
+                        .foregroundColor(valueColor)
+                        .multilineTextAlignment(.trailing)
+
+                    if let trailingSystemImage = trailingSystemImage {
+                        Image(systemName: trailingSystemImage)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(valueColor)
+                    }
+                }
+            }
+        }
+    }
+}
+
+enum SettingsInputFieldKind {
+    case plain
+    case secure
+}
+
+struct SettingsInputRow: View {
+    let title: String
+    @Binding var text: String
+    var subtitle: String? = nil
+    var placeholder: String = ""
+    var fieldKind: SettingsInputFieldKind = .plain
+    var trailingSystemImage: String? = nil
+    var isEnabled: Bool = true
+    var showsDivider: Bool = true
+
+    var body: some View {
+        VStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: AppSpacing.md) {
+                Text(title)
+                    .font(AppTypography.bodyStrong)
+                    .foregroundColor(AppColor.textPrimary)
+
+                if let subtitle = subtitle {
+                    Text(subtitle)
+                        .font(AppTypography.caption)
+                        .foregroundColor(AppColor.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                HStack(spacing: AppSpacing.sm) {
+                    ZStack(alignment: .leading) {
+                        if text.isEmpty {
+                            Text(placeholder)
+                                .font(AppTypography.body)
+                                .foregroundColor(AppColor.textSecondary)
+                        }
+
+                        inputField
+                    }
+
+                    if let trailingSystemImage = trailingSystemImage {
+                        Image(systemName: trailingSystemImage)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(AppColor.textSecondary)
+                    }
+                }
+                .padding(.horizontal, AppSpacing.md)
+                .padding(.vertical, AppSpacing.md)
+                .background(AppColor.surfaceMuted)
+                .cornerRadius(AppRadius.small)
+                .opacity(isEnabled ? 1 : 0.42)
+            }
+            .padding(.horizontal, AppSpacing.lg)
+            .padding(.vertical, AppSpacing.lg)
+            .opacity(isEnabled ? 1 : 0.42)
+
+            if showsDivider {
+                Divider()
+                    .padding(.leading, AppSpacing.lg)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var inputField: some View {
+        switch fieldKind {
+        case .plain:
+            TextField("", text: $text)
+                .font(AppTypography.body)
+                .foregroundColor(AppColor.textPrimary)
+                .disabled(isEnabled == false)
+        case .secure:
+            SecureField("", text: $text)
+                .font(AppTypography.body)
+                .foregroundColor(AppColor.textPrimary)
+                .disabled(isEnabled == false)
+        }
+    }
+}
+
+struct SettingsSegmentedRow<Option: Hashable>: View {
+    let title: String
+    var subtitle: String? = nil
+    let options: [Option]
+    @Binding var selection: Option
+    let titleForOption: (Option) -> String
+    var showsDivider: Bool = true
+
+    var body: some View {
+        VStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: AppSpacing.md) {
+                Text(title)
+                    .font(AppTypography.bodyStrong)
+                    .foregroundColor(AppColor.textPrimary)
+
+                if let subtitle = subtitle {
+                    Text(subtitle)
+                        .font(AppTypography.caption)
+                        .foregroundColor(AppColor.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                HStack(spacing: AppSpacing.sm) {
+                    ForEach(options, id: \.self) { option in
+                        Button(action: {
+                            selection = option
+                        }) {
+                            Text(titleForOption(option))
+                                .font(AppTypography.bodyStrong)
+                                .foregroundColor(selection == option ? .white : AppColor.textSecondary)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, AppSpacing.md)
+                                .background(selection == option ? AppColor.brand : AppColor.surfaceMuted)
+                                .cornerRadius(AppRadius.small)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
+                }
+            }
+            .padding(.horizontal, AppSpacing.lg)
+            .padding(.vertical, AppSpacing.lg)
+
+            if showsDivider {
+                Divider()
+                    .padding(.leading, AppSpacing.lg)
+            }
+        }
+    }
+}
+
+struct SettingsMetricDetail {
+    let iconName: String?
+    let title: String
+    let value: String
+}
+
+struct SettingsMetricCard: View {
+    let title: String
+    let progress: Double
+    let progressLabel: String
+    var progressCaption: String? = nil
+    var details: [SettingsMetricDetail] = []
+    var footnote: String? = nil
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.lg) {
+            Text(title)
+                .font(AppTypography.bodyStrong)
+                .foregroundColor(AppColor.textPrimary)
+
+            HStack(alignment: .center, spacing: AppSpacing.xl) {
+                SettingsProgressRing(
+                    progress: progress,
+                    label: progressLabel,
+                    caption: progressCaption
+                )
+
+                VStack(alignment: .leading, spacing: AppSpacing.md) {
+                    ForEach(Array(details.enumerated()), id: \.offset) { entry in
+                        HStack(alignment: .center, spacing: AppSpacing.sm) {
+                            if let iconName = entry.element.iconName {
+                                Image(systemName: iconName)
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundColor(AppColor.brand)
+                            }
+
+                            Text(entry.element.title)
+                                .font(AppTypography.caption)
+                                .foregroundColor(AppColor.textSecondary)
+
+                            Spacer(minLength: AppSpacing.sm)
+
+                            Text(entry.element.value)
+                                .font(AppTypography.bodyStrong)
+                                .foregroundColor(AppColor.textPrimary)
+                        }
+                    }
+                }
+            }
+
+            if let footnote = footnote {
+                SettingsFootnote(text: footnote)
+            }
+        }
+        .padding(AppSpacing.lg)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(AppColor.surface)
+        .cornerRadius(AppRadius.medium)
+        .overlay(
+            RoundedRectangle(cornerRadius: AppRadius.medium)
+                .stroke(AppColor.border.opacity(0.7), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.05), radius: 16, x: 0, y: 8)
+    }
+}
+
+enum SettingsNoticeTone {
+    case info
+    case warning
+    case danger
+}
+
+struct SettingsNoticeCard: View {
+    let title: String
+    let message: String
+    var tone: SettingsNoticeTone = .info
+    var iconName: String? = nil
+
+    var body: some View {
+        HStack(alignment: .top, spacing: AppSpacing.md) {
+            if let iconName = iconName {
+                Image(systemName: iconName)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(foregroundColor)
+                    .padding(.top, 2)
+            }
+
+            VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                Text(title)
+                    .font(AppTypography.bodyStrong)
+                    .foregroundColor(foregroundColor)
+
+                Text(message)
+                    .font(AppTypography.body)
+                    .foregroundColor(AppColor.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(AppSpacing.lg)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(backgroundColor)
+        .cornerRadius(AppRadius.medium)
+        .overlay(
+            RoundedRectangle(cornerRadius: AppRadius.medium)
+                .stroke(borderColor, lineWidth: 1)
+        )
+    }
+
+    private var foregroundColor: Color {
+        switch tone {
+        case .info:
+            return AppColor.brand
+        case .warning:
+            return AppColor.warning
+        case .danger:
+            return AppColor.danger
+        }
+    }
+
+    private var backgroundColor: Color {
+        switch tone {
+        case .info:
+            return AppColor.accentSurface
+        case .warning:
+            return AppColor.warning.opacity(0.12)
+        case .danger:
+            return AppColor.dangerSurface
+        }
+    }
+
+    private var borderColor: Color {
+        foregroundColor.opacity(0.18)
+    }
+}
+
 private struct SettingsRowLayout<Accessory: View>: View {
     let iconName: String?
     let title: String
     let subtitle: String?
+    let isEnabled: Bool
     let showsDivider: Bool
     let accessory: Accessory
 
@@ -240,12 +553,14 @@ private struct SettingsRowLayout<Accessory: View>: View {
         iconName: String?,
         title: String,
         subtitle: String?,
+        isEnabled: Bool,
         showsDivider: Bool,
         @ViewBuilder accessory: () -> Accessory
     ) {
         self.iconName = iconName
         self.title = title
         self.subtitle = subtitle
+        self.isEnabled = isEnabled
         self.showsDivider = showsDivider
         self.accessory = accessory()
     }
@@ -277,6 +592,7 @@ private struct SettingsRowLayout<Accessory: View>: View {
             }
             .padding(.horizontal, AppSpacing.lg)
             .padding(.vertical, AppSpacing.lg)
+            .opacity(isEnabled ? 1 : 0.42)
 
             if showsDivider {
                 Divider()
@@ -292,6 +608,44 @@ private struct SettingsRowLayout<Accessory: View>: View {
         }
 
         return AppSpacing.lg + 36 + AppSpacing.md
+    }
+}
+
+private struct SettingsProgressRing: View {
+    let progress: Double
+    let label: String
+    let caption: String?
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(AppColor.surfaceMuted, lineWidth: 8)
+
+            Circle()
+                .trim(from: 0, to: normalizedProgress)
+                .stroke(
+                    AppColor.brand,
+                    style: StrokeStyle(lineWidth: 8, lineCap: .round)
+                )
+                .rotationEffect(.degrees(-90))
+
+            VStack(spacing: AppSpacing.xs) {
+                Text(label)
+                    .font(AppTypography.bodyStrong)
+                    .foregroundColor(AppColor.textPrimary)
+
+                if let caption = caption {
+                    Text(caption)
+                        .font(AppTypography.caption)
+                        .foregroundColor(AppColor.textSecondary)
+                }
+            }
+        }
+        .frame(width: 92, height: 92)
+    }
+
+    private var normalizedProgress: CGFloat {
+        CGFloat(min(max(progress, 0), 1))
     }
 }
 
@@ -313,10 +667,12 @@ private struct SettingsIconBadge: View {
 
 private struct SettingsRowButton<Content: View>: View {
     let action: (() -> Void)?
+    let isEnabled: Bool
     let content: Content
 
-    init(action: (() -> Void)?, @ViewBuilder content: () -> Content) {
+    init(action: (() -> Void)?, isEnabled: Bool, @ViewBuilder content: () -> Content) {
         self.action = action
+        self.isEnabled = isEnabled
         self.content = content()
     }
 
@@ -327,6 +683,7 @@ private struct SettingsRowButton<Content: View>: View {
                 content
             }
             .buttonStyle(PlainButtonStyle())
+            .disabled(isEnabled == false)
         } else {
             content
         }
