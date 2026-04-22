@@ -9,6 +9,9 @@
   - `TASKS.md`
   - `CHANGELOG.md`
 - 重写 `README.md`，将其调整为项目简介和 AI 接手入口。
+- 清理 `.monkeycode/docs/README.md`、`.monkeycode/docs/AGENTS.md`、`.monkeycode/docs/Cam360技术架构文档.md` 中重复和过时的描述。
+- 重写 `.monkeycode/specs/settings-components/README.md`，将其从冗长的实现矩阵改为简洁的设计规格说明。
+- 在根目录文档和 `.monkeycode` 文档中新增统一规则：未来文档默认必须精简，避免重复维护同一事实。
 - 固化当前已确认的代码事实：
   - 主界面当前是 3-tab，不是 4-tab
   - 当前只有 `Cam360Tests`
