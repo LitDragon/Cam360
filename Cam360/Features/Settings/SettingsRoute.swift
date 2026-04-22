@@ -1,3 +1,4 @@
 enum SettingsRoute: Equatable {
-    case diagnostics
+    case notificationSettings
+    case systemPermissions
 }

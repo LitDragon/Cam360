@@ -600,6 +600,7 @@ private struct SettingsRowLayout<Accessory: View>: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
     }
 
     private var dividerLeadingInset: CGFloat {

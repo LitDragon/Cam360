@@ -19,7 +19,10 @@ struct AppRootView: View {
                 }
                 .navigationViewStyle(StackNavigationViewStyle())
             case .main:
-                MainTabView(router: router)
+                MainTabView(
+                    router: router,
+                    settingsStore: bootstrap.container.settingsStore
+                )
             }
         }
         .accentColor(AppColor.brand)

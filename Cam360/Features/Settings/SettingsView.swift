@@ -1,65 +1,124 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @State private var shareAnonymousLogs = true
+    @ObservedObject var store: SettingsStore
+
+    var body: some View {
+        NavigationView {
+            SettingsRootContent(store: store)
+                .background(navigationLinks)
+                .navigationBarHidden(true)
+        }
+        .navigationViewStyle(StackNavigationViewStyle())
+        .accessibility(identifier: "screen-settings")
+    }
+
+    private var routeBinding: Binding<SettingsRoute?> {
+        Binding(
+            get: { store.route },
+            set: { route in
+                guard let route = route else {
+                    store.dismissRoute()
+                    return
+                }
+
+                store.show(route)
+            }
+        )
+    }
+
+    private var navigationLinks: some View {
+        Group {
+            NavigationLink(
+                destination: NotificationSettingsView(store: store)
+                    .navigationBarHidden(true),
+                tag: .notificationSettings,
+                selection: routeBinding
+            ) {
+                EmptyView()
+            }
+
+            NavigationLink(
+                destination: SystemPermissionsView(store: store)
+                    .navigationBarHidden(true),
+                tag: .systemPermissions,
+                selection: routeBinding
+            ) {
+                EmptyView()
+            }
+        }
+        .hidden()
+    }
+}
+
+private struct SettingsRootContent: View {
+    @ObservedObject var store: SettingsStore
 
     var body: some View {
         VStack(spacing: 0) {
-            AppTopBar(title: "更多", subtitle: "设置与支持")
+            AppTopBar(title: "More", subtitle: "App settings and support")
 
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: AppSpacing.xl) {
-                    SettingsSectionHeader(title: "应用偏好")
+                    SettingsSectionHeader(title: "App Preferences")
                     SettingsGroupCard {
                         SettingsNavigationRow(
                             iconName: "bell.badge",
-                            title: "通知"
+                            title: "Notifications",
+                            action: {
+                                store.show(.notificationSettings)
+                            }
                         )
+                        .accessibility(identifier: "settings-row-notifications")
 
                         SettingsNavigationRow(
                             iconName: "shield",
-                            title: "系统权限",
-                            showsDivider: false
+                            title: "System Permissions",
+                            showsDivider: false,
+                            action: {
+                                store.show(.systemPermissions)
+                            }
                         )
+                        .accessibility(identifier: "settings-row-system-permissions")
                     }
 
-                    SettingsSectionHeader(title: "支持")
+                    SettingsSectionHeader(title: "Support")
                     SettingsGroupCard {
                         SettingsNavigationRow(
                             iconName: "questionmark.circle",
-                            title: "帮助中心",
+                            title: "Help Center",
                             showsDivider: false
                         )
                     }
 
-                    SettingsSectionHeader(title: "诊断与维护")
+                    SettingsSectionHeader(title: "Diagnostics & Maintenance")
                     SettingsGroupCard {
                         SettingsToggleRow(
                             iconName: "square.and.arrow.up",
-                            title: "共享匿名日志",
-                            subtitle: "帮助我们改进 App 稳定性",
-                            isOn: $shareAnonymousLogs,
+                            title: "Share Anonymous Logs",
+                            subtitle: "Helps us improve app stability",
+                            isOn: shareAnonymousLogsBinding,
                             showsDivider: false
                         )
                     }
 
-                    SettingsSectionHeader(title: "关于")
+                    SettingsSectionHeader(title: "About")
                     SettingsGroupCard {
                         SettingsStatusRow(
                             iconName: "info.circle",
-                            title: "App 版本",
+                            title: "App Version",
                             statusText: appVersionText
                         )
 
                         SettingsNavigationRow(
                             iconName: "hand.raised",
-                            title: "隐私政策",
+                            title: "Privacy Policy",
                             trailingSystemImage: "arrow.up.right.square"
                         )
 
                         SettingsNavigationRow(
                             iconName: "doc.text",
-                            title: "服务条款",
+                            title: "Terms of Service",
                             trailingSystemImage: "arrow.up.right.square",
                             showsDivider: false
                         )
@@ -72,7 +131,13 @@ struct SettingsView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(AppColor.background.edgesIgnoringSafeArea(.all))
-        .accessibility(identifier: "screen-settings")
+    }
+
+    private var shareAnonymousLogsBinding: Binding<Bool> {
+        Binding(
+            get: { store.shareAnonymousLogs },
+            set: { store.setShareAnonymousLogs($0) }
+        )
     }
 
     private var appVersionText: String {

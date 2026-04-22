@@ -2,6 +2,7 @@ import Testing
 import Foundation
 @testable import Cam360
 
+@MainActor
 struct Cam360Tests {
     @Test
     func bootstrapWithoutKnownDevicesShowsOnboarding() {
@@ -48,18 +49,69 @@ struct Cam360Tests {
         let repository = UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults)
         let preferenceStore = UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults)
         let device = makeKnownDevice()
+        let notificationPreferences = NotificationPreferences(
+            emergencyEventNotifications: false,
+            collisionAlerts: true,
+            parkingIncidentAlerts: true,
+            pushNotifications: false,
+            soundForNotifications: false,
+            quietHoursEnabled: true,
+            quietHoursStart: "09:30 PM",
+            quietHoursEnd: "07:00 AM"
+        )
 
         repository.store([device])
         preferenceStore.hasCompletedOnboarding = true
+        preferenceStore.shareAnonymousLogs = false
+        preferenceStore.notificationPreferences = notificationPreferences
 
         #expect(repository.fetchKnownDevices() == [device])
         #expect(preferenceStore.hasCompletedOnboarding)
+        #expect(preferenceStore.shareAnonymousLogs == false)
+        #expect(preferenceStore.notificationPreferences == notificationPreferences)
 
         repository.clear()
         preferenceStore.reset()
 
         #expect(repository.fetchKnownDevices().isEmpty)
         #expect(preferenceStore.hasCompletedOnboarding == false)
+        #expect(preferenceStore.shareAnonymousLogs)
+        #expect(preferenceStore.notificationPreferences == .defaultValue)
+    }
+
+    @Test
+    func settingsStoreRoutesAndPersistsPreferences() {
+        let testDefaults = makeUserDefaults()
+        defer { clear(testDefaults) }
+
+        let repository = UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults)
+        let preferenceStore = UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults)
+        let router = AppRouter(route: .main(.settings))
+        let store = SettingsStore(
+            router: router,
+            knownDeviceRepository: repository,
+            appPreferenceStore: preferenceStore
+        )
+
+        store.show(.notificationSettings)
+        #expect(store.route == .notificationSettings)
+
+        store.dismissRoute()
+        #expect(store.route == nil)
+
+        store.setShareAnonymousLogs(false)
+        store.setNotificationPreference(\.quietHoursEnabled, to: true)
+        store.setNotificationPreference(\.parkingIncidentAlerts, to: true)
+
+        let reloadedStore = SettingsStore(
+            router: router,
+            knownDeviceRepository: repository,
+            appPreferenceStore: preferenceStore
+        )
+
+        #expect(reloadedStore.shareAnonymousLogs == false)
+        #expect(reloadedStore.notificationPreferences.quietHoursEnabled)
+        #expect(reloadedStore.notificationPreferences.parkingIncidentAlerts)
     }
 
     private func makeUserDefaults() -> TestDefaults {

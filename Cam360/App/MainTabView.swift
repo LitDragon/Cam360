@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MainTabView: View {
     @ObservedObject var router: AppRouter
+    @ObservedObject var settingsStore: SettingsStore
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -27,7 +28,7 @@ struct MainTabView: View {
         case .gallery:
             GalleryView()
         case .settings:
-            SettingsView()
+            SettingsView(store: settingsStore)
         }
     }
 }
