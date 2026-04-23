@@ -1,3 +1,7 @@
 enum DeviceOnboardingRoute: Equatable {
-    case permissionGuide
+    case introduction
+    case searching
+    case wifiDetails
+    case connecting
+    case success
 }

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct DashboardView: View {
     @ObservedObject var store: DashboardStore
+    let onAddDevice: () -> Void
 
     @State private var isDrawerPresented = false
 
@@ -79,8 +80,8 @@ private extension DashboardView {
     }
 
     func addDevice() {
-        store.addMockDevicesIfNeeded()
         closeDrawer()
+        onAddDevice()
     }
 
     func dismissFeatureSheet() {

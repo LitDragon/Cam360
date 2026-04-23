@@ -6,8 +6,11 @@
 
 - 首页完成首版静态 UI：
   - 支持有设备主态、空设备态、侧边设备抽屉和首次启动底部推荐 Sheet
-  - 当前“Add Device”仍为 M0 mock 闭环，会写入本地占位设备数据
   - 首次启动默认直接进入首页，不再走独立 onboarding 首屏
+- 首页 `Add Device` 改为进入 `DeviceOnboarding` 的 M0 静态闭环：
+  - 当前包含 `introduction -> searching -> wifiDetails -> connecting -> success` 五步
+  - 成功页会写入 1 条本地占位设备并返回首页
+  - 搜索、Wi‑Fi 连接和连接进度仍是 UI 状态闭环，未接真实 AP onboarding 或 `DeviceSession`
 - 相册页完成首版静态 UI：
   - 支持顶部标题、搜索入口、筛选栏、按时间分组的媒体列表
   - 支持长按进入多选、底部批量操作栏、单项更多操作面板

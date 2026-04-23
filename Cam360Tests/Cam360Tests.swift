@@ -42,7 +42,7 @@ struct Cam360Tests {
     }
 
     @Test
-    func dashboardStoreSeedsPlaceholderDevicesAndDismissesFeatureSheet() {
+    func dashboardStoreShowsFeatureSheetUntilDismissed() {
         let testDefaults = makeUserDefaults()
         defer { clear(testDefaults) }
 
@@ -56,14 +56,44 @@ struct Cam360Tests {
         #expect(store.hasDevices == false)
         #expect(store.shouldShowFeatureSheet)
 
-        store.addMockDevicesIfNeeded()
-        #expect(store.hasDevices)
-        #expect(store.devices.count == 4)
-        #expect(store.selectedDevice?.name == "Vigilant Lens DL-400")
-
         store.dismissFeatureSheet()
         #expect(store.shouldShowFeatureSheet == false)
         #expect(preferenceStore.hasCompletedOnboarding)
+    }
+
+    @Test
+    func deviceOnboardingStoreHappyPathPersistsDeviceAndReturnsToDashboard() {
+        let testDefaults = makeUserDefaults()
+        defer { clear(testDefaults) }
+
+        let repository = UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults)
+        let preferenceStore = UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults)
+        let router = AppRouter(route: .main(.dashboard))
+        let store = DeviceOnboardingStore(
+            router: router,
+            knownDeviceRepository: repository,
+            appPreferenceStore: preferenceStore
+        )
+
+        store.startSearch()
+        #expect(store.route == .searching)
+
+        store.advanceFromSearching()
+        #expect(store.route == .wifiDetails)
+        #expect(store.canContinueWithWiFiDetails)
+
+        store.continueFromWiFiDetails()
+        #expect(store.route == .connecting)
+
+        store.completeConnection()
+        #expect(store.route == .success)
+        #expect(store.addedDeviceName == "Vigilant DL-400 Pro")
+        #expect(repository.fetchKnownDevices().count == 1)
+        #expect(repository.fetchKnownDevices().first?.name == "Vigilant DL-400 Pro")
+        #expect(preferenceStore.hasCompletedOnboarding)
+
+        store.enterHome()
+        #expect(router.route == .main(.dashboard))
     }
 
     @Test

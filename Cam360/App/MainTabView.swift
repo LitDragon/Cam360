@@ -27,7 +27,10 @@ struct MainTabView: View {
     private var currentScreen: some View {
         switch router.selectedMainTab {
         case .dashboard:
-            DashboardView(store: dashboardStore)
+            DashboardView(
+                store: dashboardStore,
+                onAddDevice: router.showOnboarding
+            )
         case .gallery:
             GalleryView()
         case .settings:

@@ -6,10 +6,10 @@
 
 - 根路由仍保留 `onboarding` 和 `main(MainTab)`；`AppBootstrap` 当前默认进入 `main(MainTab)`。
 - 首次启动提示由首页根据 `AppPreferenceStore.hasCompletedOnboarding` 展示底部功能推荐 Sheet。
-- `DeviceOnboardingView` 当前只承载 `PermissionPageView` 骨架，主按钮为“进入应用”，次按钮为“清空本地状态”。
-- `DeviceOnboardingStore.enterScaffold()` 会将 `hasCompletedOnboarding` 置为 `true` 并跳到 `dashboard`。
-- `DeviceOnboardingStore.clearPlaceholderData()` 会清空 `KnownDeviceRepository` 和 `AppPreferenceStore`，并回到首页。
-- 当前 route 只声明 `DeviceOnboardingRoute.permissionGuide`，还没有分步流程。
+- 首页空设备态和设备抽屉中的 `Add Device` 都通过根路由进入 `DeviceOnboarding`。
+- `DeviceOnboardingRoute` 当前包含 `introduction`、`searching`、`wifiDetails`、`connecting`、`success` 五步。
+- `DeviceOnboardingStore` 负责分步状态、临时 Wi‑Fi 输入、自动推进和成功落库；`DeviceOnboardingView` 只渲染 UI 并转发用户动作。
+- 成功闭环会向 `KnownDeviceRepository` 写入 1 条本地占位设备，将 `hasCompletedOnboarding` 置为 `true`，再返回首页。
 
 ## 当前范围外
 
