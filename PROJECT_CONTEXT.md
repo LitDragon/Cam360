@@ -15,10 +15,9 @@
 - App 入口为 UIKit 生命周期桥接 + SwiftUI 根视图。
 - 根级结构由 `AppBootstrap`、`AppRouter`、`AppContainer`、`AppRootView` 驱动。
 - `AppBootstrap` 根据 `AppPreferenceStore.hasCompletedOnboarding` 决定进入 `onboarding` 还是 `main(MainTab)`。
-- 当前主界面继续保持 3 个 tab：`dashboard`、`gallery`、`settings`。
-- `events` 页面文件仍存在，但当前不作为独立主 tab 恢复。
-- `DeviceOnboarding` 已有“准备 -> 热点连接 -> 连接后校验 -> 失败恢复 -> 完成确认”的多步引导骨架。
-- `Settings` 已有可用骨架与本地偏好读写。
+- 当前主界面只有 3 个 tab：`dashboard`、`gallery`、`settings`。
+- `events` 页面文件存在，但没有接入当前主 tab。
+- `DeviceOnboarding` 和 `Settings` 已有可用骨架与本地偏好读写。
 - `LivePreview`、`Playback`、`Downloads` 仍是占位实现。
 - `Core/Device/DeviceSession.swift` 已有本地状态机骨架，但未接真实设备链路。
 - 当前测试 target 只有 `Cam360Tests`。

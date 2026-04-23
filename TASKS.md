@@ -5,19 +5,19 @@
 ## 当前任务
 
 1. 保持根目录 `README.md` 作为单一入口，长期事实只在 `PROJECT_CONTEXT.md` 维护。
-2. 基于已落地的 onboarding 多步闭环，推进 `DeviceSession` 作为下一个真实能力切片。
-3. 继续在当前 3-tab 结构下推进 `dashboard` 和 `LivePreview` 的最小可用承接。
+2. 使用现有 specs 收敛 M1 第一个真实能力切片的范围。
+3. 继续按最小增量推进下一个真实能力切片。
 
 ## 下一步计划
 
-1. 把 `DeviceSession` 注入 `AppContainer`，收敛 onboarding、dashboard、live preview 要消费的统一状态。
-2. 在保持 3-tab 不变的前提下，让 `dashboard` 承接设备入口、连接摘要和后续预览入口。
-3. 让 `LivePreview` 从占位文案过渡到最小 session 驱动状态，而不是继续堆独立临时状态。
+1. 先决定主界面信息架构是否保持 3-tab，还是恢复/重接 `events`。
+2. 再在以下三块里选出首个 M1 能力切片：
+   - `DeviceOnboarding` 真实接入
+   - `DeviceSession` 统一状态源
+   - `LivePreview` 最小可用链路
 
 ## 最近完成
 
-- `2026-04-23`：确定主界面继续保持 3-tab，不恢复独立 `events` 主入口。
-- `2026-04-23`：将 `DeviceOnboarding` 从单页占位扩展为“准备 -> 热点连接 -> 连接后校验 -> 失败恢复 -> 完成确认”的多步闭环，并补充 happy path / failure path 测试。
 - `2026-04-23`：收敛根目录和 `.monkeycode/docs/` 的入口职责，移除重复事实。
 - `2026-04-23`：补充 `MEMORY.md` 实际条目，并新增 `device-onboarding`、`device-session`、`live-preview` 三份规格。
 - `2026-04-22`：补齐根目录 AI 维护文档体系。
@@ -26,9 +26,9 @@
 
 ## 待决事项
 
+- 主界面最终目标到底是 3-tab 还是 4-tab。
 - 是否需要恢复独立的 UI 冒烟测试 target。
-- `DeviceSession` 的最小对外接口先暴露哪些状态给 `dashboard` 和 `LivePreview`。
-- `dashboard` 是否承接 `events` 摘要卡片，还是只保留设备与预览入口。
+- M1 第一优先级到底是 onboarding、session，还是预览链路。
 
 ## 更新规则
 

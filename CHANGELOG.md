@@ -4,13 +4,6 @@
 
 ## 2026-04-23
 
-- 确定当前主界面继续保持 3-tab，不恢复独立 `events` 主入口。
-- 将 `DeviceOnboarding` 从单页权限占位改为多步引导闭环：
-  - 新增准备、热点连接、连接后校验、失败恢复、完成确认 5 个步骤
-  - 在 UI 上显式区分“已连设备热点”和“已确认设备可控”
-  - 为失败路径补充重试、回退热点步骤和清空本地状态入口
-- 为 `DeviceOnboardingStore` 补充 happy path / failure path 测试覆盖。
-- 同步更新 `PROJECT_CONTEXT.md`、`TASKS.md` 和设备接入规格，反映本轮落地结果和下一步优先级。
 - 收敛文档入口职责：
   - `README.md` 只保留项目简介和文档索引
   - `.monkeycode/docs/README.md` 缩减为补充文档指引
