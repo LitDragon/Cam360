@@ -1,3 +1,7 @@
 enum DeviceOnboardingRoute: Equatable {
-    case permissionGuide
+    case preparation
+    case hotspotGuide
+    case verification
+    case recovery
+    case ready
 }

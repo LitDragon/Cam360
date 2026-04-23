@@ -114,6 +114,83 @@ struct Cam360Tests {
         #expect(reloadedStore.notificationPreferences.parkingIncidentAlerts)
     }
 
+    @Test
+    func onboardingStoreSupportsHappyPath() {
+        let testDefaults = makeUserDefaults()
+        defer { clear(testDefaults) }
+
+        let repository = UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults)
+        let preferenceStore = UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults)
+        let router = AppRouter(route: .onboarding)
+        let store = DeviceOnboardingStore(
+            router: router,
+            knownDeviceRepository: repository,
+            appPreferenceStore: preferenceStore
+        )
+
+        #expect(store.route == .preparation)
+        #expect(store.hasConnectedHotspot == false)
+        #expect(store.hasValidatedDevice == false)
+
+        store.startHotspotGuide()
+        #expect(store.route == .hotspotGuide)
+
+        store.confirmHotspotConnected()
+        #expect(store.route == .verification)
+        #expect(store.hasConnectedHotspot)
+        #expect(store.hasValidatedDevice == false)
+
+        store.confirmDeviceValidated()
+        #expect(store.route == .ready)
+        #expect(store.hasValidatedDevice)
+
+        store.finishOnboarding()
+        #expect(preferenceStore.hasCompletedOnboarding)
+        #expect(router.route == .main(.dashboard))
+    }
+
+    @Test
+    func onboardingStoreSupportsRecoveryAndReset() {
+        let testDefaults = makeUserDefaults()
+        defer { clear(testDefaults) }
+
+        let repository = UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults)
+        let preferenceStore = UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults)
+        let router = AppRouter(route: .onboarding)
+        let store = DeviceOnboardingStore(
+            router: router,
+            knownDeviceRepository: repository,
+            appPreferenceStore: preferenceStore
+        )
+
+        store.startHotspotGuide()
+        store.confirmHotspotConnected()
+        store.showRecoveryGuide()
+
+        #expect(store.route == .recovery)
+        #expect(store.hasConnectedHotspot)
+        #expect(store.hasValidatedDevice == false)
+
+        store.retryVerification()
+        #expect(store.route == .verification)
+
+        store.returnToHotspotGuide()
+        #expect(store.route == .hotspotGuide)
+        #expect(store.hasConnectedHotspot == false)
+
+        repository.store([makeKnownDevice()])
+        preferenceStore.hasCompletedOnboarding = true
+
+        store.clearPlaceholderData()
+
+        #expect(store.route == .preparation)
+        #expect(store.hasConnectedHotspot == false)
+        #expect(store.hasValidatedDevice == false)
+        #expect(repository.fetchKnownDevices().isEmpty)
+        #expect(preferenceStore.hasCompletedOnboarding == false)
+        #expect(router.route == .onboarding)
+    }
+
     private func makeUserDefaults() -> TestDefaults {
         let suiteName = "Cam360Tests.\(UUID().uuidString)"
         return TestDefaults(
