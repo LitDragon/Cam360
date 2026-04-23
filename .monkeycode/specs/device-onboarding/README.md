@@ -4,10 +4,11 @@
 
 ## 当前代码对齐结果
 
-- 根路由只在 `onboarding` 和 `main(MainTab)` 之间切换；`AppBootstrap` 通过 `AppPreferenceStore.hasCompletedOnboarding` 决定初始入口。
+- 根路由仍保留 `onboarding` 和 `main(MainTab)`；`AppBootstrap` 当前默认进入 `main(MainTab)`。
+- 首次启动提示由首页根据 `AppPreferenceStore.hasCompletedOnboarding` 展示底部功能推荐 Sheet。
 - `DeviceOnboardingView` 当前只承载 `PermissionPageView` 骨架，主按钮为“进入应用”，次按钮为“清空本地状态”。
 - `DeviceOnboardingStore.enterScaffold()` 会将 `hasCompletedOnboarding` 置为 `true` 并跳到 `dashboard`。
-- `DeviceOnboardingStore.clearPlaceholderData()` 会清空 `KnownDeviceRepository` 和 `AppPreferenceStore`，并回到 onboarding。
+- `DeviceOnboardingStore.clearPlaceholderData()` 会清空 `KnownDeviceRepository` 和 `AppPreferenceStore`，并回到首页。
 - 当前 route 只声明 `DeviceOnboardingRoute.permissionGuide`，还没有分步流程。
 
 ## 当前范围外

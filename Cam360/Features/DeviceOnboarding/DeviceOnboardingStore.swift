@@ -23,6 +23,6 @@ final class DeviceOnboardingStore: ObservableObject {
     func clearPlaceholderData() {
         knownDeviceRepository.clear()
         appPreferenceStore.reset()
-        router.showOnboarding()
+        router.showMain(tab: .dashboard)
     }
 }

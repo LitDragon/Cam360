@@ -34,7 +34,7 @@ final class SettingsStore: ObservableObject {
         appPreferenceStore.reset()
         route = nil
         refresh()
-        router.showOnboarding()
+        router.showMain(tab: .dashboard)
     }
 
     func show(_ route: SettingsRoute) {

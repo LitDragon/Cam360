@@ -21,6 +21,7 @@ struct AppRootView: View {
             case .main:
                 MainTabView(
                     router: router,
+                    dashboardStore: bootstrap.container.dashboardStore,
                     settingsStore: bootstrap.container.settingsStore
                 )
             }

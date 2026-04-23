@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MainTabView: View {
     @ObservedObject var router: AppRouter
+    @ObservedObject var dashboardStore: DashboardStore
     @ObservedObject var settingsStore: SettingsStore
 
     var body: some View {
@@ -26,7 +27,7 @@ struct MainTabView: View {
     private var currentScreen: some View {
         switch router.selectedMainTab {
         case .dashboard:
-            DashboardView()
+            DashboardView(store: dashboardStore)
         case .gallery:
             GalleryView()
         case .settings:

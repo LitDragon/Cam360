@@ -14,9 +14,10 @@
 - 当前阶段仍以 `M0 骨架` 为主。
 - App 入口为 UIKit 生命周期桥接 + SwiftUI 根视图。
 - 根级结构由 `AppBootstrap`、`AppRouter`、`AppContainer`、`AppRootView` 驱动。
-- `AppBootstrap` 根据 `AppPreferenceStore.hasCompletedOnboarding` 决定进入 `onboarding` 还是 `main(MainTab)`。
+- `AppBootstrap` 当前默认直接进入 `main(MainTab)`；首页根据 `AppPreferenceStore.hasCompletedOnboarding` 决定是否展示首次功能推荐 Sheet。
 - 当前主界面只有 3 个 tab：`dashboard`、`gallery`、`settings`。
 - `events` 页面文件存在，但没有接入当前主 tab。
+- `Dashboard` 已有首版静态 UI，包含有设备态、侧边设备抽屉、无设备态和首次启动底部 Sheet。
 - `DeviceOnboarding` 和 `Settings` 已有可用骨架与本地偏好读写。
 - `LivePreview`、`Playback`、`Downloads` 仍是占位实现。
 - `Core/Device/DeviceSession.swift` 已有本地状态机骨架，但未接真实设备链路。

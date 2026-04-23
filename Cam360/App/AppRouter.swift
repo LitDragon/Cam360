@@ -19,11 +19,11 @@ enum MainTab: String, CaseIterable, Codable {
     var systemImageName: String {
         switch self {
         case .dashboard:
-            return "house.fill"
+            return "camera.viewfinder"
         case .gallery:
-            return "photo.on.rectangle.angled"
+            return "photo"
         case .settings:
-            return "ellipsis.circle"
+            return "ellipsis"
         }
     }
 

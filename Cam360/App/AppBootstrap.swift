@@ -36,7 +36,6 @@ final class AppBootstrap {
         }
 
         let initialRoute = resolveInitialRoute(
-            appPreferenceStore: appPreferenceStore,
             selectedTab: selectedTab
         )
         let router = AppRouter(route: initialRoute)
@@ -50,10 +49,9 @@ final class AppBootstrap {
     }
 
     private static func resolveInitialRoute(
-        appPreferenceStore: AppPreferenceStore,
         selectedTab: MainTab
     ) -> AppRoute {
-        appPreferenceStore.hasCompletedOnboarding ? .main(selectedTab) : .onboarding
+        .main(selectedTab)
     }
 
     private static func tabOverride(from arguments: [String]) -> MainTab? {

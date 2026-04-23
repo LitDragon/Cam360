@@ -5,13 +5,13 @@ import Foundation
 @MainActor
 struct Cam360Tests {
     @Test
-    func bootstrapWithoutKnownDevicesShowsOnboarding() {
+    func bootstrapWithoutKnownDevicesShowsDashboard() {
         let testDefaults = makeUserDefaults()
         defer { clear(testDefaults) }
 
         let bootstrap = AppBootstrap.launch(arguments: ["Cam360Tests"], userDefaults: testDefaults.userDefaults)
 
-        #expect(bootstrap.router.route == .onboarding)
+        #expect(bootstrap.router.route == .main(.dashboard))
     }
 
     @Test
@@ -29,7 +29,7 @@ struct Cam360Tests {
 
     @Test
     func routerTransitionsArePredictable() {
-        let router = AppRouter(route: .onboarding)
+        let router = AppRouter(route: .main(.dashboard))
 
         router.showMain(tab: .gallery)
         #expect(router.route == .main(.gallery))
@@ -39,6 +39,31 @@ struct Cam360Tests {
 
         router.showOnboarding()
         #expect(router.route == .onboarding)
+    }
+
+    @Test
+    func dashboardStoreSeedsPlaceholderDevicesAndDismissesFeatureSheet() {
+        let testDefaults = makeUserDefaults()
+        defer { clear(testDefaults) }
+
+        let repository = UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults)
+        let preferenceStore = UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults)
+        let store = DashboardStore(
+            knownDeviceRepository: repository,
+            appPreferenceStore: preferenceStore
+        )
+
+        #expect(store.hasDevices == false)
+        #expect(store.shouldShowFeatureSheet)
+
+        store.addMockDevicesIfNeeded()
+        #expect(store.hasDevices)
+        #expect(store.devices.count == 4)
+        #expect(store.selectedDevice?.name == "Vigilant Lens DL-400")
+
+        store.dismissFeatureSheet()
+        #expect(store.shouldShowFeatureSheet == false)
+        #expect(preferenceStore.hasCompletedOnboarding)
     }
 
     @Test
@@ -115,6 +140,30 @@ struct Cam360Tests {
         #expect(reloadedStore.shareAnonymousLogs == false)
         #expect(reloadedStore.notificationPreferences.quietHoursEnabled)
         #expect(reloadedStore.notificationPreferences.parkingIncidentAlerts)
+    }
+
+    @Test
+    func settingsStoreResetShellReturnsToDashboard() {
+        let testDefaults = makeUserDefaults()
+        defer { clear(testDefaults) }
+
+        let repository = UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults)
+        let preferenceStore = UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults)
+        let router = AppRouter(route: .main(.settings))
+        let store = SettingsStore(
+            router: router,
+            knownDeviceRepository: repository,
+            appPreferenceStore: preferenceStore
+        )
+
+        repository.store([makeKnownDevice()])
+        preferenceStore.hasCompletedOnboarding = true
+
+        store.resetShell()
+
+        #expect(repository.fetchKnownDevices().isEmpty)
+        #expect(preferenceStore.hasCompletedOnboarding == false)
+        #expect(router.route == .main(.dashboard))
     }
 
     private func makeUserDefaults() -> TestDefaults {
