@@ -10,13 +10,15 @@ struct MainTabView: View {
 
             currentScreen
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .padding(.bottom, 108)
+                .padding(.bottom, isTabBarHidden ? 0 : 108)
 
-            MainTabBar(selectedTab: router.selectedMainTab) {
-                router.showMain(tab: $0)
+            if isTabBarHidden == false {
+                MainTabBar(selectedTab: router.selectedMainTab) {
+                    router.showMain(tab: $0)
+                }
+                .padding(.horizontal, AppSpacing.lg)
+                .padding(.bottom, AppSpacing.lg)
             }
-            .padding(.horizontal, AppSpacing.lg)
-            .padding(.bottom, AppSpacing.lg)
         }
     }
 
@@ -29,6 +31,15 @@ struct MainTabView: View {
             GalleryView()
         case .settings:
             SettingsView(store: settingsStore)
+        }
+    }
+
+    private var isTabBarHidden: Bool {
+        switch router.selectedMainTab {
+        case .settings:
+            return settingsStore.route != nil
+        case .dashboard, .gallery:
+            return false
         }
     }
 }

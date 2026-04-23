@@ -93,6 +93,9 @@ struct Cam360Tests {
             appPreferenceStore: preferenceStore
         )
 
+        store.show(.helpCenter)
+        #expect(store.route == .helpCenter)
+
         store.show(.notificationSettings)
         #expect(store.route == .notificationSettings)
 

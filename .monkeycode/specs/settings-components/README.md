@@ -11,12 +11,14 @@
 
 - 已接入页面：
   - `SettingsView`
+  - `HelpCenterView`
   - `NotificationSettingsView`
   - `SystemPermissionsView`
 - 已接入路由：
+  - `helpCenter`
   - `notificationSettings`
   - `systemPermissions`
-- 当前 `Help Center`、`Privacy Policy`、`Terms of Service` 只有列表入口或占位交互，还不是完整页面。
+- 当前 `Privacy Policy`、`Terms of Service` 只有列表入口或占位交互，还不是完整页面。
 
 ## 当前可复用组件
 
@@ -41,7 +43,6 @@
 
 ## 仍属于设计参考、未在代码中接完整页面
 
-- Help Center
 - Device Settings Overview / Detail
 - Storage Policy
 - Video Quality

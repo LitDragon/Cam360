@@ -30,6 +30,15 @@ struct SettingsView: View {
     private var navigationLinks: some View {
         Group {
             NavigationLink(
+                destination: HelpCenterView(store: store)
+                    .navigationBarHidden(true),
+                tag: .helpCenter,
+                selection: routeBinding
+            ) {
+                EmptyView()
+            }
+
+            NavigationLink(
                 destination: NotificationSettingsView(store: store)
                     .navigationBarHidden(true),
                 tag: .notificationSettings,
@@ -87,8 +96,12 @@ private struct SettingsRootContent: View {
                         SettingsNavigationRow(
                             iconName: "questionmark.circle",
                             title: "Help Center",
-                            showsDivider: false
+                            showsDivider: false,
+                            action: {
+                                store.show(.helpCenter)
+                            }
                         )
+                        .accessibility(identifier: "settings-row-help-center")
                     }
 
                     SettingsSectionHeader(title: "Diagnostics & Maintenance")
