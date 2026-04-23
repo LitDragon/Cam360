@@ -4,21 +4,22 @@
 
 ## 当前任务
 
-1. 持续维护 `README.md`、`PROJECT_CONTEXT.md`、`TASKS.md`、`CHANGELOG.md` 四份文件。
-2. 保持根目录文档与 `.monkeycode/docs/`、`.monkeycode/specs/` 一致。
-3. 后续新增或修改文档时，统一遵守“精简、去重、事实优先”。
-4. 继续按最小增量推进下一个真实能力切片。
+1. 保持根目录 `README.md` 作为单一入口，长期事实只在 `PROJECT_CONTEXT.md` 维护。
+2. 使用现有 specs 收敛 M1 第一个真实能力切片的范围。
+3. 继续按最小增量推进下一个真实能力切片。
 
 ## 下一步计划
 
 1. 先决定主界面信息架构是否保持 3-tab，还是恢复/重接 `events`。
-2. 再决定首个 M1 能力从哪一块开始：
+2. 再在以下三块里选出首个 M1 能力切片：
    - `DeviceOnboarding` 真实接入
    - `DeviceSession` 统一状态源
    - `LivePreview` 最小可用链路
 
 ## 最近完成
 
+- `2026-04-23`：收敛根目录和 `.monkeycode/docs/` 的入口职责，移除重复事实。
+- `2026-04-23`：补充 `MEMORY.md` 实际条目，并新增 `device-onboarding`、`device-session`、`live-preview` 三份规格。
 - `2026-04-22`：补齐根目录 AI 维护文档体系。
 - `2026-04-22`：将当前已确认的代码事实、文档偏差和下一步计划固化到仓库根目录。
 - `2026-04-22`：清理 `.monkeycode/docs/` 和 `.monkeycode/specs/` 中重复、过时的描述，并新增“文档必须精简”的统一标准。

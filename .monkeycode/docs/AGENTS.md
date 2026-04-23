@@ -1,17 +1,6 @@
 ## 元规则
 - 子目录同名规则文件优先。
-- 根目录四份文档和 `.monkeycode/docs/README.md` 是默认入口。
-
-## 项目地图
-- `Cam360/App`: UIKit 生命周期桥接、`AppBootstrap`、`AppRouter`、根视图与主 Tab。
-- `Cam360/Core`: 仅放跨 Feature 复用的薄能力，M0 只允许设计系统、仓储接口和共享常量。
-- `Cam360/Features`: 按功能拆目录；每个功能默认保留 `View + Store + Route + Components(可选)`。
-- `Cam360/Resources`: `Info.plist`、启动页等资源。
-- `Cam360Tests`: 当前唯一测试 target。
-- `.monkeycode/`: 项目文档与规范存储。
-  - `.monkeycode/docs/`: 整体项目文档。
-  - `.monkeycode/specs/*/`: Feature 需求与设计规格，每一版需求对应一个子目录。
-
+- 默认先读根目录 `README.md`，长期事实以 `PROJECT_CONTEXT.md` 为准。
 
 ## 工作规则
 - 前期优先做UI，核心模块后面加

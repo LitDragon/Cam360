@@ -2,6 +2,18 @@
 
 本文件记录仓库中已经实际发生的改动历史。旧记录基于当前 `git log` 做了首次整理，后续按日期持续追加。
 
+## 2026-04-23
+
+- 收敛文档入口职责：
+  - `README.md` 只保留项目简介和文档索引
+  - `.monkeycode/docs/README.md` 缩减为补充文档指引
+- 清理 `PROJECT_CONTEXT.md`、`.monkeycode/docs/AGENTS.md`、`.monkeycode/docs/Cam360技术架构文档.md` 中重复的代码事实和规则描述。
+- 补充 `.monkeycode/MEMORY.md` 的首批实际条目，记录用户长期偏好和验证口径。
+- 新增以下核心规格文档：
+  - `.monkeycode/specs/device-onboarding/README.md`
+  - `.monkeycode/specs/device-session/README.md`
+  - `.monkeycode/specs/live-preview/README.md`
+
 ## 2026-04-22
 
 - 新增根目录维护文档：
