@@ -4,6 +4,16 @@
 
 ## 2026-04-23
 
+- 相册页完成首版静态 UI：
+  - 支持顶部标题、搜索入口、筛选栏、按时间分组的媒体列表
+  - 支持长按进入多选、底部批量操作栏、单项更多操作面板
+  - 当前仍使用本地 mock 数据，`下载/分享` 仅为 UI 占位闭环
+- 相册页完成 feature 内瘦身，按职责拆分为：
+  - `Cam360/Features/Gallery/GalleryView.swift`
+  - `Cam360/Features/Gallery/GalleryModels.swift`
+  - `Cam360/Features/Gallery/GalleryChrome.swift`
+  - `Cam360/Features/Gallery/GalleryListComponents.swift`
+  - `Cam360/Features/Gallery/GalleryActionSheet.swift`
 - 主 tab 容器在设置二级及更深子页面时隐藏底部 tab，并移除对应底部占位。
 - 设置页 `Help Center` 已接成可达页面，新增 `helpCenter` 路由、页面实现和对应测试。
 - 收敛文档入口职责：

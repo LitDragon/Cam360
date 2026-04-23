@@ -14,7 +14,6 @@ Cam360 是一个 iOS 行车记录仪 App。
 
 补充文档按需读取：
 
-- [.monkeycode/docs/AGENTS.md](.monkeycode/docs/AGENTS.md)：工作规则和验证口径
 - [.monkeycode/docs/Cam360技术架构文档.md](.monkeycode/docs/Cam360技术架构文档.md)：架构边界、路由与依赖注入、M1+ 演进顺序
 - [.monkeycode/specs/settings-components/README.md](.monkeycode/specs/settings-components/README.md)：设置相关规格
 - [.monkeycode/specs/device-onboarding/README.md](.monkeycode/specs/device-onboarding/README.md)：设备接入规格
