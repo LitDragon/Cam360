@@ -3,6 +3,8 @@ import SwiftUI
 struct DashboardView: View {
     @ObservedObject var store: DashboardStore
     let onAddDevice: () -> Void
+    let onOpenGallery: () -> Void
+    let onOpenSettings: () -> Void
 
     @State private var isDrawerPresented = false
 
@@ -12,14 +14,20 @@ struct DashboardView: View {
                 DashboardHeaderView(
                     title: store.selectedDevice?.name ?? "Home",
                     subtitle: store.selectedDevice?.status.title,
-                    onMenu: toggleDrawer
+                    showsMenu: store.hasDevices,
+                    onMenu: toggleDrawer,
+                    onSettings: onOpenSettings
                 )
 
                 ScrollView(showsIndicators: false) {
                     Group {
                         if store.hasDevices {
                             DashboardConnectedStateView(
-                                recentEvents: store.recentEvents
+                                recentEvents: store.recentEvents,
+                                isRecording: store.isRecording,
+                                storageState: store.storageState,
+                                onToggleRecording: store.toggleRecording,
+                                onOpenGallery: onOpenGallery
                             )
                         } else {
                             DashboardEmptyStateView(
@@ -92,17 +100,24 @@ private extension DashboardView {
 private struct DashboardHeaderView: View {
     let title: String
     let subtitle: String?
+    let showsMenu: Bool
     let onMenu: () -> Void
+    let onSettings: () -> Void
 
     var body: some View {
         HStack(spacing: AppSpacing.md) {
-            Button(action: onMenu) {
-                Image(systemName: "line.3.horizontal")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundColor(AppColor.brand)
+            if showsMenu {
+                Button(action: onMenu) {
+                    Image(systemName: "line.3.horizontal")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(AppColor.brand)
+                        .frame(width: 36, height: 36)
+                }
+                .buttonStyle(PlainButtonStyle())
+            } else {
+                Color.clear
                     .frame(width: 36, height: 36)
             }
-            .buttonStyle(PlainButtonStyle())
 
             Spacer(minLength: 0)
 
@@ -127,8 +142,13 @@ private struct DashboardHeaderView: View {
 
             Spacer(minLength: 0)
 
-            Color.clear
-                .frame(width: 36, height: 36)
+            Button(action: onSettings) {
+                Image(systemName: "gearshape")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundColor(AppColor.textPrimary)
+                    .frame(width: 36, height: 36)
+            }
+            .buttonStyle(PlainButtonStyle())
         }
         .padding(.horizontal, AppSpacing.xxl)
         .padding(.vertical, AppSpacing.lg)
@@ -145,10 +165,31 @@ private struct DashboardHeaderView: View {
 
 private struct DashboardConnectedStateView: View {
     let recentEvents: [DashboardRecentEvent]
+    let isRecording: Bool
+    let storageState: DashboardStorageState
+    let onToggleRecording: () -> Void
+    let onOpenGallery: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.xl) {
             DashboardPreviewCard()
+
+            DashboardCaptureControls(
+                isRecording: isRecording,
+                onToggleRecording: onToggleRecording
+            )
+
+            switch storageState {
+            case let .available(summary):
+                DashboardStorageCard(summary: summary)
+            case let .unavailable(title, message):
+                DashboardStorageUnavailableCard(
+                    title: title,
+                    message: message
+                )
+            }
+
+            DashboardGalleryRow(action: onOpenGallery)
 
             VStack(alignment: .leading, spacing: AppSpacing.md) {
                 HStack {
@@ -158,17 +199,23 @@ private struct DashboardConnectedStateView: View {
 
                     Spacer(minLength: 0)
 
-                    Button(action: {}) {
-                        Text("View all")
-                            .font(AppTypography.caption)
-                            .foregroundColor(AppColor.brand)
+                    if recentEvents.isEmpty == false {
+                        Button(action: onOpenGallery) {
+                            Text("View all")
+                                .font(AppTypography.caption)
+                                .foregroundColor(AppColor.brand)
+                        }
+                        .buttonStyle(PlainButtonStyle())
                     }
-                    .buttonStyle(PlainButtonStyle())
                 }
 
-                VStack(spacing: AppSpacing.md) {
-                    ForEach(recentEvents) { event in
-                        DashboardEventRow(event: event)
+                if recentEvents.isEmpty {
+                    DashboardRecentEventsEmptyState()
+                } else {
+                    VStack(spacing: AppSpacing.md) {
+                        ForEach(recentEvents) { event in
+                            DashboardEventRow(event: event)
+                        }
                     }
                 }
             }
@@ -178,41 +225,47 @@ private struct DashboardConnectedStateView: View {
 
 private struct DashboardPreviewCard: View {
     var body: some View {
-        ZStack {
+        ZStack(alignment: .topLeading) {
             RoundedRectangle(cornerRadius: AppRadius.large, style: .continuous)
                 .fill(
                     LinearGradient(
                         colors: [
-                            Color.black.opacity(0.94),
-                            Color(red: 0.17, green: 0.18, blue: 0.2),
-                            Color.black.opacity(0.9)
+                            Color(red: 0.15, green: 0.56, blue: 0.9),
+                            Color(red: 0.14, green: 0.43, blue: 0.82),
+                            Color(red: 0.1, green: 0.23, blue: 0.44)
                         ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
+                        startPoint: .topTrailing,
+                        endPoint: .bottomLeading
                     )
                 )
-                .frame(height: 280)
+                .frame(height: 214)
 
-            VStack(spacing: AppSpacing.md) {
-                Image(systemName: "camera.aperture")
-                    .font(.system(size: 108, weight: .thin))
-                    .foregroundColor(.white.opacity(0.84))
+            DashboardPreviewLandscape()
+                .frame(height: 214)
 
-                Text("Tap to enter live preview")
-                    .font(AppTypography.caption)
-                    .foregroundColor(.white.opacity(0.62))
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(spacing: AppSpacing.sm) {
+                    DashboardPreviewPill(
+                        title: "LIVE",
+                        dotColor: AppColor.danger
+                    )
+                    DashboardPreviewPill(title: "4K")
+
+                    Spacer(minLength: 0)
+                }
+
+                Spacer(minLength: 0)
+
+                HStack {
+                    Spacer(minLength: 0)
+
+                    Text("2023-10-27 14:32:15")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.white.opacity(0.84))
+                }
             }
-
-            ZStack {
-                Circle()
-                    .fill(Color.white.opacity(0.92))
-                    .frame(width: 56, height: 56)
-
-                Image(systemName: "play.fill")
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(Color.black.opacity(0.76))
-                    .offset(x: 2)
-            }
+            .padding(.horizontal, AppSpacing.md)
+            .padding(.vertical, AppSpacing.md)
         }
         .overlay(
             RoundedRectangle(cornerRadius: AppRadius.large, style: .continuous)
@@ -222,38 +275,336 @@ private struct DashboardPreviewCard: View {
     }
 }
 
+private struct DashboardPreviewLandscape: View {
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack(alignment: .bottom) {
+                Path { path in
+                    path.move(to: CGPoint(x: 0, y: geometry.size.height * 0.16))
+                    path.addLine(to: CGPoint(x: geometry.size.width * 0.26, y: geometry.size.height * 0.1))
+                    path.addLine(to: CGPoint(x: geometry.size.width * 0.38, y: geometry.size.height * 0.76))
+                    path.addLine(to: CGPoint(x: 0, y: geometry.size.height * 0.76))
+                    path.closeSubpath()
+                }
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.77, green: 0.62, blue: 0.35),
+                            Color(red: 0.45, green: 0.33, blue: 0.2)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+
+                Path { path in
+                    path.move(to: CGPoint(x: geometry.size.width * 0.27, y: geometry.size.height * 0.5))
+                    path.addLine(to: CGPoint(x: geometry.size.width, y: geometry.size.height * 0.44))
+                    path.addLine(to: CGPoint(x: geometry.size.width, y: geometry.size.height * 0.76))
+                    path.addLine(to: CGPoint(x: geometry.size.width * 0.34, y: geometry.size.height * 0.76))
+                    path.closeSubpath()
+                }
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.07, green: 0.48, blue: 0.76),
+                            Color(red: 0.03, green: 0.28, blue: 0.52)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+
+                Path { path in
+                    path.move(to: CGPoint(x: geometry.size.width * 0.22, y: geometry.size.height * 0.77))
+                    path.addLine(to: CGPoint(x: geometry.size.width * 0.45, y: geometry.size.height * 0.58))
+                    path.addLine(to: CGPoint(x: geometry.size.width, y: geometry.size.height * 0.62))
+                    path.addLine(to: CGPoint(x: geometry.size.width, y: geometry.size.height))
+                    path.addLine(to: CGPoint(x: 0, y: geometry.size.height))
+                    path.addLine(to: CGPoint(x: 0, y: geometry.size.height * 0.92))
+                    path.closeSubpath()
+                }
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.42, green: 0.43, blue: 0.45),
+                            Color(red: 0.2, green: 0.21, blue: 0.23)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+
+                Path { path in
+                    path.move(to: CGPoint(x: geometry.size.width * 0.64, y: geometry.size.height * 0.65))
+                    path.addLine(to: CGPoint(x: geometry.size.width, y: geometry.size.height * 0.7))
+                }
+                .stroke(Color(red: 0.24, green: 0.23, blue: 0.19), lineWidth: 4)
+
+                Path { path in
+                    path.move(to: CGPoint(x: geometry.size.width * 0.44, y: geometry.size.height * 0.58))
+                    path.addLine(to: CGPoint(x: geometry.size.width * 0.36, y: geometry.size.height))
+                }
+                .stroke(Color.white.opacity(0.92), style: StrokeStyle(lineWidth: 4, lineCap: .round, dash: [14, 18]))
+
+                Path { path in
+                    path.move(to: CGPoint(x: geometry.size.width * 0.46, y: geometry.size.height * 0.58))
+                    path.addLine(to: CGPoint(x: geometry.size.width, y: geometry.size.height * 0.62))
+                }
+                .stroke(Color.white.opacity(0.86), lineWidth: 2)
+
+                Path { path in
+                    path.move(to: CGPoint(x: geometry.size.width * 0.33, y: geometry.size.height * 0.65))
+                    path.addLine(to: CGPoint(x: geometry.size.width * 0.07, y: geometry.size.height * 0.69))
+                }
+                .stroke(Color(red: 0.93, green: 0.8, blue: 0.16), lineWidth: 3)
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: AppRadius.large, style: .continuous))
+    }
+}
+
+private struct DashboardPreviewPill: View {
+    let title: String
+    var dotColor: Color? = nil
+
+    var body: some View {
+        HStack(spacing: 6) {
+            if let dotColor = dotColor {
+                Circle()
+                    .fill(dotColor)
+                    .frame(width: 6, height: 6)
+            }
+
+            Text(title)
+                .font(.system(size: 11, weight: .bold))
+                .foregroundColor(.white)
+        }
+        .padding(.horizontal, AppSpacing.sm)
+        .padding(.vertical, 7)
+        .background(Color.black.opacity(0.42))
+        .cornerRadius(10)
+    }
+}
+
+private struct DashboardCaptureControls: View {
+    let isRecording: Bool
+    let onToggleRecording: () -> Void
+
+    var body: some View {
+        HStack(spacing: AppSpacing.md) {
+            Button(action: {}) {
+                HStack(spacing: AppSpacing.sm) {
+                    Image(systemName: "camera")
+                        .font(.system(size: 15, weight: .medium))
+
+                    Text("Photo")
+                        .font(AppTypography.bodyStrong)
+                }
+                .foregroundColor(AppColor.textSecondary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, AppSpacing.lg)
+                .background(AppColor.surface)
+                .cornerRadius(AppRadius.medium)
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous)
+                        .stroke(AppColor.border.opacity(0.7), lineWidth: 1)
+                )
+            }
+            .buttonStyle(PlainButtonStyle())
+
+            Button(action: onToggleRecording) {
+                HStack(spacing: AppSpacing.sm) {
+                    Image(systemName: isRecording ? "stop.circle.fill" : "record.circle")
+                        .font(.system(size: 17, weight: .semibold))
+
+                    Text(isRecording ? "Stop Recording" : "Start Recording")
+                        .font(AppTypography.bodyStrong)
+                }
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, AppSpacing.lg)
+                .background(isRecording ? AppColor.danger : AppColor.brand)
+                .cornerRadius(AppRadius.medium)
+                .shadow(color: (isRecording ? AppColor.danger : AppColor.brand).opacity(0.2), radius: 16, x: 0, y: 8)
+            }
+            .buttonStyle(PlainButtonStyle())
+        }
+    }
+}
+
+private struct DashboardStorageCard: View {
+    let summary: DashboardStorageSummary
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.md) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Storage Summary")
+                    .font(AppTypography.bodyStrong)
+                    .foregroundColor(AppColor.textPrimary)
+
+                Spacer(minLength: 0)
+
+                Text(summary.usageText)
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundColor(AppColor.textSecondary)
+            }
+
+            Text("\(summary.usedCapacityText) / \(summary.totalCapacityText)")
+                .font(AppTypography.body)
+                .foregroundColor(AppColor.textSecondary)
+
+            GeometryReader { geometry in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 3, style: .continuous)
+                        .fill(AppColor.border.opacity(0.35))
+                        .frame(height: 6)
+
+                    RoundedRectangle(cornerRadius: 3, style: .continuous)
+                        .fill(AppColor.brand)
+                        .frame(width: max(geometry.size.width * CGFloat(summary.usageFraction), 12), height: 6)
+                }
+            }
+            .frame(height: 6)
+        }
+        .padding(.horizontal, AppSpacing.lg)
+        .padding(.vertical, AppSpacing.lg)
+        .background(AppColor.surface)
+        .cornerRadius(AppRadius.medium)
+        .overlay(
+            RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous)
+                .stroke(AppColor.border.opacity(0.7), lineWidth: 1)
+        )
+    }
+}
+
+private struct DashboardStorageUnavailableCard: View {
+    let title: String
+    let message: String
+
+    var body: some View {
+        VStack(spacing: AppSpacing.md) {
+            Circle()
+                .fill(AppColor.accentSurface)
+                .frame(width: 44, height: 44)
+                .overlay(
+                    Image(systemName: "sdcard")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(AppColor.brand)
+                )
+
+            VStack(spacing: AppSpacing.xs) {
+                Text(title)
+                    .font(AppTypography.bodyStrong)
+                    .foregroundColor(AppColor.textPrimary)
+
+                Text(message)
+                    .font(AppTypography.caption)
+                    .foregroundColor(AppColor.textSecondary)
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, AppSpacing.xl)
+        .padding(.vertical, AppSpacing.xxl)
+        .background(AppColor.surface)
+        .cornerRadius(AppRadius.medium)
+        .overlay(
+            RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous)
+                .stroke(AppColor.border.opacity(0.7), lineWidth: 1)
+        )
+    }
+}
+
+private struct DashboardGalleryRow: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: AppSpacing.md) {
+                Image(systemName: "photo.on.rectangle")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(AppColor.brand)
+
+                Text("Open Full Gallery")
+                    .font(AppTypography.bodyStrong)
+                    .foregroundColor(AppColor.textPrimary)
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(AppColor.border)
+            }
+            .padding(.horizontal, AppSpacing.lg)
+            .padding(.vertical, AppSpacing.lg)
+            .background(AppColor.surface)
+            .cornerRadius(AppRadius.medium)
+            .overlay(
+                RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous)
+                    .stroke(AppColor.border.opacity(0.7), lineWidth: 1)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+private struct DashboardRecentEventsEmptyState: View {
+    var body: some View {
+        VStack(spacing: AppSpacing.lg) {
+            Circle()
+                .fill(AppColor.surfaceMuted)
+                .frame(width: 56, height: 56)
+                .overlay(
+                    Image(systemName: "tray")
+                        .font(.system(size: 22, weight: .regular))
+                        .foregroundColor(AppColor.textSecondary.opacity(0.8))
+                )
+
+            VStack(spacing: AppSpacing.sm) {
+                Text("No recent events")
+                    .font(AppTypography.bodyStrong)
+                    .foregroundColor(AppColor.textPrimary)
+
+                Text("New driving events and saved clips will appear here.")
+                    .font(AppTypography.body)
+                    .foregroundColor(AppColor.textSecondary)
+                    .multilineTextAlignment(.center)
+
+                Text("You can still view all recordings in Full Gallery.")
+                    .font(AppTypography.caption)
+                    .foregroundColor(AppColor.textSecondary.opacity(0.8))
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, AppSpacing.xl)
+        .padding(.vertical, 44)
+    }
+}
+
 private struct DashboardEventRow: View {
     let event: DashboardRecentEvent
 
     var body: some View {
         HStack(spacing: AppSpacing.md) {
-            ZStack {
-                RoundedRectangle(cornerRadius: AppRadius.small, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color(red: 0.36, green: 0.4, blue: 0.46),
-                                Color(red: 0.12, green: 0.14, blue: 0.18)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 42, height: 42)
+            DashboardEventArtworkView(artwork: event.artwork)
 
-                Image(systemName: "person.crop.square.fill")
-                    .font(.system(size: 20, weight: .regular))
-                    .foregroundColor(.white.opacity(0.9))
-            }
-
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: AppSpacing.xs) {
                 Text(event.title)
                     .font(AppTypography.bodyStrong)
                     .foregroundColor(AppColor.textPrimary)
 
-                Text(event.detail)
-                    .font(AppTypography.caption)
-                    .foregroundColor(AppColor.textSecondary)
+                HStack(spacing: AppSpacing.sm) {
+                    DashboardEventBadge(
+                        title: event.badgeTitle,
+                        tone: event.badgeTone
+                    )
+
+                    Text(event.detail)
+                        .font(AppTypography.caption)
+                        .foregroundColor(AppColor.textSecondary)
+                }
             }
 
             Spacer(minLength: 0)
@@ -270,6 +621,121 @@ private struct DashboardEventRow: View {
             RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous)
                 .stroke(AppColor.border.opacity(0.65), lineWidth: 1)
         )
+    }
+}
+
+private struct DashboardEventArtworkView: View {
+    let artwork: DashboardEventArtwork
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: AppRadius.small, style: .continuous)
+                .fill(backgroundGradient)
+                .frame(width: 56, height: 56)
+
+            Image(systemName: symbolName)
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundColor(.white.opacity(0.92))
+        }
+    }
+
+    private var backgroundGradient: LinearGradient {
+        switch artwork {
+        case .vehicle:
+            return LinearGradient(
+                colors: [
+                    Color(red: 0.72, green: 0.63, blue: 0.59),
+                    Color(red: 0.37, green: 0.34, blue: 0.36)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        case .landscape:
+            return LinearGradient(
+                colors: [
+                    Color(red: 0.42, green: 0.75, blue: 0.82),
+                    Color(red: 0.23, green: 0.45, blue: 0.28)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        case .nightDrive:
+            return LinearGradient(
+                colors: [
+                    Color(red: 0.24, green: 0.39, blue: 0.57),
+                    Color(red: 0.08, green: 0.11, blue: 0.2)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        case .parking:
+            return LinearGradient(
+                colors: [
+                    Color(red: 0.53, green: 0.75, blue: 0.48),
+                    Color(red: 0.21, green: 0.43, blue: 0.24)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        }
+    }
+
+    private var symbolName: String {
+        switch artwork {
+        case .vehicle:
+            return "car.fill"
+        case .landscape:
+            return "leaf.fill"
+        case .nightDrive:
+            return "camera.fill"
+        case .parking:
+            return "p.circle.fill"
+        }
+    }
+}
+
+private struct DashboardEventBadge: View {
+    let title: String
+    let tone: StatusTagTone
+
+    var body: some View {
+        Text(title)
+            .font(.system(size: 9, weight: .bold))
+            .foregroundColor(foregroundColor)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 4)
+            .background(backgroundColor)
+            .cornerRadius(6)
+    }
+
+    private var foregroundColor: Color {
+        switch tone {
+        case .danger:
+            return .white
+        case .neutral:
+            return AppColor.textSecondary
+        case .accent:
+            return AppColor.brand
+        case .success:
+            return AppColor.success
+        case .warning:
+            return AppColor.warning
+        }
+    }
+
+    private var backgroundColor: Color {
+        switch tone {
+        case .danger:
+            return AppColor.danger
+        case .neutral:
+            return AppColor.surfaceMuted
+        case .accent:
+            return AppColor.accentSurface
+        case .success:
+            return AppColor.success.opacity(0.16)
+        case .warning:
+            return AppColor.warning.opacity(0.18)
+        }
     }
 }
 

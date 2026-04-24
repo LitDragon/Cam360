@@ -29,7 +29,13 @@ struct MainTabView: View {
         case .dashboard:
             DashboardView(
                 store: dashboardStore,
-                onAddDevice: router.showOnboarding
+                onAddDevice: router.showOnboarding,
+                onOpenGallery: {
+                    router.showMain(tab: .gallery)
+                },
+                onOpenSettings: {
+                    router.showMain(tab: .settings)
+                }
             )
         case .gallery:
             GalleryView()

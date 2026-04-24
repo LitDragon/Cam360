@@ -62,6 +62,49 @@ struct Cam360Tests {
     }
 
     @Test
+    func dashboardStoreExposesDeviceHubStates() {
+        let testDefaults = makeUserDefaults()
+        defer { clear(testDefaults) }
+
+        let repository = UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults)
+        let preferenceStore = UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults)
+        repository.store([
+            makeKnownDevice(id: "cam360-main", name: "DriveCam X Pro"),
+            makeKnownDevice(id: "cam360-rear", name: "Rear View"),
+            makeKnownDevice(id: "cam360-cabin", name: "Cabin View"),
+            makeKnownDevice(id: "cam360-side", name: "Side View")
+        ])
+
+        let store = DashboardStore(
+            knownDeviceRepository: repository,
+            appPreferenceStore: preferenceStore
+        )
+
+        #expect(store.hasDevices)
+        #expect(store.isRecording == false)
+        #expect(store.recentEvents.count == 4)
+
+        store.toggleRecording()
+        #expect(store.isRecording)
+
+        store.selectDevice(id: "cam360-cabin")
+        #expect(store.recentEvents.isEmpty)
+        if case let .available(summary) = store.storageState {
+            #expect(summary.usageText == "58% USED")
+        } else {
+            #expect(Bool(false))
+        }
+
+        store.selectDevice(id: "cam360-side")
+        #expect(store.isRecording)
+        if case let .unavailable(title, _) = store.storageState {
+            #expect(title == "No SD card detected")
+        } else {
+            #expect(Bool(false))
+        }
+    }
+
+    @Test
     func deviceOnboardingStoreHappyPathPersistsDeviceAndReturnsToDashboard() {
         let testDefaults = makeUserDefaults()
         defer { clear(testDefaults) }

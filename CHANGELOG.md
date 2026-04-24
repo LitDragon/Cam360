@@ -2,6 +2,19 @@
 
 本文件记录仓库中已经实际发生的改动历史。旧记录基于当前 `git log` 做了首次整理，后续按日期持续追加。
 
+## 2026-04-24
+
+- 首页已连接设备态改为设备聚合页样式：
+  - 新增预览卡、`Photo` / `Start Recording`、存储摘要 / 无 SD 卡态、`Open Full Gallery`、`Recent Events` 列表和空态
+  - 页面仍落在 `Dashboard` 的 connected state，不新增根级 route 或独立 device detail 主入口
+- 首页设备聚合页入口已接现有 tab：
+  - `Open Full Gallery` 直接切到 `gallery`
+  - 右上齿轮直接切到 `settings`
+- `DashboardStore` 补充设备聚合页所需的本地占位状态：
+  - 按设备切换录制态、存储态和事件列表
+  - 保持当前仍为 UI / mock 闭环，未接 `DeviceSession`
+- 新增 `DashboardStore` 对应测试，并通过一次 `xcodebuild test` 验证。
+
 ## 2026-04-23
 
 - 首页完成首版静态 UI：

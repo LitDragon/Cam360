@@ -36,16 +36,42 @@ struct DashboardDeviceItem: Identifiable, Equatable {
     let hotspotSSID: String
 }
 
+struct DashboardStorageSummary: Equatable {
+    let usedCapacityText: String
+    let totalCapacityText: String
+    let usageFraction: Double
+
+    var usageText: String {
+        "\(Int((usageFraction * 100).rounded()))% USED"
+    }
+}
+
+enum DashboardStorageState: Equatable {
+    case available(DashboardStorageSummary)
+    case unavailable(title: String, message: String)
+}
+
+enum DashboardEventArtwork: Equatable {
+    case vehicle
+    case landscape
+    case nightDrive
+    case parking
+}
+
 struct DashboardRecentEvent: Identifiable, Equatable {
     let id: String
     let title: String
     let detail: String
+    let badgeTitle: String
+    let badgeTone: StatusTagTone
+    let artwork: DashboardEventArtwork
 }
 
 final class DashboardStore: ObservableObject {
     @Published private(set) var devices: [DashboardDeviceItem]
     @Published private(set) var selectedDeviceID: DashboardDeviceItem.ID?
     @Published private(set) var shouldShowFeatureSheet: Bool
+    @Published private(set) var recordingStatesByDeviceID: [DashboardDeviceItem.ID: Bool]
 
     private let knownDeviceRepository: KnownDeviceRepository
     private let appPreferenceStore: AppPreferenceStore
@@ -59,6 +85,7 @@ final class DashboardStore: ObservableObject {
         devices = []
         selectedDeviceID = nil
         shouldShowFeatureSheet = false
+        recordingStatesByDeviceID = [:]
         refresh()
     }
 
@@ -75,14 +102,23 @@ final class DashboardStore: ObservableObject {
     }
 
     var recentEvents: [DashboardRecentEvent] {
-        guard selectedDevice != nil else {
-            return []
+        selectedScenario?.events ?? []
+    }
+
+    var storageState: DashboardStorageState {
+        selectedScenario?.storageState ?? .available(Self.defaultStorageSummary)
+    }
+
+    var isRecording: Bool {
+        guard let selectedDeviceID = selectedDeviceID else {
+            return false
         }
 
-        return Self.placeholderEvents
+        return recordingStatesByDeviceID[selectedDeviceID] ?? false
     }
 
     func refresh() {
+        let currentRecordingStates = recordingStatesByDeviceID
         let items = knownDeviceRepository.fetchKnownDevices().enumerated().map { index, device in
             DashboardDeviceItem(
                 id: device.id,
@@ -93,6 +129,10 @@ final class DashboardStore: ObservableObject {
         }
 
         devices = items
+        recordingStatesByDeviceID = items.enumerated().reduce(into: [:]) { partialResult, item in
+            let defaultValue = scenario(forIndex: item.offset).startsRecording
+            partialResult[item.element.id] = currentRecordingStates[item.element.id] ?? defaultValue
+        }
 
         if let selectedDeviceID = selectedDeviceID,
            items.contains(where: { $0.id == selectedDeviceID }) {
@@ -106,6 +146,14 @@ final class DashboardStore: ObservableObject {
 
     func selectDevice(id: DashboardDeviceItem.ID) {
         selectedDeviceID = id
+    }
+
+    func toggleRecording() {
+        guard let selectedDeviceID = selectedDeviceID else {
+            return
+        }
+
+        recordingStatesByDeviceID[selectedDeviceID] = isRecording == false
     }
 
     func addMockDevicesIfNeeded() {
@@ -133,9 +181,24 @@ final class DashboardStore: ObservableObject {
             return .offline
         }
     }
+
+    private var selectedScenario: DashboardDeviceScenario? {
+        guard let selectedDeviceID = selectedDeviceID,
+              let selectedIndex = devices.firstIndex(where: { $0.id == selectedDeviceID }) else {
+            return nil
+        }
+
+        return scenario(forIndex: selectedIndex)
+    }
 }
 
 private extension DashboardStore {
+    struct DashboardDeviceScenario {
+        let startsRecording: Bool
+        let storageState: DashboardStorageState
+        let events: [DashboardRecentEvent]
+    }
+
     static let placeholderDevices: [KnownDeviceSummary] = [
         KnownDeviceSummary(
             id: "dashboard-device-main",
@@ -163,16 +226,98 @@ private extension DashboardStore {
         )
     ]
 
-    static let placeholderEvents: [DashboardRecentEvent] = [
-        DashboardRecentEvent(
-            id: "braking-detected",
-            title: "Braking Detected",
-            detail: "Today, 11:42 AM"
+    static let defaultStorageSummary = DashboardStorageSummary(
+        usedCapacityText: "74.2 GB",
+        totalCapacityText: "128 GB",
+        usageFraction: 0.58
+    )
+
+    static let placeholderScenarios: [DashboardDeviceScenario] = [
+        DashboardDeviceScenario(
+            startsRecording: false,
+            storageState: .available(defaultStorageSummary),
+            events: [
+                DashboardRecentEvent(
+                    id: "collision-detected",
+                    title: "Collision Detected",
+                    detail: "Today, 10:42 AM",
+                    badgeTitle: "IMPACT",
+                    badgeTone: .danger,
+                    artwork: .vehicle
+                ),
+                DashboardRecentEvent(
+                    id: "motion-detected",
+                    title: "Motion Detected",
+                    detail: "Today, 9:15 AM",
+                    badgeTitle: "MOTION",
+                    badgeTone: .neutral,
+                    artwork: .landscape
+                ),
+                DashboardRecentEvent(
+                    id: "manual-save",
+                    title: "Manual Save",
+                    detail: "Yesterday, 8:15 PM",
+                    badgeTitle: "MANUAL",
+                    badgeTone: .neutral,
+                    artwork: .nightDrive
+                ),
+                DashboardRecentEvent(
+                    id: "parking-incident",
+                    title: "Parking Incident",
+                    detail: "Mon, 2:30 PM",
+                    badgeTitle: "IMPACT",
+                    badgeTone: .danger,
+                    artwork: .parking
+                )
+            ]
         ),
-        DashboardRecentEvent(
-            id: "parking-sentry",
-            title: "Parking Sentry",
-            detail: "Yesterday, 09:15 PM"
+        DashboardDeviceScenario(
+            startsRecording: true,
+            storageState: .available(defaultStorageSummary),
+            events: [
+                DashboardRecentEvent(
+                    id: "collision-detected-secondary",
+                    title: "Collision Detected",
+                    detail: "Today, 10:42 AM",
+                    badgeTitle: "IMPACT",
+                    badgeTone: .danger,
+                    artwork: .vehicle
+                ),
+                DashboardRecentEvent(
+                    id: "motion-detected-secondary",
+                    title: "Motion Detected",
+                    detail: "Today, 9:15 AM",
+                    badgeTitle: "MOTION",
+                    badgeTone: .neutral,
+                    artwork: .nightDrive
+                ),
+                DashboardRecentEvent(
+                    id: "manual-save-secondary",
+                    title: "Manual Save",
+                    detail: "Yesterday, 8:15 PM",
+                    badgeTitle: "MANUAL",
+                    badgeTone: .neutral,
+                    artwork: .landscape
+                )
+            ]
+        ),
+        DashboardDeviceScenario(
+            startsRecording: true,
+            storageState: .available(defaultStorageSummary),
+            events: []
+        ),
+        DashboardDeviceScenario(
+            startsRecording: true,
+            storageState: .unavailable(
+                title: "No SD card detected",
+                message: "Insert an SD card to store clips, or switch to cloud storage to browse history."
+            ),
+            events: []
         )
     ]
+
+    func scenario(forIndex index: Int) -> DashboardDeviceScenario {
+        let normalizedIndex = index % Self.placeholderScenarios.count
+        return Self.placeholderScenarios[normalizedIndex]
+    }
 }

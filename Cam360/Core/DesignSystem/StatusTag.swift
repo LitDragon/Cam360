@@ -1,6 +1,6 @@
 import SwiftUI
 
-enum StatusTagTone {
+enum StatusTagTone: Equatable {
     case accent
     case success
     case warning
