@@ -4,20 +4,20 @@
 
 ## 当前任务
 
-1. 保持根目录 `README.md` 作为单一入口，长期事实只在 `PROJECT_CONTEXT.md` 维护。
-2. 使用现有 specs 收敛 M1 第一个真实能力切片的范围。
+1. 按单页设计图继续细化 `Settings`，优先 `Storage Policy`、`Safety`、`Device Settings`、`Watermark`、`Firmware Update`。
+2. 保持根目录 `README.md` 作为单一入口，长期事实只在 `PROJECT_CONTEXT.md` 维护。
 3. 继续按最小增量推进下一个真实能力切片。
 
 ## 下一步计划
 
-1. 把 `DeviceSession` 作为统一状态源先接进 `Dashboard`，替换当前设备聚合页里的录制、存储和事件 mock 状态。
-2. 再决定主界面信息架构是否保持 3-tab，还是恢复/重接 `events`。
-3. 最后在以下两块里选出下一个 M1 能力切片：
-   - `DeviceOnboarding` 真实接入
-   - `LivePreview` 最小可用链路
+1. 先按单页图修正 `Settings` 高歧义页面的文案、间距、状态和控件细节。
+2. 再收敛 `SystemPreferences` 和 `DeviceSettings` 的二级返回栈，避免当前全局 route 直接回根页。
+3. 最后再决定哪些设备设置继续保留本地占位，哪些开始接 `DeviceSession` 或真实能力。
 
 ## 最近完成
 
+- `2026-04-24`：按总图扩展 `Settings` 为设备设置 M0 骨架，新增设置首页、`Recording / Storage / Watermark / Safety / Device Settings / Rename Device` 一级页面，以及 `Network Identity / Firmware Update` 的本地内嵌流转。
+- `2026-04-24`：`SettingsStore` 新增设备设置本地占位状态和更新/恢复默认值动作，并为该状态流补充 1 条测试，通过一次 `xcodebuild test`。
 - `2026-04-24`：首页已连接设备态已改成设备聚合页样式，包含预览卡、录制操作、存储摘要、无 SD 卡态、完整相册入口和事件列表 / 空态。
 - `2026-04-24`：首页设备聚合页已接现有 tab 跳转，`Open Full Gallery` 切到 `gallery`，右上齿轮切到 `settings`。
 - `2026-04-24`：为设备聚合页补充 `DashboardStore` 本地占位状态和对应测试，并通过一次 `xcodebuild test`。

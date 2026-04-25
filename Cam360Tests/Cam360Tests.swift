@@ -216,6 +216,52 @@ struct Cam360Tests {
     }
 
     @Test
+    func settingsStoreUpdatesDeviceConfigurationState() {
+        let testDefaults = makeUserDefaults()
+        defer { clear(testDefaults) }
+
+        let repository = UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults)
+        let preferenceStore = UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults)
+        let router = AppRouter(route: .main(.settings))
+        let store = SettingsStore(
+            router: router,
+            knownDeviceRepository: repository,
+            appPreferenceStore: preferenceStore
+        )
+
+        store.show(.recordingSettings)
+        #expect(store.route == .recordingSettings)
+
+        store.updateRecordingSetting(\.autoOverwrite, to: false)
+        store.updateSafetySetting(\.parkingModeEnabled, to: false)
+        store.updateNetworkIdentity(\.networkName, to: "RoadGuard_4K")
+        store.commitNetworkIdentityChanges()
+        store.setRenameDeviceDraft("RoadGuard Pro")
+        store.renameDevice()
+        store.startFirmwareUpdate()
+
+        #expect(store.recordingSettings.autoOverwrite == false)
+        #expect(store.safetySettings.parkingModeEnabled == false)
+        #expect(store.devicePreferences.connectionName == "RoadGuard_4K")
+        #expect(store.devicePreferences.deviceName == "RoadGuard Pro")
+        #expect(store.route == nil)
+        #expect(
+            store.firmwareUpdateStage == .downloading(
+                progress: 0.45,
+                downloadedSize: "1.3 MB",
+                remainingTime: "2 mins left"
+            )
+        )
+
+        store.restoreSafetyDefaults()
+        store.restoreDefaultDeviceConfiguration()
+
+        #expect(store.safetySettings == .defaultValue)
+        #expect(store.recordingSettings == .defaultValue)
+        #expect(store.firmwareUpdateStage == .available)
+    }
+
+    @Test
     func settingsStoreResetShellReturnsToDashboard() {
         let testDefaults = makeUserDefaults()
         defer { clear(testDefaults) }

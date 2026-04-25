@@ -11,14 +11,30 @@
 
 - 已接入页面：
   - `SettingsView`
+  - `SettingsOverviewView`
+  - `SystemPreferencesView`
+  - `RecordingSettingsView`
+  - `StoragePolicyView`
+  - `WatermarkConfigurationView`
+  - `SafetySettingsView`
+  - `DeviceSettingsDetailView`
+  - `RenameDeviceView`
   - `HelpCenterView`
   - `NotificationSettingsView`
   - `SystemPermissionsView`
 - 已接入路由：
+  - `systemPreferences`
+  - `recordingSettings`
+  - `storagePolicy`
+  - `watermarkConfiguration`
+  - `deviceSettings`
+  - `safetySettings`
+  - `renameDevice`
   - `helpCenter`
   - `notificationSettings`
   - `systemPermissions`
 - 当前 `Privacy Policy`、`Terms of Service` 只有列表入口或占位交互，还不是完整页面。
+- `Network Identity`、`Firmware Update` 已在 `DeviceSettingsDetailView` 内以本地内嵌流转落壳，尚未接真实能力。
 
 ## 当前可复用组件
 
@@ -43,12 +59,8 @@
 
 ## 仍属于设计参考、未在代码中接完整页面
 
-- Device Settings Overview / Detail
-- Storage Policy
-- Video Quality
-- Watermark Configuration
-- Network Identity
-- Safety
+- `Firmware Update` 的下载、失败和成功反馈仍是本地占位流转，不是真实升级链路。
+- `Storage Policy` 的 no-card / ready / error 仍是本地状态切换，不接真实存储事件。
 
 ## 维护规则
 

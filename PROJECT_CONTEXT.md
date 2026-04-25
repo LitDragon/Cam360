@@ -18,7 +18,7 @@
 - 当前主界面只有 3 个 tab：`dashboard`、`gallery`、`settings`。
 - `events` 页面文件存在，但没有接入当前主 tab。
 - `Dashboard` 当前包含设备聚合页样式的已连接设备态、侧边设备抽屉、无设备态和首次启动底部 Sheet；`Open Full Gallery` 和右上齿轮分别切到 `gallery`、`settings` tab。
-- `DeviceOnboarding` 已接入首页 `Add Device` 的 5 步静态流程，成功页会回写本地占位设备；`Settings` 已有可用骨架与本地偏好读写。
+- `DeviceOnboarding` 已接入首页 `Add Device` 的 5 步静态流程，成功页会回写本地占位设备；`Settings` 已扩展为设备设置 M0 骨架，包含首页、一级子页、设备内嵌设置流转和本地占位状态。
 - `LivePreview`、`Playback`、`Downloads` 仍是占位实现。
 - `Core/Device/DeviceSession.swift` 已有本地状态机骨架，但未接真实设备链路。
 - 当前测试 target 只有 `Cam360Tests`。

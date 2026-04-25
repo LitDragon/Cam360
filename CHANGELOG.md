@@ -4,6 +4,14 @@
 
 ## 2026-04-24
 
+- 设置页按总图扩展为设备设置 M0 骨架：
+  - 新增设置首页，按 `Camera Settings / System Maintenance` 分组
+  - 新增 `Recording Settings`、`Storage Policy`、`Watermark Configuration`、`Safety`、`Device Settings`、`Rename Device`
+  - 在 `Device Settings` 内新增 `Network Identity`、`Firmware Update` 本地内嵌流转
+- `SettingsStore` 补充设备侧本地占位状态：
+  - 录制、存储、水印、网络、设备、Safety、Firmware Update 状态均先留在本地闭环
+  - 当前未接 `DeviceSession`、真实固件检查、真实存储状态或系统权限读数
+- 新增 `SettingsStore` 对应测试，覆盖设备设置本地状态更新与恢复默认值，并通过一次 `xcodebuild test` 验证。
 - 首页已连接设备态改为设备聚合页样式：
   - 新增预览卡、`Photo` / `Start Recording`、存储摘要 / 无 SD 卡态、`Open Full Gallery`、`Recent Events` 列表和空态
   - 页面仍落在 `Dashboard` 的 connected state，不新增根级 route 或独立 device detail 主入口
