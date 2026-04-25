@@ -48,7 +48,9 @@ struct MainTabView: View {
         switch router.selectedMainTab {
         case .settings:
             return settingsStore.route != nil
-        case .dashboard, .gallery:
+        case .dashboard:
+            return dashboardStore.shouldShowFeatureSheet
+        case .gallery:
             return false
         }
     }

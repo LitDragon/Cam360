@@ -5,7 +5,7 @@
 ## 当前代码对齐结果
 
 - 根路由仍保留 `onboarding` 和 `main(MainTab)`；`AppBootstrap` 当前默认进入 `main(MainTab)`。
-- 首次启动提示由首页根据 `AppPreferenceStore.hasCompletedOnboarding` 展示底部功能推荐 Sheet。
+- 首次启动提示由首页根据 `AppPreferenceStore.hasCompletedOnboarding` 展示 3 页全屏引导 flow，不直接进入 `DeviceOnboarding` 5 步接入页。
 - 首页空设备态和设备抽屉中的 `Add Device` 都通过根路由进入 `DeviceOnboarding`。
 - `DeviceOnboardingRoute` 当前包含 `introduction`、`searching`、`wifiDetails`、`connecting`、`success` 五步。
 - `DeviceOnboardingStore` 负责分步状态、临时 Wi‑Fi 输入、自动推进和成功落库；`DeviceOnboardingView` 只渲染 UI 并转发用户动作。

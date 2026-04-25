@@ -2,6 +2,12 @@
 
 本文件记录仓库中已经实际发生的改动历史。按日期保留结果和边界，不展开过程细节或验证信息。
 
+## 2026-04-25
+
+- 首页首次安装提示从底部推荐 Sheet 改为 3 页全屏引导 flow，按品牌启动页、Wi‑Fi 连接说明、连接成功页顺序展示。
+- 首次安装引导展示期间会隐藏底部 tab；跳过引导仍沿用 `hasCompletedOnboarding` 作为统一完成态。
+- 引导成功页进入首页时会补当前本地占位设备，避免成功态返回后仍停留在空设备首页。
+
 ## 2026-04-24
 
 - `Settings` 扩展为设备设置 M0 骨架，补齐首页、`Recording Settings`、`Storage Policy`、`Watermark Configuration`、`Safety`、`Device Settings`、`Rename Device`，并在 `Device Settings` 内加入 `Network Identity`、`Firmware Update` 本地流转。

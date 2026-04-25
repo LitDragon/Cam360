@@ -53,9 +53,8 @@ struct DashboardView: View {
 
             if store.shouldShowFeatureSheet {
                 DashboardFeatureSheet(
-                    onDismiss: dismissFeatureSheet,
-                    onPrimaryAction: dismissFeatureSheet,
-                    onSecondaryAction: dismissFeatureSheet
+                    onSkip: dismissFeatureSheet,
+                    onEnterHome: completeFeatureSheet
                 )
             }
         }
@@ -93,6 +92,11 @@ private extension DashboardView {
     }
 
     func dismissFeatureSheet() {
+        store.dismissFeatureSheet()
+    }
+
+    func completeFeatureSheet() {
+        store.addMockDevicesIfNeeded()
         store.dismissFeatureSheet()
     }
 }
@@ -1039,133 +1043,499 @@ private struct DashboardDrawerRow: View {
 }
 
 private struct DashboardFeatureSheet: View {
-    let onDismiss: () -> Void
-    let onPrimaryAction: () -> Void
-    let onSecondaryAction: () -> Void
+    private enum Page: Int {
+        case splash
+        case connect
+        case success
+    }
+
+    let onSkip: () -> Void
+    let onEnterHome: () -> Void
+
+    @State private var currentPage: Page = .splash
+    @State private var splashProgress: CGFloat = 0.12
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            Color.black.opacity(0.08)
-                .edgesIgnoringSafeArea(.all)
-                .onTapGesture(perform: onDismiss)
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color(red: 0.97, green: 0.98, blue: 1.0),
+                    Color(red: 0.93, green: 0.95, blue: 1.0)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .edgesIgnoringSafeArea(.all)
+
+            switch currentPage {
+            case .splash:
+                splashPage
+            case .connect:
+                connectPage
+            case .success:
+                successPage
+            }
+        }
+        .accessibility(identifier: "dashboard-feature-onboarding")
+        .animation(.easeInOut(duration: 0.25), value: currentPage)
+        .onAppear(perform: startSplashAnimation)
+    }
+
+    private var splashPage: some View {
+        VStack(spacing: 0) {
+            RoundedRectangle(cornerRadius: 2, style: .continuous)
+                .stroke(Color.white.opacity(0.8), lineWidth: 1)
+                .frame(width: 94, height: 50)
+                .padding(.top, 80)
+                .padding(.leading, 46)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            Spacer(minLength: 0)
+
+            DashboardFeatureSplashIllustration()
+
+            Text("VIGILANT LENS")
+                .font(.system(size: 30, weight: .heavy))
+                .foregroundColor(AppColor.textPrimary)
+                .padding(.top, 40)
+
+            Text("PRECISION CO-PILOT")
+                .font(.system(size: 14, weight: .medium))
+                .tracking(2.2)
+                .foregroundColor(AppColor.textSecondary)
+                .padding(.top, AppSpacing.sm)
+
+            Spacer(minLength: 0)
 
             VStack(spacing: AppSpacing.lg) {
-                HStack {
-                    Text("功能推荐")
-                        .font(AppTypography.bodyStrong)
-                        .foregroundColor(AppColor.textPrimary)
+                DashboardFeatureProgressBar(progress: splashProgress)
+                    .frame(width: 194)
 
-                    Spacer(minLength: 0)
-
-                    Button(action: onDismiss) {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 18, weight: .regular))
-                            .foregroundColor(AppColor.textSecondary)
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                }
-
-                ZStack {
-                    Circle()
-                        .fill(AppColor.accentSurface)
-                        .frame(width: 70, height: 70)
-
-                    Circle()
-                        .stroke(AppColor.brand.opacity(0.2), lineWidth: 1)
-                        .frame(width: 82, height: 82)
-
-                    Image(systemName: "bolt.horizontal.circle.fill")
-                        .font(.system(size: 34, weight: .regular))
-                        .foregroundColor(AppColor.brand)
-                }
-
-                VStack(spacing: AppSpacing.xs) {
-                    Text("首页发现新设备")
-                        .font(AppTypography.bodyStrong)
-                        .foregroundColor(AppColor.textPrimary)
-
-                    Text("请启用推荐权限，下次启动可更快发现附近设备。")
-                        .font(AppTypography.caption)
-                        .foregroundColor(AppColor.textSecondary)
-                        .multilineTextAlignment(.center)
-                }
-
-                VStack(spacing: 0) {
-                    DashboardPermissionRow(title: "蓝牙权限", status: "已允许")
-                    DashboardPermissionRow(title: "蓝牙开关", status: "已开启")
-                    DashboardPermissionRow(title: "定位权限", status: "去授权")
-                    DashboardPermissionRow(title: "附近设备权限", status: "去授权", showsDivider: false)
-                }
-                .background(AppColor.background)
-                .cornerRadius(AppRadius.medium)
-
-                HStack(spacing: AppSpacing.md) {
-                    Button(action: onSecondaryAction) {
-                        Text("暂不开启")
-                            .font(AppTypography.bodyStrong)
-                            .foregroundColor(AppColor.textSecondary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, AppSpacing.md)
-                            .background(AppColor.surfaceMuted)
-                            .cornerRadius(AppRadius.medium)
-                    }
-                    .buttonStyle(PlainButtonStyle())
-
-                    Button(action: onPrimaryAction) {
-                        Text("立即开启")
-                            .font(AppTypography.bodyStrong)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, AppSpacing.md)
-                            .background(AppColor.brand)
-                            .cornerRadius(AppRadius.medium)
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                }
+                Text(appVersionText)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(AppColor.textSecondary.opacity(0.9))
             }
-            .padding(.horizontal, AppSpacing.xl)
-            .padding(.top, AppSpacing.xl)
-            .padding(.bottom, AppSpacing.xl)
-            .background(AppColor.surface)
-            .cornerRadius(AppRadius.xLarge)
-            .shadow(color: Color.black.opacity(0.12), radius: 24, x: 0, y: 6)
-            .padding(.horizontal, AppSpacing.lg)
+            .padding(.bottom, 64)
+        }
+    }
+
+    private var connectPage: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Spacer(minLength: 0)
+
+                Button(action: onSkip) {
+                    Text("Skip")
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundColor(AppColor.textSecondary)
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+            .padding(.top, 60)
+            .padding(.horizontal, 24)
+
+            Spacer(minLength: 32)
+
+            DashboardFeatureConnectIllustration()
+                .padding(.horizontal, 36)
+
+            Text("Connect via WiFi")
+                .font(.system(size: 31, weight: .bold))
+                .foregroundColor(AppColor.textPrimary)
+                .padding(.top, 44)
+
+            Text("Seamlessly link your phone to the dashcam to preview and manage recordings.")
+                .font(.system(size: 16, weight: .regular))
+                .foregroundColor(AppColor.textSecondary)
+                .multilineTextAlignment(.center)
+                .lineSpacing(5)
+                .padding(.top, 18)
+                .padding(.horizontal, 48)
+
+            DashboardFeaturePageIndicator(currentIndex: 1)
+                .padding(.top, 42)
+
+            Spacer(minLength: 0)
+
+            DashboardFeaturePrimaryButton(
+                title: "Next Step",
+                action: showSuccess
+            )
+            .padding(.horizontal, 40)
+            .padding(.bottom, 48)
+        }
+    }
+
+    private var successPage: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: AppSpacing.md) {
+                Button(action: onSkip) {
+                    Image(systemName: "line.3.horizontal")
+                        .font(.system(size: 18, weight: .regular))
+                        .foregroundColor(AppColor.textSecondary)
+                        .frame(width: 36, height: 36)
+                }
+                .buttonStyle(PlainButtonStyle())
+
+                Text("Connection Status")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundColor(AppColor.brand)
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "person.crop.circle")
+                    .font(.system(size: 22, weight: .regular))
+                    .foregroundColor(AppColor.textSecondary)
+                    .frame(width: 36, height: 36)
+            }
+            .padding(.top, 48)
+            .padding(.horizontal, 16)
             .padding(.bottom, AppSpacing.lg)
+
+            Rectangle()
+                .fill(AppColor.border.opacity(0.45))
+                .frame(height: 1)
+
+            Spacer(minLength: 56)
+
+            DashboardFeatureSuccessIllustration()
+
+            Text("Connection Successful")
+                .font(.system(size: 31, weight: .bold))
+                .foregroundColor(AppColor.textPrimary)
+                .multilineTextAlignment(.center)
+                .padding(.top, 42)
+                .padding(.horizontal, 24)
+
+            DashboardFeatureDeviceCard()
+                .padding(.top, 24)
+                .padding(.horizontal, 34)
+
+            Text("The Vigilant Lens is now synced and ready to provide real-time telemetry and safety monitoring.")
+                .font(.system(size: 16, weight: .regular))
+                .foregroundColor(AppColor.textSecondary)
+                .multilineTextAlignment(.center)
+                .lineSpacing(6)
+                .padding(.top, 34)
+                .padding(.horizontal, 36)
+
+            Spacer(minLength: 0)
+
+            DashboardFeaturePrimaryButton(
+                title: "Enter Home",
+                action: onEnterHome
+            )
+            .padding(.horizontal, 34)
+
+            DashboardFeatureFooterChips()
+                .padding(.top, 64)
+                .padding(.bottom, 32)
+        }
+    }
+
+    private func startSplashAnimation() {
+        guard currentPage == .splash else {
+            return
+        }
+
+        withAnimation(.easeInOut(duration: 0.85)) {
+            splashProgress = 0.34
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            guard currentPage == .splash else {
+                return
+            }
+
+            currentPage = .connect
+        }
+    }
+
+    private func showSuccess() {
+        currentPage = .success
+    }
+
+    private var appVersionText: String {
+        guard let rawVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String,
+              rawVersion.isEmpty == false,
+              rawVersion.contains("$(") == false else {
+            return "v 1.0"
+        }
+
+        return "v \(rawVersion)"
+    }
+}
+
+private struct DashboardFeatureSplashIllustration: View {
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(Color.white.opacity(0.92))
+                .frame(width: 136, height: 136)
+                .shadow(color: AppColor.brand.opacity(0.1), radius: 16, x: 0, y: 8)
+
+            Circle()
+                .fill(AppColor.brand)
+                .frame(width: 92, height: 92)
+                .overlay(
+                    Image(systemName: "video.fill")
+                        .font(.system(size: 34, weight: .semibold))
+                        .foregroundColor(.white)
+                )
+
+            Circle()
+                .fill(AppColor.brand)
+                .frame(width: 18, height: 18)
+                .offset(x: 46, y: -46)
         }
     }
 }
 
-private struct DashboardPermissionRow: View {
-    let title: String
-    let status: String
-    var showsDivider = true
+private struct DashboardFeatureConnectIllustration: View {
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.2, green: 0.23, blue: 0.28),
+                            Color(red: 0.08, green: 0.09, blue: 0.13)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .frame(width: 186, height: 90)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(Color.white.opacity(0.35), lineWidth: 1)
+                )
+                .shadow(color: Color.black.opacity(0.2), radius: 20, x: 0, y: 18)
+                .overlay(
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        Color(red: 0.34, green: 0.47, blue: 0.58),
+                                        Color(red: 0.15, green: 0.17, blue: 0.21)
+                                    ],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
+                            .padding(12)
+
+                        Image(systemName: "video.fill")
+                            .font(.system(size: 26, weight: .medium))
+                            .foregroundColor(.white)
+                    }
+                )
+                .offset(x: -52, y: -30)
+
+            ZStack {
+                RoundedRectangle(cornerRadius: 36, style: .continuous)
+                    .fill(Color(red: 0.97, green: 0.97, blue: 1.0))
+                    .frame(width: 126, height: 224)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 36, style: .continuous)
+                            .stroke(Color.black.opacity(0.8), lineWidth: 4)
+                    )
+                    .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 10)
+
+                VStack(spacing: 14) {
+                    RoundedRectangle(cornerRadius: 3, style: .continuous)
+                        .fill(AppColor.border.opacity(0.75))
+                        .frame(width: 48, height: 4)
+                        .padding(.top, 26)
+
+                    Circle()
+                        .fill(AppColor.brand.opacity(0.14))
+                        .frame(width: 62, height: 62)
+                        .overlay(
+                            Image(systemName: "wifi")
+                                .font(.system(size: 28, weight: .semibold))
+                                .foregroundColor(AppColor.brand)
+                        )
+
+                    VStack(spacing: 8) {
+                        RoundedRectangle(cornerRadius: 3, style: .continuous)
+                            .fill(AppColor.border.opacity(0.55))
+                            .frame(width: 70, height: 6)
+
+                        RoundedRectangle(cornerRadius: 3, style: .continuous)
+                            .fill(AppColor.border.opacity(0.4))
+                            .frame(width: 56, height: 6)
+                    }
+
+                    Spacer(minLength: 0)
+                }
+            }
+            .offset(x: 54, y: 4)
+
+            Circle()
+                .stroke(AppColor.brand.opacity(0.3), lineWidth: 2)
+                .frame(width: 110, height: 110)
+                .offset(x: 0, y: -16)
+
+            Circle()
+                .stroke(AppColor.brand.opacity(0.55), lineWidth: 2)
+                .frame(width: 176, height: 176)
+                .offset(x: 0, y: -16)
+        }
+        .frame(height: 300)
+    }
+}
+
+private struct DashboardFeatureSuccessIllustration: View {
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(AppColor.brand.opacity(0.12), lineWidth: 1)
+                .frame(width: 118, height: 118)
+
+            Circle()
+                .stroke(AppColor.brand.opacity(0.2), lineWidth: 1.5)
+                .frame(width: 94, height: 94)
+
+            Circle()
+                .fill(Color.white.opacity(0.94))
+                .frame(width: 72, height: 72)
+
+            Circle()
+                .fill(AppColor.brand)
+                .frame(width: 52, height: 52)
+                .overlay(
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundColor(.white)
+                )
+        }
+    }
+}
+
+private struct DashboardFeatureDeviceCard: View {
+    var body: some View {
+        VStack(spacing: 18) {
+            Text("PAIRED DEVICE")
+                .font(.system(size: 12, weight: .medium))
+                .tracking(1.5)
+                .foregroundColor(AppColor.textSecondary)
+
+            HStack(spacing: AppSpacing.sm) {
+                Image(systemName: "camera.viewfinder")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundColor(AppColor.brand)
+
+                Text("Vigilant Lens DL-400")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(AppColor.textPrimary)
+            }
+
+            HStack(spacing: AppSpacing.sm) {
+                Circle()
+                    .fill(AppColor.brand)
+                    .frame(width: 8, height: 8)
+
+                Text("Signal Strength: Optimal")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(AppColor.brand)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 26)
+        .background(Color.white.opacity(0.95))
+        .cornerRadius(AppRadius.medium)
+        .shadow(color: Color.black.opacity(0.06), radius: 16, x: 0, y: 10)
+    }
+}
+
+private struct DashboardFeatureFooterChips: View {
+    private let titles = ["LINKED", "5G DATA", "GPS ACTIVE"]
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Text(title)
-                    .font(AppTypography.body)
-                    .foregroundColor(AppColor.textPrimary)
+        HStack(spacing: 18) {
+            ForEach(titles, id: \.self) { title in
+                HStack(spacing: 7) {
+                    Circle()
+                        .fill(AppColor.brand)
+                        .frame(width: 6, height: 6)
 
+                    Text(title)
+                        .font(.system(size: 11, weight: .semibold))
+                        .tracking(0.8)
+                        .foregroundColor(AppColor.textSecondary)
+                }
+            }
+        }
+        .padding(.horizontal, 24)
+        .padding(.vertical, 14)
+        .background(Color.white.opacity(0.7))
+        .clipShape(Capsule())
+    }
+}
+
+private struct DashboardFeaturePrimaryButton: View {
+    let title: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack {
                 Spacer(minLength: 0)
 
-                Text(status)
-                    .font(AppTypography.caption)
-                    .foregroundColor(status == "去授权" ? AppColor.brand : AppColor.textSecondary)
+                Text(title)
+                    .font(AppTypography.button)
+                    .foregroundColor(.white)
 
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(AppColor.border)
-            }
-            .padding(.horizontal, AppSpacing.md)
-            .padding(.vertical, AppSpacing.md)
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.white)
 
-            if showsDivider {
-                Rectangle()
-                    .fill(AppColor.border.opacity(0.55))
-                    .frame(height: 1)
-                    .padding(.leading, AppSpacing.md)
+                Spacer(minLength: 0)
             }
+            .padding(.vertical, 18)
+            .frame(maxWidth: .infinity)
+            .background(AppColor.brand)
+            .cornerRadius(28)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .shadow(color: AppColor.brand.opacity(0.28), radius: 16, x: 0, y: 10)
+    }
+}
+
+private struct DashboardFeaturePageIndicator: View {
+    let currentIndex: Int
+
+    var body: some View {
+        HStack(spacing: 10) {
+            ForEach(0..<3) { index in
+                if index == currentIndex {
+                    Capsule()
+                        .fill(AppColor.brand)
+                        .frame(width: 32, height: 8)
+                } else {
+                    Circle()
+                        .fill(AppColor.border.opacity(0.9))
+                        .frame(width: 8, height: 8)
+                }
+            }
+        }
+    }
+}
+
+private struct DashboardFeatureProgressBar: View {
+    let progress: CGFloat
+
+    var body: some View {
+        ZStack(alignment: .leading) {
+            Capsule()
+                .fill(AppColor.brand.opacity(0.14))
+                .frame(height: 5)
+
+            Capsule()
+                .fill(AppColor.brand)
+                .frame(width: 194 * progress, height: 5)
         }
     }
 }
