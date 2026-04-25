@@ -18,28 +18,7 @@
 - 设置页 `Help Center` 可达，并补齐对应路由和页面实现。
 - 收敛根目录和 `.monkeycode/docs/` 文档入口，清理重复事实，补充 `MEMORY.md` 条目，并新增 `device-onboarding`、`device-session`、`live-preview` 三份规格。
 
-## 2026-04-22
+## 2026-04-22 及更早
 
-- 建立根目录维护文档体系，明确 `README.md`、`PROJECT_CONTEXT.md`、`TASKS.md`、`CHANGELOG.md` 的职责边界。
-- 清理 `.monkeycode/docs/` 中重复和过时的描述，重写 `settings-components` 规格，并统一“文档保持精简、避免重复维护”的规则。
-- 固化当前代码事实：主界面当前为 3-tab、当前只有 `Cam360Tests`、`DeviceSession` 仅有骨架未接真实链路。
-
-## 2026-04-21
-
-- 完成设置页补全，扩展 Settings 设计系统组件。
-- 新增通知设置页和系统权限页。
-- 扩展 `SettingsStore` 与相关测试覆盖。
-
-## 2026-04-20
-
-- 继续推进设置页相关 UI。
-
-## 2026-04-16
-
-- 建立并整理 `.monkeycode` 文档体系，统一项目文档入口，并增加 GitHub Actions 的 iOS build/test workflow。
-- 增加 `DeviceSession` 状态机、部分 Feature Store 测试、深色模式与设计系统颜色能力，同时清理不适用的 UI tests / snapshot testing 内容并收敛 tab 与占位 UI。
-- 通过 SPM 引入 `Lottie`。
-
-## 2026-04-15
-
-- Initial commit。
+- 完成项目初始化，并逐步搭出当前 M0 早期骨架，包含设置页首版、占位 UI 和 `DeviceSession` 骨架。
+- 建立根目录与 `.monkeycode` 文档体系，明确维护文档职责，并统一“文档保持精简”的规则。
