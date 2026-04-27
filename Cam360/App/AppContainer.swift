@@ -7,6 +7,7 @@ final class AppContainer {
     let dashboardStore: DashboardStore
     let deviceOnboardingStore: DeviceOnboardingStore
     let deviceListStore: DeviceListStore
+    let galleryStore: GalleryStore
     let livePreviewStore: LivePreviewStore
     let playbackStore: PlaybackStore
     let downloadsStore: DownloadsStore
@@ -30,6 +31,7 @@ final class AppContainer {
             appPreferenceStore: appPreferenceStore
         )
         deviceListStore = DeviceListStore(knownDeviceRepository: knownDeviceRepository)
+        galleryStore = GalleryStore()
         livePreviewStore = LivePreviewStore()
         playbackStore = PlaybackStore()
         downloadsStore = DownloadsStore()

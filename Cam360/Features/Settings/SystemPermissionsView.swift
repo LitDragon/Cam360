@@ -181,7 +181,7 @@ struct SystemPermissionsView: View {
     private static func photoPermissionStatus() -> SystemPermissionStatus {
         let status: PHAuthorizationStatus
         if #available(iOS 14.0, *) {
-            status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+            status = PHPhotoLibrary.authorizationStatus(for: .addOnly)
         } else {
             status = PHPhotoLibrary.authorizationStatus()
         }

@@ -11,6 +11,7 @@ struct SettingsView: View {
         }
         .navigationViewStyle(StackNavigationViewStyle())
         .accessibility(identifier: "screen-settings")
+        .onAppear(perform: store.refresh)
     }
 
     private var routeBinding: Binding<SettingsRoute?> {

@@ -24,6 +24,7 @@ final class SettingsStore: ObservableObject {
     private let router: AppRouter
     private let knownDeviceRepository: KnownDeviceRepository
     private let appPreferenceStore: AppPreferenceStore
+    private var seededDeviceID: KnownDeviceSummary.ID?
 
     init(
         router: AppRouter,
@@ -38,7 +39,9 @@ final class SettingsStore: ObservableObject {
     }
 
     func refresh() {
-        knownDeviceCount = knownDeviceRepository.fetchKnownDevices().count
+        let knownDevices = knownDeviceRepository.fetchKnownDevices()
+        syncDeviceStateIfNeeded(with: knownDevices.first)
+        knownDeviceCount = knownDevices.count
         hasCompletedOnboarding = appPreferenceStore.hasCompletedOnboarding
         shareAnonymousLogs = appPreferenceStore.shareAnonymousLogs
         notificationPreferences = appPreferenceStore.notificationPreferences
@@ -164,6 +167,7 @@ final class SettingsStore: ObservableObject {
 
         devicePreferences.deviceName = trimmedName
         renameDeviceDraft = trimmedName
+        updateKnownDeviceName(trimmedName)
 
         if dismissRoute {
             route = nil
@@ -198,7 +202,41 @@ final class SettingsStore: ObservableObject {
         renameDeviceDraft = currentName
     }
 
+    private func syncDeviceStateIfNeeded(with device: KnownDeviceSummary?) {
+        guard seededDeviceID != device?.id else {
+            return
+        }
+
+        seedDeviceState(from: device)
+    }
+
+    private func updateKnownDeviceName(_ name: String) {
+        var devices = knownDeviceRepository.fetchKnownDevices()
+        guard devices.isEmpty == false else {
+            return
+        }
+
+        let targetIndex: Int
+        if let seededDeviceID = seededDeviceID,
+           let index = devices.firstIndex(where: { $0.id == seededDeviceID }) {
+            targetIndex = index
+        } else {
+            targetIndex = devices.startIndex
+            seededDeviceID = devices[targetIndex].id
+        }
+
+        let device = devices[targetIndex]
+        devices[targetIndex] = KnownDeviceSummary(
+            id: device.id,
+            name: name,
+            hotspotSSID: device.hotspotSSID,
+            lastConnectedAt: device.lastConnectedAt
+        )
+        knownDeviceRepository.store(devices)
+    }
+
     private func seedDeviceState(from device: KnownDeviceSummary?) {
+        seededDeviceID = device?.id
         let deviceName = device?.name ?? SettingsPlaceholder.deviceName
         let connectionName = device?.hotspotSSID ?? SettingsPlaceholder.connectionName
         recordingSettings = .defaultValue

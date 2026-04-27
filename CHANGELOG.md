@@ -2,6 +2,12 @@
 
 本文件记录仓库中已经实际发生的改动历史。按日期保留结果和边界，不展开过程细节或验证信息。
 
+## 2026-04-27
+
+- `Gallery` 状态从 View 本地 `@State` 收敛到 `GalleryStore`，并由 `AppContainer` 下发，避免切 tab 后删除、搜索和选择态被重置。
+- `SettingsStore` 在刷新时补齐新增设备 seed，并在重命名时回写 `KnownDeviceRepository`，保证设置页、首页和设备抽屉读取同一设备名。
+- `SystemPermissionsView` 的照片权限查询从 read/write 调整为 add-only 口径，继续匹配当前导出写入权限说明。
+
 ## 2026-04-25
 
 - 首页首次安装提示从底部推荐 Sheet 改为 3 页全屏引导 flow，按品牌启动页、Wi‑Fi 连接说明、连接成功页顺序展示。

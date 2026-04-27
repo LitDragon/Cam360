@@ -300,6 +300,76 @@ struct Cam360Tests {
     }
 
     @Test
+    func settingsStoreRefreshSeedsDeviceAddedAfterInitialization() {
+        let testDefaults = makeUserDefaults()
+        defer { clear(testDefaults) }
+
+        let repository = UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults)
+        let preferenceStore = UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults)
+        let router = AppRouter(route: .main(.settings))
+        let store = SettingsStore(
+            router: router,
+            knownDeviceRepository: repository,
+            appPreferenceStore: preferenceStore
+        )
+
+        repository.store([
+            makeKnownDevice(id: "cam360-added-device", name: "Vigilant DL-400 Pro")
+        ])
+        store.refresh()
+
+        #expect(store.devicePreferences.deviceName == "Vigilant DL-400 Pro")
+        #expect(store.devicePreferences.connectionName == "Cam360_AP_cam360-added-device")
+        #expect(store.knownDeviceCount == 1)
+    }
+
+    @Test
+    func settingsStoreRenamePersistsKnownDeviceName() {
+        let testDefaults = makeUserDefaults()
+        defer { clear(testDefaults) }
+
+        let repository = UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults)
+        let preferenceStore = UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults)
+        let router = AppRouter(route: .main(.settings))
+        repository.store([
+            makeKnownDevice(id: "cam360-main", name: "Old Name"),
+            makeKnownDevice(id: "cam360-rear", name: "Rear Camera")
+        ])
+        let store = SettingsStore(
+            router: router,
+            knownDeviceRepository: repository,
+            appPreferenceStore: preferenceStore
+        )
+
+        store.setRenameDeviceDraft("RoadGuard Pro")
+        store.renameDevice()
+
+        let devices = repository.fetchKnownDevices()
+        #expect(devices.first?.name == "RoadGuard Pro")
+        #expect(devices.last?.name == "Rear Camera")
+
+        let dashboardStore = DashboardStore(
+            knownDeviceRepository: repository,
+            appPreferenceStore: preferenceStore
+        )
+        #expect(dashboardStore.selectedDevice?.name == "RoadGuard Pro")
+    }
+
+    @Test
+    func galleryStoreKeepsDeletedItemsInSharedState() {
+        let items = Array(GalleryItem.sampleData.prefix(2))
+        let store = GalleryStore(items: items)
+        let deletedItem = items[0]
+
+        store.showItemMenu(deletedItem)
+        store.handleMenuDelete()
+
+        #expect(store.items.contains(where: { $0.id == deletedItem.id }) == false)
+        #expect(store.items.count == 1)
+        #expect(store.activeMenuItem == nil)
+    }
+
+    @Test
     func settingsStoreResetShellReturnsToDashboard() {
         let testDefaults = makeUserDefaults()
         defer { clear(testDefaults) }

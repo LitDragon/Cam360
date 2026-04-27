@@ -3,6 +3,7 @@ import SwiftUI
 struct MainTabView: View {
     @ObservedObject var router: AppRouter
     @ObservedObject var dashboardStore: DashboardStore
+    @ObservedObject var galleryStore: GalleryStore
     @ObservedObject var settingsStore: SettingsStore
 
     var body: some View {
@@ -38,7 +39,7 @@ struct MainTabView: View {
                 }
             )
         case .gallery:
-            GalleryView()
+            GalleryView(store: galleryStore)
         case .settings:
             SettingsView(store: settingsStore)
         }
