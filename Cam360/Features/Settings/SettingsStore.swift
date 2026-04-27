@@ -155,7 +155,7 @@ final class SettingsStore: ObservableObject {
         renameDeviceDraft = value
     }
 
-    func renameDevice() {
+    func renameDevice(dismissRoute: Bool = true) {
         let trimmedName = renameDeviceDraft.trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard trimmedName.isEmpty == false else {
@@ -164,7 +164,10 @@ final class SettingsStore: ObservableObject {
 
         devicePreferences.deviceName = trimmedName
         renameDeviceDraft = trimmedName
-        route = nil
+
+        if dismissRoute {
+            route = nil
+        }
     }
 
     func startFirmwareUpdate() {

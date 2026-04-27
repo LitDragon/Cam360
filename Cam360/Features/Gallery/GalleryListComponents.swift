@@ -162,17 +162,23 @@ struct GalleryThumbnail: View {
             RoundedRectangle(cornerRadius: AppRadius.small, style: .continuous)
                 .fill(
                     LinearGradient(
-                        gradient: Gradient(colors: item.thumbnailColors),
+                        gradient: Gradient(colors: item.thumbnailStyle.colors),
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                 )
-                .frame(width: 128, height: 78)
+                .frame(
+                    width: AppLayout.galleryThumbnailSize.width,
+                    height: AppLayout.galleryThumbnailSize.height
+                )
 
             Image(systemName: item.thumbnailSymbol)
                 .font(.system(size: 28, weight: .semibold))
                 .foregroundColor(.white.opacity(0.88))
-                .frame(width: 128, height: 78)
+                .frame(
+                    width: AppLayout.galleryThumbnailSize.width,
+                    height: AppLayout.galleryThumbnailSize.height
+                )
 
             if let badgeTitle = item.badgeTitle {
                 StatusTag(title: badgeTitle, tone: item.badgeTone)
@@ -183,7 +189,10 @@ struct GalleryThumbnail: View {
                 Image(systemName: "play.circle.fill")
                     .font(.system(size: 24, weight: .regular))
                     .foregroundColor(.white)
-                    .frame(width: 128, height: 78)
+                    .frame(
+                        width: AppLayout.galleryThumbnailSize.width,
+                        height: AppLayout.galleryThumbnailSize.height
+                    )
             }
 
             VStack {
@@ -202,6 +211,25 @@ struct GalleryThumbnail: View {
                         .padding(AppSpacing.xs)
                 }
             }
+        }
+    }
+}
+
+private extension GalleryArtworkStyle {
+    var colors: [Color] {
+        switch self {
+        case .emergencyBrake:
+            return AppArtworkPalette.galleryEmergencyBrake
+        case .dailyRecording:
+            return AppArtworkPalette.galleryDailyRecording
+        case .parkingMonitor:
+            return AppArtworkPalette.galleryParkingMonitor
+        case .snapshot:
+            return AppArtworkPalette.gallerySnapshot
+        case .rushHour:
+            return AppArtworkPalette.galleryRushHour
+        case .collisionAlert:
+            return AppArtworkPalette.galleryCollisionAlert
         }
     }
 }

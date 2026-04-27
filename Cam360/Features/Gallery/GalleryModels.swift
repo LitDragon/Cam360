@@ -1,4 +1,4 @@
-import SwiftUI
+import Foundation
 
 enum GalleryFilter: CaseIterable, Identifiable, Equatable {
     case all
@@ -69,6 +69,15 @@ enum GalleryMediaKind: Equatable {
     case photo
 }
 
+enum GalleryArtworkStyle: Equatable {
+    case emergencyBrake
+    case dailyRecording
+    case parkingMonitor
+    case snapshot
+    case rushHour
+    case collisionAlert
+}
+
 struct GallerySectionModel: Identifiable {
     let kind: GallerySectionKind
     let items: [GalleryItem]
@@ -85,7 +94,7 @@ struct GalleryItem: Identifiable {
     let kind: GalleryMediaKind
     let section: GallerySectionKind
     let thumbnailSymbol: String
-    let thumbnailColors: [Color]
+    let thumbnailStyle: GalleryArtworkStyle
 
     var badgeTitle: String? {
         kind == .event ? "紧急事件" : nil
@@ -111,10 +120,7 @@ struct GalleryItem: Identifiable {
             kind: .event,
             section: .today,
             thumbnailSymbol: "car.fill",
-            thumbnailColors: [
-                Color(red: 0.09, green: 0.20, blue: 0.32),
-                Color(red: 0.36, green: 0.52, blue: 0.72)
-            ]
+            thumbnailStyle: .emergencyBrake
         ),
         GalleryItem(
             title: "日常录制",
@@ -124,10 +130,7 @@ struct GalleryItem: Identifiable {
             kind: .video,
             section: .today,
             thumbnailSymbol: "road.lanes",
-            thumbnailColors: [
-                Color(red: 0.13, green: 0.32, blue: 0.29),
-                Color(red: 0.47, green: 0.67, blue: 0.40)
-            ]
+            thumbnailStyle: .dailyRecording
         ),
         GalleryItem(
             title: "停车监控",
@@ -137,10 +140,7 @@ struct GalleryItem: Identifiable {
             kind: .event,
             section: .today,
             thumbnailSymbol: "parkingsign.circle.fill",
-            thumbnailColors: [
-                Color(red: 0.34, green: 0.25, blue: 0.15),
-                Color(red: 0.72, green: 0.57, blue: 0.34)
-            ]
+            thumbnailStyle: .parkingMonitor
         ),
         GalleryItem(
             title: "高速抓拍",
@@ -150,10 +150,7 @@ struct GalleryItem: Identifiable {
             kind: .photo,
             section: .yesterday,
             thumbnailSymbol: "camera.macro",
-            thumbnailColors: [
-                Color(red: 0.11, green: 0.25, blue: 0.20),
-                Color(red: 0.45, green: 0.66, blue: 0.53)
-            ]
+            thumbnailStyle: .snapshot
         ),
         GalleryItem(
             title: "晚高峰录制",
@@ -163,10 +160,7 @@ struct GalleryItem: Identifiable {
             kind: .video,
             section: .yesterday,
             thumbnailSymbol: "tram.fill",
-            thumbnailColors: [
-                Color(red: 0.18, green: 0.16, blue: 0.33),
-                Color(red: 0.51, green: 0.35, blue: 0.63)
-            ]
+            thumbnailStyle: .rushHour
         ),
         GalleryItem(
             title: "碰撞提醒",
@@ -176,10 +170,7 @@ struct GalleryItem: Identifiable {
             kind: .event,
             section: .earlier,
             thumbnailSymbol: "exclamationmark.triangle.fill",
-            thumbnailColors: [
-                Color(red: 0.35, green: 0.12, blue: 0.18),
-                Color(red: 0.76, green: 0.33, blue: 0.28)
-            ]
+            thumbnailStyle: .collisionAlert
         )
     ]
 }

@@ -3,6 +3,7 @@ import SwiftUI
 private enum DeviceSettingsDetailRoute: Hashable {
     case networkIdentity
     case firmwareUpdate
+    case renameDevice
 }
 
 struct DeviceSettingsDetailView: View {
@@ -27,7 +28,8 @@ struct DeviceSettingsDetailView: View {
                             title: "Device Name",
                             subtitle: store.devicePreferences.deviceName,
                             action: {
-                                store.show(.renameDevice)
+                                store.setRenameDeviceDraft(store.devicePreferences.deviceName)
+                                route = .renameDevice
                             }
                         )
 
@@ -104,7 +106,7 @@ struct DeviceSettingsDetailView: View {
                 }
                 .padding(.horizontal, AppSpacing.xxl)
                 .padding(.top, AppSpacing.xl)
-                .padding(.bottom, 140)
+                .padding(.bottom, AppLayout.scrollBottomContentInset)
             }
         }
         .background(navigationLinks)
@@ -145,6 +147,24 @@ struct DeviceSettingsDetailView: View {
                 )
                 .navigationBarHidden(true),
                 tag: .firmwareUpdate,
+                selection: routeBinding
+            ) {
+                EmptyView()
+            }
+
+            NavigationLink(
+                destination: RenameDeviceView(
+                    store: store,
+                    dismiss: {
+                        route = nil
+                    },
+                    save: {
+                        store.renameDevice(dismissRoute: false)
+                        route = nil
+                    }
+                )
+                .navigationBarHidden(true),
+                tag: .renameDevice,
                 selection: routeBinding
             ) {
                 EmptyView()
@@ -209,7 +229,7 @@ private struct NetworkIdentityView: View {
                 }
                 .padding(.horizontal, AppSpacing.xxl)
                 .padding(.top, AppSpacing.xl)
-                .padding(.bottom, 140)
+                .padding(.bottom, AppLayout.scrollBottomContentInset)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -253,7 +273,7 @@ private struct FirmwareUpdateView: View {
                 }
                 .padding(.horizontal, AppSpacing.xxl)
                 .padding(.top, AppSpacing.xl)
-                .padding(.bottom, 140)
+                .padding(.bottom, AppLayout.scrollBottomContentInset)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)

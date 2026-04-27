@@ -5,7 +5,7 @@ indirect enum DeviceSessionState: Equatable {
     case apConnecting
     case handshaking
     case ready(DeviceInfo)
-    case busy(Operation)
+    case busy(operation: Operation, deviceInfo: DeviceInfo)
     case recovering(previousState: DeviceSessionState)
     case failed(DeviceError)
     case disconnected

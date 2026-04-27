@@ -42,6 +42,44 @@ struct Cam360Tests {
     }
 
     @Test
+    func deviceSessionCompletesOperationBackToReadyDevice() {
+        let session = DeviceSession()
+        let deviceInfo = makeDeviceInfo()
+
+        session.send(.startAPConnection(ssid: "Cam360_AP"))
+        session.send(.apConnectionSucceeded)
+        session.send(.handshakeSucceeded(deviceInfo))
+        session.send(.startOperation(.livePreview))
+
+        #expect(session.state == .busy(operation: .livePreview, deviceInfo: deviceInfo))
+        #expect(session.currentOperation == .livePreview)
+
+        session.send(.operationCompleted)
+
+        #expect(session.state == .ready(deviceInfo))
+        #expect(session.currentOperation == nil)
+    }
+
+    @Test
+    func deviceSessionRecoveryReturnsToLastReadyDevice() {
+        let session = DeviceSession()
+        let deviceInfo = makeDeviceInfo()
+
+        session.send(.startAPConnection(ssid: "Cam360_AP"))
+        session.send(.apConnectionSucceeded)
+        session.send(.handshakeSucceeded(deviceInfo))
+        session.send(.startOperation(.updateSettings))
+        session.send(.connectionLost)
+        session.send(.startRecovery)
+
+        #expect(session.state == .recovering(previousState: .ready(deviceInfo)))
+
+        session.send(.recoverySucceeded)
+
+        #expect(session.state == .ready(deviceInfo))
+    }
+
+    @Test
     func dashboardStoreShowsFeatureSheetUntilDismissed() {
         let testDefaults = makeUserDefaults()
         defer { clear(testDefaults) }
@@ -307,6 +345,15 @@ func makeKnownDevice(
         name: name,
         hotspotSSID: "Cam360_AP_\(id)",
         lastConnectedAt: Date(timeIntervalSince1970: 1_713_139_200)
+    )
+}
+
+func makeDeviceInfo() -> DeviceInfo {
+    DeviceInfo(
+        id: "cam360-device",
+        name: "Cam360 Test Device",
+        firmwareVersion: "v1.0.0",
+        capabilities: [.livePreview, .settings]
     )
 }
 

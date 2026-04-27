@@ -8,10 +8,14 @@ final class DeviceSession: ObservableObject {
     private var previousStateBeforeRecovery: DeviceSessionState?
 
     func send(_ event: DeviceSessionEvent) {
+        rememberRecoveryStateIfNeeded(for: event)
+
         let nextState = transition(from: state, event: event)
         if nextState != state {
             state = nextState
         }
+
+        updateDerivedState(for: nextState)
     }
 
     private func transition(from state: DeviceSessionState, event: DeviceSessionEvent) -> DeviceSessionState {
@@ -34,15 +38,11 @@ final class DeviceSession: ObservableObject {
         case (.handshaking, .handshakeFailed(let reason)):
             return .failed(.handshakeFailed(reason: reason))
 
-        case (.ready, .startOperation(let operation)):
-            return .busy(operation)
+        case (.ready(let deviceInfo), .startOperation(let operation)):
+            return .busy(operation: operation, deviceInfo: deviceInfo)
 
-        case (.busy, .operationCompleted):
-            if let prev = previousStateBeforeRecovery {
-                previousStateBeforeRecovery = nil
-                return prev
-            }
-            return .ready(extractDeviceInfo(from: state))
+        case (.busy(operation: _, deviceInfo: let deviceInfo), .operationCompleted):
+            return .ready(deviceInfo)
 
         case (.busy, .operationFailed(let error)):
             return .failed(error)
@@ -51,13 +51,12 @@ final class DeviceSession: ObservableObject {
             return .failed(.connectionLost)
 
         case (.failed, .startRecovery):
-            if case .ready(let info) = stateForRecovery(from: state) {
-                previousStateBeforeRecovery = .ready(info)
-            }
             return .recovering(previousState: previousStateBeforeRecovery ?? .idle)
 
         case (.recovering, .recoverySucceeded):
-            return previousStateBeforeRecovery ?? .idle
+            let recoveredState = previousStateBeforeRecovery ?? .idle
+            previousStateBeforeRecovery = nil
+            return recoveredState
 
         case (.recovering, .recoveryFailed(let error)):
             return .failed(error)
@@ -66,6 +65,7 @@ final class DeviceSession: ObservableObject {
             return .disconnected
 
         case (_, .reset):
+            previousStateBeforeRecovery = nil
             return .idle
 
         default:
@@ -73,14 +73,36 @@ final class DeviceSession: ObservableObject {
         }
     }
 
-    private func stateForRecovery(from state: DeviceSessionState) -> DeviceSessionState {
-        return state
+    private func rememberRecoveryStateIfNeeded(for event: DeviceSessionEvent) {
+        switch event {
+        case .connectionLost, .operationFailed:
+            previousStateBeforeRecovery = recoverableState(from: state)
+        case .startAPConnection, .reset, .disconnect:
+            previousStateBeforeRecovery = nil
+        default:
+            break
+        }
     }
 
-    private func extractDeviceInfo(from state: DeviceSessionState) -> DeviceInfo {
-        if case .ready(let info) = state {
-            return info
+    private func recoverableState(from state: DeviceSessionState) -> DeviceSessionState? {
+        switch state {
+        case .ready(let deviceInfo):
+            return .ready(deviceInfo)
+        case .busy(operation: _, deviceInfo: let deviceInfo):
+            return .ready(deviceInfo)
+        case .recovering(let previousState):
+            return previousState
+        default:
+            return nil
         }
-        return DeviceInfo(id: "", name: "", firmwareVersion: "", capabilities: [])
+    }
+
+    private func updateDerivedState(for state: DeviceSessionState) {
+        switch state {
+        case .busy(operation: let operation, deviceInfo: _):
+            currentOperation = operation
+        default:
+            currentOperation = nil
+        }
     }
 }

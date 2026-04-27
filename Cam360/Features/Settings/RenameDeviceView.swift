@@ -2,6 +2,8 @@ import SwiftUI
 
 struct RenameDeviceView: View {
     @ObservedObject var store: SettingsStore
+    var dismiss: (() -> Void)? = nil
+    var save: (() -> Void)? = nil
 
     var body: some View {
         VStack(spacing: 0) {
@@ -9,7 +11,7 @@ struct RenameDeviceView: View {
                 title: "Rename Device",
                 subtitle: "Update the label shown throughout the app",
                 leadingSystemImage: "arrow.left",
-                leadingAction: store.dismissRoute
+                leadingAction: dismissAction
             )
 
             ScrollView(showsIndicators: false) {
@@ -29,14 +31,14 @@ struct RenameDeviceView: View {
                     .padding(.horizontal, AppSpacing.sm)
 
                     PrimaryButton(title: "Save Name") {
-                        store.renameDevice()
+                        saveAction()
                     }
                     .opacity(canSave ? 1 : 0.48)
                     .disabled(canSave == false)
                 }
                 .padding(.horizontal, AppSpacing.xxl)
                 .padding(.top, AppSpacing.xl)
-                .padding(.bottom, 140)
+                .padding(.bottom, AppLayout.scrollBottomContentInset)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -53,5 +55,21 @@ struct RenameDeviceView: View {
             get: { store.renameDeviceDraft },
             set: { store.setRenameDeviceDraft($0) }
         )
+    }
+
+    private func dismissAction() {
+        if let dismiss = dismiss {
+            dismiss()
+        } else {
+            store.dismissRoute()
+        }
+    }
+
+    private func saveAction() {
+        if let save = save {
+            save()
+        } else {
+            store.renameDevice()
+        }
     }
 }

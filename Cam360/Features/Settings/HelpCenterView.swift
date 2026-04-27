@@ -2,6 +2,7 @@ import SwiftUI
 
 struct HelpCenterView: View {
     @ObservedObject var store: SettingsStore
+    var dismiss: (() -> Void)? = nil
     @State private var searchText = ""
 
     private let topicItems: [HelpCenterItem] = [
@@ -23,7 +24,7 @@ struct HelpCenterView: View {
             AppTopBar(
                 title: "Help Center",
                 leadingSystemImage: "arrow.left",
-                leadingAction: store.dismissRoute
+                leadingAction: dismissAction
             )
 
             ScrollView(showsIndicators: false) {
@@ -57,7 +58,7 @@ struct HelpCenterView: View {
                 }
                 .padding(.horizontal, AppSpacing.xxl)
                 .padding(.top, AppSpacing.xl)
-                .padding(.bottom, 140)
+                .padding(.bottom, AppLayout.scrollBottomContentInset)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -74,6 +75,14 @@ struct HelpCenterView: View {
                     showsDivider: index < items.count - 1
                 )
             }
+        }
+    }
+
+    private func dismissAction() {
+        if let dismiss = dismiss {
+            dismiss()
+        } else {
+            store.dismissRoute()
         }
     }
 }

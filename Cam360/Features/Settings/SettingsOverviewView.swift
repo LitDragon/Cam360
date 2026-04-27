@@ -98,7 +98,7 @@ struct SettingsOverviewView: View {
                 }
                 .padding(.horizontal, AppSpacing.xxl)
                 .padding(.top, AppSpacing.xl)
-                .padding(.bottom, 140)
+                .padding(.bottom, AppLayout.scrollBottomContentInset)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)

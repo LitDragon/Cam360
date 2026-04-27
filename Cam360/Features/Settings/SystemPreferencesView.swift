@@ -1,7 +1,14 @@
 import SwiftUI
 
+private enum SystemPreferencesRoute: Hashable {
+    case notificationSettings
+    case systemPermissions
+    case helpCenter
+}
+
 struct SystemPreferencesView: View {
     @ObservedObject var store: SettingsStore
+    @State private var route: SystemPreferencesRoute?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -20,7 +27,7 @@ struct SystemPreferencesView: View {
                             iconName: "bell.badge",
                             title: "Notifications",
                             action: {
-                                store.show(.notificationSettings)
+                                route = .notificationSettings
                             }
                         )
                         .accessibility(identifier: "settings-row-notifications")
@@ -30,7 +37,7 @@ struct SystemPreferencesView: View {
                             title: "System Permissions",
                             showsDivider: false,
                             action: {
-                                store.show(.systemPermissions)
+                                route = .systemPermissions
                             }
                         )
                         .accessibility(identifier: "settings-row-system-permissions")
@@ -43,7 +50,7 @@ struct SystemPreferencesView: View {
                             title: "Help Center",
                             showsDivider: false,
                             action: {
-                                store.show(.helpCenter)
+                                route = .helpCenter
                             }
                         )
                         .accessibility(identifier: "settings-row-help-center")
@@ -84,12 +91,52 @@ struct SystemPreferencesView: View {
                 }
                 .padding(.horizontal, AppSpacing.xxl)
                 .padding(.top, AppSpacing.xl)
-                .padding(.bottom, 140)
+                .padding(.bottom, AppLayout.scrollBottomContentInset)
             }
         }
+        .background(navigationLinks)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(AppColor.background.edgesIgnoringSafeArea(.all))
         .accessibility(identifier: "screen-settings-system-preferences")
+    }
+
+    private var routeBinding: Binding<SystemPreferencesRoute?> {
+        Binding(
+            get: { route },
+            set: { route = $0 }
+        )
+    }
+
+    private var navigationLinks: some View {
+        Group {
+            NavigationLink(
+                destination: NotificationSettingsView(store: store, dismiss: dismissNestedRoute)
+                    .navigationBarHidden(true),
+                tag: .notificationSettings,
+                selection: routeBinding
+            ) {
+                EmptyView()
+            }
+
+            NavigationLink(
+                destination: SystemPermissionsView(store: store, dismiss: dismissNestedRoute)
+                    .navigationBarHidden(true),
+                tag: .systemPermissions,
+                selection: routeBinding
+            ) {
+                EmptyView()
+            }
+
+            NavigationLink(
+                destination: HelpCenterView(store: store, dismiss: dismissNestedRoute)
+                    .navigationBarHidden(true),
+                tag: .helpCenter,
+                selection: routeBinding
+            ) {
+                EmptyView()
+            }
+        }
+        .hidden()
     }
 
     private var shareAnonymousLogsBinding: Binding<Bool> {
@@ -97,5 +144,9 @@ struct SystemPreferencesView: View {
             get: { store.shareAnonymousLogs },
             set: { store.setShareAnonymousLogs($0) }
         )
+    }
+
+    private func dismissNestedRoute() {
+        route = nil
     }
 }

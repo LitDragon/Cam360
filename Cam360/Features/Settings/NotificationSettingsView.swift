@@ -2,6 +2,7 @@ import SwiftUI
 
 struct NotificationSettingsView: View {
     @ObservedObject var store: SettingsStore
+    var dismiss: (() -> Void)? = nil
 
     var body: some View {
         VStack(spacing: 0) {
@@ -9,7 +10,7 @@ struct NotificationSettingsView: View {
                 title: "Notification Settings",
                 eyebrow: "Settings",
                 leadingSystemImage: "arrow.left",
-                leadingAction: store.dismissRoute
+                leadingAction: dismissAction
             )
 
             ScrollView(showsIndicators: false) {
@@ -89,7 +90,7 @@ struct NotificationSettingsView: View {
                 }
                 .padding(.horizontal, AppSpacing.xxl)
                 .padding(.top, AppSpacing.xl)
-                .padding(.bottom, 140)
+                .padding(.bottom, AppLayout.scrollBottomContentInset)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -102,5 +103,13 @@ struct NotificationSettingsView: View {
             get: { store.notificationPreferences[keyPath: keyPath] },
             set: { store.setNotificationPreference(keyPath, to: $0) }
         )
+    }
+
+    private func dismissAction() {
+        if let dismiss = dismiss {
+            dismiss()
+        } else {
+            store.dismissRoute()
+        }
     }
 }

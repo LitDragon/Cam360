@@ -17,12 +17,21 @@ jobs:
       - name: List available simulators
         run: xcrun simctl list devices available | head -30
 
+      - name: Resolve simulator destination
+        run: |
+          SIMULATOR_ID=$(xcrun simctl list devices available | awk -F '[()]' '/iPhone/ { print $2; exit }')
+          if [ -z "$SIMULATOR_ID" ]; then
+            echo "No available iPhone simulator found"
+            exit 1
+          fi
+          echo "SIMULATOR_DESTINATION=platform=iOS Simulator,id=$SIMULATOR_ID" >> "$GITHUB_ENV"
+
       - name: Build
         run: |
           xcodebuild -project Cam360.xcodeproj \
             -scheme Cam360 \
             -configuration Debug \
-            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -destination "$SIMULATOR_DESTINATION" \
             CODE_SIGNING_ALLOWED=NO \
             build
 
@@ -31,6 +40,6 @@ jobs:
           xcodebuild -project Cam360.xcodeproj \
             -scheme Cam360 \
             -configuration Debug \
-            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -destination "$SIMULATOR_DESTINATION" \
             CODE_SIGNING_ALLOWED=NO \
             test

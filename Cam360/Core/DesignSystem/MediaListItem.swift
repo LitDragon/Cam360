@@ -13,15 +13,15 @@ struct MediaListItem: View {
                 RoundedRectangle(cornerRadius: AppRadius.small, style: .continuous)
                     .fill(
                         LinearGradient(
-                            gradient: Gradient(colors: [
-                                Color(red: 15.0 / 255.0, green: 23.0 / 255.0, blue: 42.0 / 255.0),
-                                Color(red: 30.0 / 255.0, green: 41.0 / 255.0, blue: 59.0 / 255.0)
-                            ]),
+                            gradient: Gradient(colors: AppArtworkPalette.mediaPlaceholder),
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
                     )
-                    .frame(width: 104, height: 72)
+                    .frame(
+                        width: AppLayout.mediaThumbnailSize.width,
+                        height: AppLayout.mediaThumbnailSize.height
+                    )
 
                 if let badgeTitle = badgeTitle {
                     StatusTag(title: badgeTitle, tone: badgeTone)
@@ -48,7 +48,10 @@ struct MediaListItem: View {
                 Image(systemName: "play.circle.fill")
                     .font(.system(size: 24, weight: .regular))
                     .foregroundColor(.white)
-                    .frame(width: 104, height: 72)
+                    .frame(
+                        width: AppLayout.mediaThumbnailSize.width,
+                        height: AppLayout.mediaThumbnailSize.height
+                    )
             }
 
             VStack(alignment: .leading, spacing: AppSpacing.xs) {

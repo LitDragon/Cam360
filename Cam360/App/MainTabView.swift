@@ -11,7 +11,7 @@ struct MainTabView: View {
 
             currentScreen
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .padding(.bottom, isTabBarHidden ? 0 : 108)
+                .padding(.bottom, isTabBarHidden ? 0 : AppLayout.mainTabReservedBottomInset)
 
             if isTabBarHidden == false {
                 MainTabBar(selectedTab: router.selectedMainTab) {

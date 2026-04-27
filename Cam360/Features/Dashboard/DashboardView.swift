@@ -238,19 +238,15 @@ private struct DashboardPreviewCard: View {
             RoundedRectangle(cornerRadius: AppRadius.large, style: .continuous)
                 .fill(
                     LinearGradient(
-                        colors: [
-                            Color(red: 0.15, green: 0.56, blue: 0.9),
-                            Color(red: 0.14, green: 0.43, blue: 0.82),
-                            Color(red: 0.1, green: 0.23, blue: 0.44)
-                        ],
+                        colors: AppArtworkPalette.dashboardPreviewBackground,
                         startPoint: .topTrailing,
                         endPoint: .bottomLeading
                     )
                 )
-                .frame(height: 214)
+                .frame(height: AppLayout.dashboardPreviewHeight)
 
             DashboardPreviewLandscape()
-                .frame(height: 214)
+                .frame(height: AppLayout.dashboardPreviewHeight)
 
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: AppSpacing.sm) {
@@ -270,7 +266,7 @@ private struct DashboardPreviewCard: View {
 
                     Text(state.timestampText)
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.white.opacity(0.84))
+                        .foregroundColor(AppArtworkPalette.dashboardPreviewTimestamp)
                 }
             }
             .padding(.horizontal, AppSpacing.md)
@@ -278,9 +274,14 @@ private struct DashboardPreviewCard: View {
         }
         .overlay(
             RoundedRectangle(cornerRadius: AppRadius.large, style: .continuous)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                .stroke(AppArtworkPalette.dashboardPreviewOverlayStroke, lineWidth: AppLayout.hairline)
         )
-        .shadow(color: Color.black.opacity(0.16), radius: 20, x: 0, y: 12)
+        .shadow(
+            color: AppShadow.dashboardPreview.color,
+            radius: AppShadow.dashboardPreview.radius,
+            x: AppShadow.dashboardPreview.x,
+            y: AppShadow.dashboardPreview.y
+        )
     }
 }
 
@@ -297,10 +298,7 @@ private struct DashboardPreviewLandscape: View {
                 }
                 .fill(
                     LinearGradient(
-                        colors: [
-                            Color(red: 0.77, green: 0.62, blue: 0.35),
-                            Color(red: 0.45, green: 0.33, blue: 0.2)
-                        ],
+                        colors: AppArtworkPalette.dashboardPreviewLeftTerrain,
                         startPoint: .top,
                         endPoint: .bottom
                     )
@@ -315,10 +313,7 @@ private struct DashboardPreviewLandscape: View {
                 }
                 .fill(
                     LinearGradient(
-                        colors: [
-                            Color(red: 0.07, green: 0.48, blue: 0.76),
-                            Color(red: 0.03, green: 0.28, blue: 0.52)
-                        ],
+                        colors: AppArtworkPalette.dashboardPreviewRightTerrain,
                         startPoint: .top,
                         endPoint: .bottom
                     )
@@ -335,10 +330,7 @@ private struct DashboardPreviewLandscape: View {
                 }
                 .fill(
                     LinearGradient(
-                        colors: [
-                            Color(red: 0.42, green: 0.43, blue: 0.45),
-                            Color(red: 0.2, green: 0.21, blue: 0.23)
-                        ],
+                        colors: AppArtworkPalette.dashboardPreviewRoad,
                         startPoint: .top,
                         endPoint: .bottom
                     )
@@ -348,25 +340,41 @@ private struct DashboardPreviewLandscape: View {
                     path.move(to: CGPoint(x: geometry.size.width * 0.64, y: geometry.size.height * 0.65))
                     path.addLine(to: CGPoint(x: geometry.size.width, y: geometry.size.height * 0.7))
                 }
-                .stroke(Color(red: 0.24, green: 0.23, blue: 0.19), lineWidth: 4)
+                .stroke(
+                    AppArtworkPalette.dashboardPreviewRoadEdge,
+                    lineWidth: AppLayout.dashboardPreviewRoadEdgeWidth
+                )
 
                 Path { path in
                     path.move(to: CGPoint(x: geometry.size.width * 0.44, y: geometry.size.height * 0.58))
                     path.addLine(to: CGPoint(x: geometry.size.width * 0.36, y: geometry.size.height))
                 }
-                .stroke(Color.white.opacity(0.92), style: StrokeStyle(lineWidth: 4, lineCap: .round, dash: [14, 18]))
+                .stroke(
+                    AppArtworkPalette.dashboardPreviewLaneDivider,
+                    style: StrokeStyle(
+                        lineWidth: AppLayout.dashboardPreviewLaneDividerWidth,
+                        lineCap: .round,
+                        dash: AppLayout.dashboardPreviewLaneDash
+                    )
+                )
 
                 Path { path in
                     path.move(to: CGPoint(x: geometry.size.width * 0.46, y: geometry.size.height * 0.58))
                     path.addLine(to: CGPoint(x: geometry.size.width, y: geometry.size.height * 0.62))
                 }
-                .stroke(Color.white.opacity(0.86), lineWidth: 2)
+                .stroke(
+                    AppArtworkPalette.dashboardPreviewLaneHighlight,
+                    lineWidth: AppLayout.dashboardPreviewLaneHighlightWidth
+                )
 
                 Path { path in
                     path.move(to: CGPoint(x: geometry.size.width * 0.33, y: geometry.size.height * 0.65))
                     path.addLine(to: CGPoint(x: geometry.size.width * 0.07, y: geometry.size.height * 0.69))
                 }
-                .stroke(Color(red: 0.93, green: 0.8, blue: 0.16), lineWidth: 3)
+                .stroke(
+                    AppArtworkPalette.dashboardPreviewLaneMarker,
+                    lineWidth: AppLayout.dashboardPreviewLaneMarkerWidth
+                )
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: AppRadius.large, style: .continuous))
@@ -378,11 +386,14 @@ private struct DashboardPreviewPill: View {
     var dotColor: Color? = nil
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: AppLayout.dashboardPreviewPillDotSize) {
             if let dotColor = dotColor {
                 Circle()
                     .fill(dotColor)
-                    .frame(width: 6, height: 6)
+                    .frame(
+                        width: AppLayout.dashboardPreviewPillDotSize,
+                        height: AppLayout.dashboardPreviewPillDotSize
+                    )
             }
 
             Text(title)
@@ -390,9 +401,9 @@ private struct DashboardPreviewPill: View {
                 .foregroundColor(.white)
         }
         .padding(.horizontal, AppSpacing.sm)
-        .padding(.vertical, 7)
-        .background(Color.black.opacity(0.42))
-        .cornerRadius(10)
+        .padding(.vertical, AppLayout.dashboardPreviewPillVerticalPadding)
+        .background(AppArtworkPalette.dashboardPreviewPillBackground)
+        .cornerRadius(AppRadius.dashboardPreviewPill)
     }
 }
 
@@ -652,37 +663,25 @@ private struct DashboardEventArtworkView: View {
         switch artwork {
         case .vehicle:
             return LinearGradient(
-                colors: [
-                    Color(red: 0.72, green: 0.63, blue: 0.59),
-                    Color(red: 0.37, green: 0.34, blue: 0.36)
-                ],
+                colors: AppArtworkPalette.dashboardEventVehicle,
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
         case .landscape:
             return LinearGradient(
-                colors: [
-                    Color(red: 0.42, green: 0.75, blue: 0.82),
-                    Color(red: 0.23, green: 0.45, blue: 0.28)
-                ],
+                colors: AppArtworkPalette.dashboardEventLandscape,
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
         case .nightDrive:
             return LinearGradient(
-                colors: [
-                    Color(red: 0.24, green: 0.39, blue: 0.57),
-                    Color(red: 0.08, green: 0.11, blue: 0.2)
-                ],
+                colors: AppArtworkPalette.dashboardEventNightDrive,
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
         case .parking:
             return LinearGradient(
-                colors: [
-                    Color(red: 0.53, green: 0.75, blue: 0.48),
-                    Color(red: 0.21, green: 0.43, blue: 0.24)
-                ],
+                colors: AppArtworkPalette.dashboardEventParking,
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
@@ -850,10 +849,7 @@ private struct DashboardDeviceIllustration: View {
                 RoundedRectangle(cornerRadius: 26, style: .continuous)
                     .fill(
                         LinearGradient(
-                            colors: [
-                                Color(red: 0.54, green: 0.58, blue: 0.66),
-                                Color(red: 0.34, green: 0.37, blue: 0.45)
-                            ],
+                            colors: AppArtworkPalette.dashboardDeviceBody,
                             startPoint: .top,
                             endPoint: .bottom
                         )
@@ -966,7 +962,7 @@ private struct DashboardDrawerOverlay: View {
             .padding(.horizontal, AppSpacing.xl)
             .padding(.top, AppSpacing.xxxl)
             .padding(.bottom, AppSpacing.xl)
-            .frame(width: 300)
+            .frame(width: AppLayout.dashboardDrawerWidth)
             .frame(maxHeight: .infinity, alignment: .top)
             .background(AppColor.surface)
             .cornerRadius(AppRadius.xLarge)
@@ -1055,10 +1051,7 @@ private struct DashboardFeatureSheet: View {
     var body: some View {
         ZStack {
             LinearGradient(
-                colors: [
-                    Color(red: 0.97, green: 0.98, blue: 1.0),
-                    Color(red: 0.93, green: 0.95, blue: 1.0)
-                ],
+                colors: AppArtworkPalette.dashboardFeatureBackground,
                 startPoint: .top,
                 endPoint: .bottom
             )
@@ -1106,7 +1099,7 @@ private struct DashboardFeatureSheet: View {
 
             VStack(spacing: AppSpacing.lg) {
                 DashboardFeatureProgressBar(progress: splashProgress)
-                    .frame(width: 194)
+                    .frame(width: DashboardFeatureProgressBar.width)
 
                 Text(AppInfo.shortVersionText)
                     .font(.system(size: 12, weight: .medium))
@@ -1285,10 +1278,7 @@ private struct DashboardFeatureConnectIllustration: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(
                     LinearGradient(
-                        colors: [
-                            Color(red: 0.2, green: 0.23, blue: 0.28),
-                            Color(red: 0.08, green: 0.09, blue: 0.13)
-                        ],
+                        colors: AppArtworkPalette.dashboardFeatureCameraBody,
                         startPoint: .top,
                         endPoint: .bottom
                     )
@@ -1304,10 +1294,7 @@ private struct DashboardFeatureConnectIllustration: View {
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
                             .fill(
                                 LinearGradient(
-                                    colors: [
-                                        Color(red: 0.34, green: 0.47, blue: 0.58),
-                                        Color(red: 0.15, green: 0.17, blue: 0.21)
-                                    ],
+                                    colors: AppArtworkPalette.dashboardFeatureCameraScreen,
                                     startPoint: .top,
                                     endPoint: .bottom
                                 )
@@ -1323,7 +1310,7 @@ private struct DashboardFeatureConnectIllustration: View {
 
             ZStack {
                 RoundedRectangle(cornerRadius: 36, style: .continuous)
-                    .fill(Color(red: 0.97, green: 0.97, blue: 1.0))
+                    .fill(AppArtworkPalette.dashboardFeaturePhoneBody)
                     .frame(width: 126, height: 224)
                     .overlay(
                         RoundedRectangle(cornerRadius: 36, style: .continuous)
@@ -1515,6 +1502,8 @@ private struct DashboardFeaturePageIndicator: View {
 }
 
 private struct DashboardFeatureProgressBar: View {
+    static let width: CGFloat = 194
+
     let progress: CGFloat
 
     var body: some View {
@@ -1525,7 +1514,7 @@ private struct DashboardFeatureProgressBar: View {
 
             Capsule()
                 .fill(AppColor.brand)
-                .frame(width: 194 * progress, height: 5)
+                .frame(width: Self.width * progress, height: 5)
         }
     }
 }
