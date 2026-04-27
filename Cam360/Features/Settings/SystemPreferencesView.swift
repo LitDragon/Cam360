@@ -65,7 +65,7 @@ struct SystemPreferencesView: View {
                         SettingsStatusRow(
                             iconName: "info.circle",
                             title: "App Version",
-                            statusText: appVersionText
+                            statusText: store.appVersionText
                         )
 
                         SettingsNavigationRow(
@@ -97,15 +97,5 @@ struct SystemPreferencesView: View {
             get: { store.shareAnonymousLogs },
             set: { store.setShareAnonymousLogs($0) }
         )
-    }
-
-    private var appVersionText: String {
-        guard let rawVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String,
-              rawVersion.isEmpty == false,
-              rawVersion.contains("$(") == false else {
-            return "v1.0"
-        }
-
-        return "v\(rawVersion)"
     }
 }

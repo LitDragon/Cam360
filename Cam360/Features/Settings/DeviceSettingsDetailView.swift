@@ -183,7 +183,7 @@ private struct NetworkIdentityView: View {
                         SettingsInputRow(
                             title: "Network Name",
                             text: networkBinding(for: \.networkName),
-                            placeholder: "Vigilant_Dash_4K"
+                            placeholder: store.networkNamePlaceholderText
                         )
 
                         SettingsInputRow(

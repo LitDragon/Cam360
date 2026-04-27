@@ -23,6 +23,7 @@ struct DashboardView: View {
                     Group {
                         if store.hasDevices {
                             DashboardConnectedStateView(
+                                previewState: store.previewState,
                                 recentEvents: store.recentEvents,
                                 isRecording: store.isRecording,
                                 storageState: store.storageState,
@@ -53,6 +54,7 @@ struct DashboardView: View {
 
             if store.shouldShowFeatureSheet {
                 DashboardFeatureSheet(
+                    deviceState: store.featureSheetDeviceState,
                     onSkip: dismissFeatureSheet,
                     onEnterHome: completeFeatureSheet
                 )
@@ -96,7 +98,7 @@ private extension DashboardView {
     }
 
     func completeFeatureSheet() {
-        store.addMockDevicesIfNeeded()
+        store.addPlaceholderDevicesIfNeeded()
         store.dismissFeatureSheet()
     }
 }
@@ -168,6 +170,7 @@ private struct DashboardHeaderView: View {
 }
 
 private struct DashboardConnectedStateView: View {
+    let previewState: DashboardPreviewState
     let recentEvents: [DashboardRecentEvent]
     let isRecording: Bool
     let storageState: DashboardStorageState
@@ -176,7 +179,7 @@ private struct DashboardConnectedStateView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.xl) {
-            DashboardPreviewCard()
+            DashboardPreviewCard(state: previewState)
 
             DashboardCaptureControls(
                 isRecording: isRecording,
@@ -228,6 +231,8 @@ private struct DashboardConnectedStateView: View {
 }
 
 private struct DashboardPreviewCard: View {
+    let state: DashboardPreviewState
+
     var body: some View {
         ZStack(alignment: .topLeading) {
             RoundedRectangle(cornerRadius: AppRadius.large, style: .continuous)
@@ -250,10 +255,10 @@ private struct DashboardPreviewCard: View {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: AppSpacing.sm) {
                     DashboardPreviewPill(
-                        title: "LIVE",
+                        title: state.statusTitle,
                         dotColor: AppColor.danger
                     )
-                    DashboardPreviewPill(title: "4K")
+                    DashboardPreviewPill(title: state.resolutionTitle)
 
                     Spacer(minLength: 0)
                 }
@@ -263,7 +268,7 @@ private struct DashboardPreviewCard: View {
                 HStack {
                     Spacer(minLength: 0)
 
-                    Text("2023-10-27 14:32:15")
+                    Text(state.timestampText)
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.white.opacity(0.84))
                 }
@@ -953,7 +958,7 @@ private struct DashboardDrawerOverlay: View {
                 }
                 .buttonStyle(PlainButtonStyle())
 
-                Text(appVersionText)
+                Text(AppInfo.brandedVersionText)
                     .font(.system(size: 11, weight: .medium))
                     .foregroundColor(AppColor.border)
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -971,15 +976,6 @@ private struct DashboardDrawerOverlay: View {
         }
     }
 
-    private var appVersionText: String {
-        guard let rawVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String,
-              rawVersion.isEmpty == false,
-              rawVersion.contains("$(") == false else {
-            return "DASHCAM PRO v1.0"
-        }
-
-        return "DASHCAM PRO v\(rawVersion)"
-    }
 }
 
 private struct DashboardDrawerRow: View {
@@ -1049,6 +1045,7 @@ private struct DashboardFeatureSheet: View {
         case success
     }
 
+    let deviceState: DashboardFeatureDeviceState
     let onSkip: () -> Void
     let onEnterHome: () -> Void
 
@@ -1111,7 +1108,7 @@ private struct DashboardFeatureSheet: View {
                 DashboardFeatureProgressBar(progress: splashProgress)
                     .frame(width: 194)
 
-                Text(appVersionText)
+                Text(AppInfo.shortVersionText)
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(AppColor.textSecondary.opacity(0.9))
             }
@@ -1207,7 +1204,7 @@ private struct DashboardFeatureSheet: View {
                 .padding(.top, 42)
                 .padding(.horizontal, 24)
 
-            DashboardFeatureDeviceCard()
+            DashboardFeatureDeviceCard(state: deviceState)
                 .padding(.top, 24)
                 .padding(.horizontal, 34)
 
@@ -1255,15 +1252,6 @@ private struct DashboardFeatureSheet: View {
         currentPage = .success
     }
 
-    private var appVersionText: String {
-        guard let rawVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String,
-              rawVersion.isEmpty == false,
-              rawVersion.contains("$(") == false else {
-            return "v 1.0"
-        }
-
-        return "v \(rawVersion)"
-    }
 }
 
 private struct DashboardFeatureSplashIllustration: View {
@@ -1415,6 +1403,8 @@ private struct DashboardFeatureSuccessIllustration: View {
 }
 
 private struct DashboardFeatureDeviceCard: View {
+    let state: DashboardFeatureDeviceState
+
     var body: some View {
         VStack(spacing: 18) {
             Text("PAIRED DEVICE")
@@ -1427,7 +1417,7 @@ private struct DashboardFeatureDeviceCard: View {
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundColor(AppColor.brand)
 
-                Text("Vigilant Lens DL-400")
+                Text(state.pairedDeviceName)
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundColor(AppColor.textPrimary)
             }
@@ -1437,7 +1427,7 @@ private struct DashboardFeatureDeviceCard: View {
                     .fill(AppColor.brand)
                     .frame(width: 8, height: 8)
 
-                Text("Signal Strength: Optimal")
+                Text(state.connectionStatusText)
                     .font(.system(size: 15, weight: .medium))
                     .foregroundColor(AppColor.brand)
             }

@@ -67,6 +67,17 @@ struct DashboardRecentEvent: Identifiable, Equatable {
     let artwork: DashboardEventArtwork
 }
 
+struct DashboardPreviewState: Equatable {
+    let statusTitle: String
+    let resolutionTitle: String
+    let timestampText: String
+}
+
+struct DashboardFeatureDeviceState: Equatable {
+    let pairedDeviceName: String
+    let connectionStatusText: String
+}
+
 final class DashboardStore: ObservableObject {
     @Published private(set) var devices: [DashboardDeviceItem]
     @Published private(set) var selectedDeviceID: DashboardDeviceItem.ID?
@@ -105,8 +116,23 @@ final class DashboardStore: ObservableObject {
         selectedScenario?.events ?? []
     }
 
+    var previewState: DashboardPreviewState {
+        selectedScenario?.previewState ?? Self.placeholderPreviewState
+    }
+
     var storageState: DashboardStorageState {
         selectedScenario?.storageState ?? .available(Self.defaultStorageSummary)
+    }
+
+    var featureSheetDeviceState: DashboardFeatureDeviceState {
+        guard let selectedDevice = selectedDevice else {
+            return Self.placeholderFeatureSheetDeviceState
+        }
+
+        return DashboardFeatureDeviceState(
+            pairedDeviceName: selectedDevice.name,
+            connectionStatusText: Self.placeholderConnectionStatusText
+        )
     }
 
     var isRecording: Bool {
@@ -156,7 +182,7 @@ final class DashboardStore: ObservableObject {
         recordingStatesByDeviceID[selectedDeviceID] = isRecording == false
     }
 
-    func addMockDevicesIfNeeded() {
+    func addPlaceholderDevicesIfNeeded() {
         guard knownDeviceRepository.fetchKnownDevices().isEmpty else {
             refresh()
             return
@@ -195,6 +221,7 @@ final class DashboardStore: ObservableObject {
 private extension DashboardStore {
     struct DashboardDeviceScenario {
         let startsRecording: Bool
+        let previewState: DashboardPreviewState
         let storageState: DashboardStorageState
         let events: [DashboardRecentEvent]
     }
@@ -232,9 +259,23 @@ private extension DashboardStore {
         usageFraction: 0.58
     )
 
+    static let placeholderPreviewState = DashboardPreviewState(
+        statusTitle: "LIVE",
+        resolutionTitle: "4K",
+        timestampText: "2023-10-27 14:32:15"
+    )
+
+    static let placeholderConnectionStatusText = "Signal Strength: Optimal"
+
+    static let placeholderFeatureSheetDeviceState = DashboardFeatureDeviceState(
+        pairedDeviceName: placeholderDevices.first?.name ?? "Placeholder Dashcam",
+        connectionStatusText: placeholderConnectionStatusText
+    )
+
     static let placeholderScenarios: [DashboardDeviceScenario] = [
         DashboardDeviceScenario(
             startsRecording: false,
+            previewState: placeholderPreviewState,
             storageState: .available(defaultStorageSummary),
             events: [
                 DashboardRecentEvent(
@@ -273,6 +314,7 @@ private extension DashboardStore {
         ),
         DashboardDeviceScenario(
             startsRecording: true,
+            previewState: placeholderPreviewState,
             storageState: .available(defaultStorageSummary),
             events: [
                 DashboardRecentEvent(
@@ -303,11 +345,13 @@ private extension DashboardStore {
         ),
         DashboardDeviceScenario(
             startsRecording: true,
+            previewState: placeholderPreviewState,
             storageState: .available(defaultStorageSummary),
             events: []
         ),
         DashboardDeviceScenario(
             startsRecording: true,
+            previewState: placeholderPreviewState,
             storageState: .unavailable(
                 title: "No SD card detected",
                 message: "Insert an SD card to store clips, or switch to cloud storage to browse history."

@@ -10,14 +10,16 @@ final class SettingsStore: ObservableObject {
     @Published private(set) var recordingSettings = RecordingSettingsState.defaultValue
     @Published private(set) var storagePolicy = StoragePolicyState.defaultValue
     @Published private(set) var watermarkConfiguration = WatermarkConfigurationState.defaultValue
-    @Published private(set) var networkIdentity = NetworkIdentityState.defaultValue(networkName: "Vigilant_Dash_4K")
+    @Published private(set) var networkIdentity = NetworkIdentityState.defaultValue(
+        networkName: SettingsPlaceholder.connectionName
+    )
     @Published private(set) var devicePreferences = DevicePreferencesState.defaultValue(
-        deviceName: "DriveCam X Pro",
-        connectionName: "Vigilant_Dash_4K"
+        deviceName: SettingsPlaceholder.deviceName,
+        connectionName: SettingsPlaceholder.connectionName
     )
     @Published private(set) var safetySettings = SafetySettingsState.defaultValue
     @Published private(set) var firmwareUpdateStage: FirmwareUpdateStage = .available
-    @Published private(set) var renameDeviceDraft = "DriveCam X Pro"
+    @Published private(set) var renameDeviceDraft = SettingsPlaceholder.deviceName
 
     private let router: AppRouter
     private let knownDeviceRepository: KnownDeviceRepository
@@ -40,6 +42,14 @@ final class SettingsStore: ObservableObject {
         hasCompletedOnboarding = appPreferenceStore.hasCompletedOnboarding
         shareAnonymousLogs = appPreferenceStore.shareAnonymousLogs
         notificationPreferences = appPreferenceStore.notificationPreferences
+    }
+
+    var appVersionText: String {
+        AppInfo.shortVersionText
+    }
+
+    var networkNamePlaceholderText: String {
+        SettingsPlaceholder.connectionName
     }
 
     func resetShell() {
@@ -158,11 +168,7 @@ final class SettingsStore: ObservableObject {
     }
 
     func startFirmwareUpdate() {
-        firmwareUpdateStage = .downloading(
-            progress: 0.45,
-            downloadedSize: "1.3 MB",
-            remainingTime: "2 mins left"
-        )
+        firmwareUpdateStage = SettingsPlaceholder.firmwareUpdateStage
     }
 
     func markFirmwareUpdateFailed() {
@@ -190,8 +196,8 @@ final class SettingsStore: ObservableObject {
     }
 
     private func seedDeviceState(from device: KnownDeviceSummary?) {
-        let deviceName = device?.name ?? "DriveCam X Pro"
-        let connectionName = device?.hotspotSSID ?? "Vigilant_Dash_4K"
+        let deviceName = device?.name ?? SettingsPlaceholder.deviceName
+        let connectionName = device?.hotspotSSID ?? SettingsPlaceholder.connectionName
         recordingSettings = .defaultValue
         storagePolicy = .defaultValue
         watermarkConfiguration = .defaultValue
@@ -204,4 +210,14 @@ final class SettingsStore: ObservableObject {
         firmwareUpdateStage = .available
         renameDeviceDraft = deviceName
     }
+}
+
+private enum SettingsPlaceholder {
+    static let deviceName = "DriveCam X Pro"
+    static let connectionName = "Vigilant_Dash_4K"
+    static let firmwareUpdateStage = FirmwareUpdateStage.downloading(
+        progress: 0.45,
+        downloadedSize: "1.3 MB",
+        remainingTime: "2 mins left"
+    )
 }
