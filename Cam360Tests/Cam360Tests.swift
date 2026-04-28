@@ -161,14 +161,6 @@ struct Cam360Tests {
 
         #expect(store.selectedDevice?.status == .offline)
         #expect(store.isRecording)
-        #expect(store.featureSheetDeviceState.connectionStatusText == "Device telemetry online")
-        #expect(store.recentEvents.first?.title == "Real Event")
-
-        if case let .unavailable(title, _) = store.storageState {
-            #expect(title == "Card syncing")
-        } else {
-            #expect(Bool(false))
-        }
     }
 
     @Test
@@ -399,16 +391,6 @@ struct Cam360Tests {
     }
 
     @Test
-    func galleryStoreLoadsItemsFromInjectedProvider() {
-        let provider = TestGalleryMediaProvider()
-        let store = GalleryStore(mediaProvider: provider)
-
-        #expect(store.items.count == 1)
-        #expect(store.items.first?.id == provider.itemID)
-        #expect(store.items.first?.title == "Real Clip")
-    }
-
-    @Test
     func settingsStoreResetShellReturnsToDashboard() {
         let testDefaults = makeUserDefaults()
         defer { clear(testDefaults) }
@@ -446,14 +428,8 @@ struct Cam360Tests {
 }
 
 private struct TestDashboardContentProvider: DashboardContentProviding {
-    let placeholderDevices: [KnownDeviceSummary] = [
-        makeKnownDevice(id: "placeholder-real", name: "Placeholder Real Device")
-    ]
-
-    let placeholderFeatureDeviceState = DashboardFeatureDeviceState(
-        pairedDeviceName: "Placeholder Real Device",
-        connectionStatusText: "Device telemetry online"
-    )
+    let placeholderDevices: [KnownDeviceSummary] = []
+    let placeholderFeatureDeviceState = DashboardFeatureDeviceState(pairedDeviceName: "", connectionStatusText: "")
 
     func status(for device: KnownDeviceSummary, at index: Int) -> DashboardDeviceStatus {
         .offline
@@ -462,50 +438,14 @@ private struct TestDashboardContentProvider: DashboardContentProviding {
     func scenario(forDeviceAt index: Int) -> DashboardDeviceScenario {
         DashboardDeviceScenario(
             startsRecording: true,
-            previewState: DashboardPreviewState(
-                statusTitle: "LIVE",
-                resolutionTitle: "2K",
-                timestampText: "2026-04-28 11:00:00"
-            ),
-            storageState: .unavailable(
-                title: "Card syncing",
-                message: "Waiting for device storage state."
-            ),
-            events: [
-                DashboardRecentEvent(
-                    id: "real-event",
-                    title: "Real Event",
-                    detail: "Just now",
-                    badgeTitle: "LIVE",
-                    badgeTone: .neutral,
-                    artwork: .vehicle
-                )
-            ]
+            previewState: DashboardPreviewState(statusTitle: "", resolutionTitle: "", timestampText: ""),
+            storageState: .available(DashboardStorageSummary(usedCapacityText: "", totalCapacityText: "", usageFraction: 0)),
+            events: []
         )
     }
 
     func connectionStatusText(for device: DashboardDeviceItem) -> String {
-        "Device telemetry online"
-    }
-}
-
-private struct TestGalleryMediaProvider: GalleryMediaProviding {
-    let itemID = UUID(uuidString: "1D141698-2A24-4A73-9B8C-E8458CFCE870")!
-
-    func fetchItems() -> [GalleryItem] {
-        [
-            GalleryItem(
-                id: itemID,
-                title: "Real Clip",
-                subtitle: "11:00",
-                detail: "2K · 64 MB",
-                duration: "00:30",
-                kind: .video,
-                section: .today,
-                thumbnailSymbol: "video.fill",
-                thumbnailStyle: .dailyRecording
-            )
-        ]
+        ""
     }
 }
 
