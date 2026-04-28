@@ -4,7 +4,9 @@
 
 ## 当前代码对齐结果
 
-- 当前 iOS 工程仍未实现真实 AP 连接、TCP 控制通道、HTTP 资源下载或媒体预览链路。
+- `Core/DeviceProtocol` 已实现控制协议基础层，覆盖 JSON message/value、`\n` 分帧、请求响应匹配、事件路由、握手命令计划和 Network.framework transport。
+- 当前 iOS 工程仍未实现真实 AP 连接、HTTP 资源下载或媒体预览链路。
+- `DeviceProtocol` 当前尚未接入 `DeviceSession`、`DeviceOnboarding` 或页面状态。
 - `DeviceSession` 已有状态机骨架，后续真实连接、握手、恢复和失败语义应先收敛到 `DeviceSession`。
 - `LivePreview`、`Playback`、`Downloads`、`Settings` 当前仍按 M0 占位或本地状态闭环，不直接持有底层连接。
 

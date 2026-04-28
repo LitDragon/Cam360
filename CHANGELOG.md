@@ -6,6 +6,8 @@
 
 - 新增 `.monkeycode/specs/device-protocol/README.md`，从外部资料中收敛 iOS 可用的设备控制协议、握手流程、错误码、P0 Topic 和原始资料入口。
 - 根 `README.md` 增加设备协议规格入口，`DeviceSession` 规格改为引用 `device-protocol` 作为真实协议事实源。
+- 新增 `Core/DeviceProtocol` 基础层，包含协议值模型、消息模型、JSON 编解码、`\n` 分帧、请求响应匹配、事件路由、握手命令计划和 Network.framework transport。
+- 新增 `DeviceProtocolTests`，覆盖兼容解析、半包/粘包、非法帧后续处理、`reply_to` 匹配、事件路由和 iOS 握手命令顺序。
 
 ## 2026-04-27
 

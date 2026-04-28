@@ -4,21 +4,21 @@
 
 ## 当前任务
 
-1. 按单页设计图继续细化 `Settings`，优先 `Storage Policy`、`Safety`、`Device Settings`、`Watermark`、`Firmware Update`。
-2. 收敛 `SystemPreferences` 和 `DeviceSettings` 的二级返回栈，避免当前全局 route 直接回根页。
-3. 明确下一个真实能力切片，决定哪些页面继续保留本地占位，哪些开始接 `DeviceSession` 或真实能力。
+1. 将 `Core/DeviceProtocol` 接入 `DeviceSession` 握手流程，继续保持 UI 结构不变。
+2. 为握手成功、设备错误、超时和断开补 `DeviceSession` 级测试。
+3. 握手稳定后，只把 Dashboard/Settings 的只读设备状态切到真实状态源。
 
 ## 下一步计划
 
-1. 先按单页图修正 `Settings` 高歧义页面的文案、间距、状态和控件细节。
-2. 再处理设置二级返回栈，确认子页面返回路径和 tab 可见性一致。
-3. 最后只选一个真实能力切片继续推进，避免同时展开 onboarding、session 和预览链路。
+1. 先新增 `DeviceSession` 的协议客户端依赖入口和握手 orchestration。
+2. 再用 fake transport 覆盖正常握手、`errno` 失败、响应超时和断开。
+3. 最后再决定 `DeviceOnboarding` 何时从本地自动推进切到真实握手结果。
 
 ## 最近完成
 
+- `2026-04-28`：新增 `Core/DeviceProtocol` 基础层和测试，覆盖 JSON 编解码、`\n` 分帧、`reply_to` 响应匹配、事件路由、iOS 握手命令顺序和 Network.framework transport。
 - `2026-04-28`：新增 `device-protocol` 规格，收敛外部资料中 iOS 可用的控制通道、握手、错误码、Topic 和模拟器参考入口。
 - `2026-04-27`：修复代码审查发现的 4 个状态同步/权限口径问题：Gallery 状态迁入共享 Store，设置设备态刷新与重命名回写仓库，Photos 权限改为 add-only 口径。
-- `2026-04-25`：首页首次安装提示改成 3 页全屏引导 flow，展示期间隐藏底部 tab，成功进入首页时补本地占位设备。
 
 ## 待决事项
 

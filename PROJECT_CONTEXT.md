@@ -23,6 +23,7 @@
 - `DeviceOnboarding` 已接入首页 `Add Device` 的 5 步静态流程，成功页会回写本地占位设备；`Settings` 已扩展为设备设置 M0 骨架，包含首页、一级子页、设备内嵌设置流转和本地占位状态。
 - `LivePreview`、`Playback`、`Downloads` 仍是占位实现。
 - `Core/Device/DeviceSession.swift` 已有本地状态机骨架，但未接真实设备链路。
+- `Core/DeviceProtocol` 已有 TCP 控制协议基础层，覆盖 JSON message/value、`\n` 分帧、请求响应匹配、事件路由、握手命令计划和 Network.framework transport；当前尚未接入 `DeviceSession` 或 UI。
 - 当前测试 target 只有 `Cam360Tests`。
 
 ## 技术基线
