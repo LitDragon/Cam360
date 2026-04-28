@@ -18,6 +18,7 @@ Cam360 采用文档优先的开发方式：当前状态、已实现能力、下�
 
 - [.monkeycode/docs/Cam360技术架构文档.md](.monkeycode/docs/Cam360技术架构文档.md)：架构边界、路由与依赖注入、M1+ 演进顺序
 - [.monkeycode/specs/settings-components/README.md](.monkeycode/specs/settings-components/README.md)：设置相关规格
+- [.monkeycode/specs/device-protocol/README.md](.monkeycode/specs/device-protocol/README.md)：设备协议规格，收敛 iOS 可用的控制通道、握手、错误码与 Topic 口径
 - [.monkeycode/specs/device-onboarding/README.md](.monkeycode/specs/device-onboarding/README.md)：设备接入规格
 - [.monkeycode/specs/device-session/README.md](.monkeycode/specs/device-session/README.md)：`DeviceSession` 规格
 - [.monkeycode/specs/live-preview/README.md](.monkeycode/specs/live-preview/README.md)：实时预览规格

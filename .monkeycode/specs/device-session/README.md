@@ -1,6 +1,6 @@
 # DeviceSession 规格
 
-本文件只记录当前状态机骨架和未来真实接入时的边界。
+本文件只记录当前状态机骨架和未来真实接入时的边界。真实设备协议事实以 [`device-protocol`](../device-protocol/README.md) 为准。
 
 ## 当前代码对齐结果
 
@@ -20,5 +20,6 @@
 ## 后续接入约束
 
 - `DeviceSession` 应作为统一设备状态源，Feature 只消费状态，不各自维护连接生命周期。
+- 真实握手、错误码、重连和 Topic 路由先按 `device-protocol` 收敛到会话层，再接具体 Feature。
 - 新事件或新能力先补 `State`、`Event`、transition，再接底层实现。
 - 失败、恢复、断开语义继续保持显式枚举，避免退回到松散字符串状态。

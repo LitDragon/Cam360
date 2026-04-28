@@ -2,6 +2,11 @@
 
 本文件记录仓库中已经实际发生的改动历史。按日期保留结果和边界，不展开过程细节或验证信息。
 
+## 2026-04-28
+
+- 新增 `.monkeycode/specs/device-protocol/README.md`，从外部资料中收敛 iOS 可用的设备控制协议、握手流程、错误码、P0 Topic 和原始资料入口。
+- 根 `README.md` 增加设备协议规格入口，`DeviceSession` 规格改为引用 `device-protocol` 作为真实协议事实源。
+
 ## 2026-04-27
 
 - `Gallery` 状态从 View 本地 `@State` 收敛到 `GalleryStore`，并由 `AppContainer` 下发，避免切 tab 后删除、搜索和选择态被重置。
