@@ -10,7 +10,11 @@ final class GalleryStore: ObservableObject {
     @Published var searchText: String
     @Published private(set) var items: [GalleryItem]
 
-    init(items: [GalleryItem] = GalleryItem.sampleData) {
+    convenience init(mediaProvider: GalleryMediaProviding = GallerySampleMediaProvider()) {
+        self.init(items: mediaProvider.fetchItems())
+    }
+
+    init(items: [GalleryItem]) {
         selectedFilter = .all
         isSelectionMode = false
         selectedIDs = []

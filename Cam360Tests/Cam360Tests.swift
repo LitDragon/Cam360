@@ -143,6 +143,35 @@ struct Cam360Tests {
     }
 
     @Test
+    func dashboardStoreUsesInjectedContentProvider() {
+        let testDefaults = makeUserDefaults()
+        defer { clear(testDefaults) }
+
+        let repository = UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults)
+        let preferenceStore = UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults)
+        repository.store([
+            makeKnownDevice(id: "cam360-real-source", name: "Road Camera")
+        ])
+
+        let store = DashboardStore(
+            knownDeviceRepository: repository,
+            appPreferenceStore: preferenceStore,
+            contentProvider: TestDashboardContentProvider()
+        )
+
+        #expect(store.selectedDevice?.status == .offline)
+        #expect(store.isRecording)
+        #expect(store.featureSheetDeviceState.connectionStatusText == "Device telemetry online")
+        #expect(store.recentEvents.first?.title == "Real Event")
+
+        if case let .unavailable(title, _) = store.storageState {
+            #expect(title == "Card syncing")
+        } else {
+            #expect(Bool(false))
+        }
+    }
+
+    @Test
     func deviceOnboardingStoreHappyPathPersistsDeviceAndReturnsToDashboard() {
         let testDefaults = makeUserDefaults()
         defer { clear(testDefaults) }
@@ -357,7 +386,7 @@ struct Cam360Tests {
 
     @Test
     func galleryStoreKeepsDeletedItemsInSharedState() {
-        let items = Array(GalleryItem.sampleData.prefix(2))
+        let items = Array(GallerySampleMediaProvider().fetchItems().prefix(2))
         let store = GalleryStore(items: items)
         let deletedItem = items[0]
 
@@ -367,6 +396,16 @@ struct Cam360Tests {
         #expect(store.items.contains(where: { $0.id == deletedItem.id }) == false)
         #expect(store.items.count == 1)
         #expect(store.activeMenuItem == nil)
+    }
+
+    @Test
+    func galleryStoreLoadsItemsFromInjectedProvider() {
+        let provider = TestGalleryMediaProvider()
+        let store = GalleryStore(mediaProvider: provider)
+
+        #expect(store.items.count == 1)
+        #expect(store.items.first?.id == provider.itemID)
+        #expect(store.items.first?.title == "Real Clip")
     }
 
     @Test
@@ -403,6 +442,70 @@ struct Cam360Tests {
 
     private func clear(_ testDefaults: TestDefaults) {
         testDefaults.userDefaults.removePersistentDomain(forName: testDefaults.suiteName)
+    }
+}
+
+private struct TestDashboardContentProvider: DashboardContentProviding {
+    let placeholderDevices: [KnownDeviceSummary] = [
+        makeKnownDevice(id: "placeholder-real", name: "Placeholder Real Device")
+    ]
+
+    let placeholderFeatureDeviceState = DashboardFeatureDeviceState(
+        pairedDeviceName: "Placeholder Real Device",
+        connectionStatusText: "Device telemetry online"
+    )
+
+    func status(for device: KnownDeviceSummary, at index: Int) -> DashboardDeviceStatus {
+        .offline
+    }
+
+    func scenario(forDeviceAt index: Int) -> DashboardDeviceScenario {
+        DashboardDeviceScenario(
+            startsRecording: true,
+            previewState: DashboardPreviewState(
+                statusTitle: "LIVE",
+                resolutionTitle: "2K",
+                timestampText: "2026-04-28 11:00:00"
+            ),
+            storageState: .unavailable(
+                title: "Card syncing",
+                message: "Waiting for device storage state."
+            ),
+            events: [
+                DashboardRecentEvent(
+                    id: "real-event",
+                    title: "Real Event",
+                    detail: "Just now",
+                    badgeTitle: "LIVE",
+                    badgeTone: .neutral,
+                    artwork: .vehicle
+                )
+            ]
+        )
+    }
+
+    func connectionStatusText(for device: DashboardDeviceItem) -> String {
+        "Device telemetry online"
+    }
+}
+
+private struct TestGalleryMediaProvider: GalleryMediaProviding {
+    let itemID = UUID(uuidString: "1D141698-2A24-4A73-9B8C-E8458CFCE870")!
+
+    func fetchItems() -> [GalleryItem] {
+        [
+            GalleryItem(
+                id: itemID,
+                title: "Real Clip",
+                subtitle: "11:00",
+                detail: "2K · 64 MB",
+                duration: "00:30",
+                kind: .video,
+                section: .today,
+                thumbnailSymbol: "video.fill",
+                thumbnailStyle: .dailyRecording
+            )
+        ]
     }
 }
 

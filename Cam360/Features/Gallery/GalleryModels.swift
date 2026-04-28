@@ -86,7 +86,7 @@ struct GallerySectionModel: Identifiable {
 }
 
 struct GalleryItem: Identifiable {
-    let id = UUID()
+    let id: UUID
     let title: String
     let subtitle: String
     let detail: String
@@ -95,6 +95,28 @@ struct GalleryItem: Identifiable {
     let section: GallerySectionKind
     let thumbnailSymbol: String
     let thumbnailStyle: GalleryArtworkStyle
+
+    init(
+        id: UUID = UUID(),
+        title: String,
+        subtitle: String,
+        detail: String,
+        duration: String?,
+        kind: GalleryMediaKind,
+        section: GallerySectionKind,
+        thumbnailSymbol: String,
+        thumbnailStyle: GalleryArtworkStyle
+    ) {
+        self.id = id
+        self.title = title
+        self.subtitle = subtitle
+        self.detail = detail
+        self.duration = duration
+        self.kind = kind
+        self.section = section
+        self.thumbnailSymbol = thumbnailSymbol
+        self.thumbnailStyle = thumbnailStyle
+    }
 
     var badgeTitle: String? {
         kind == .event ? "紧急事件" : nil
@@ -110,8 +132,20 @@ struct GalleryItem: Identifiable {
             subtitle.lowercased().contains(normalizedKeyword) ||
             detail.lowercased().contains(normalizedKeyword)
     }
+}
 
-    static let sampleData: [GalleryItem] = [
+protocol GalleryMediaProviding {
+    func fetchItems() -> [GalleryItem]
+}
+
+struct GallerySampleMediaProvider: GalleryMediaProviding {
+    func fetchItems() -> [GalleryItem] {
+        Self.items
+    }
+}
+
+private extension GallerySampleMediaProvider {
+    static let items: [GalleryItem] = [
         GalleryItem(
             title: "紧急刹车",
             subtitle: "10:15",

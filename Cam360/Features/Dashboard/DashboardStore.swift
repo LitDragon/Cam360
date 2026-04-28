@@ -78,6 +78,22 @@ struct DashboardFeatureDeviceState: Equatable {
     let connectionStatusText: String
 }
 
+struct DashboardDeviceScenario: Equatable {
+    let startsRecording: Bool
+    let previewState: DashboardPreviewState
+    let storageState: DashboardStorageState
+    let events: [DashboardRecentEvent]
+}
+
+protocol DashboardContentProviding {
+    var placeholderDevices: [KnownDeviceSummary] { get }
+    var placeholderFeatureDeviceState: DashboardFeatureDeviceState { get }
+
+    func status(for device: KnownDeviceSummary, at index: Int) -> DashboardDeviceStatus
+    func scenario(forDeviceAt index: Int) -> DashboardDeviceScenario
+    func connectionStatusText(for device: DashboardDeviceItem) -> String
+}
+
 final class DashboardStore: ObservableObject {
     @Published private(set) var devices: [DashboardDeviceItem]
     @Published private(set) var selectedDeviceID: DashboardDeviceItem.ID?
@@ -86,13 +102,16 @@ final class DashboardStore: ObservableObject {
 
     private let knownDeviceRepository: KnownDeviceRepository
     private let appPreferenceStore: AppPreferenceStore
+    private let contentProvider: DashboardContentProviding
 
     init(
         knownDeviceRepository: KnownDeviceRepository,
-        appPreferenceStore: AppPreferenceStore
+        appPreferenceStore: AppPreferenceStore,
+        contentProvider: DashboardContentProviding = PlaceholderDashboardContentProvider()
     ) {
         self.knownDeviceRepository = knownDeviceRepository
         self.appPreferenceStore = appPreferenceStore
+        self.contentProvider = contentProvider
         devices = []
         selectedDeviceID = nil
         shouldShowFeatureSheet = false
@@ -117,21 +136,21 @@ final class DashboardStore: ObservableObject {
     }
 
     var previewState: DashboardPreviewState {
-        selectedScenario?.previewState ?? Self.placeholderPreviewState
+        selectedScenario?.previewState ?? contentProvider.scenario(forDeviceAt: 0).previewState
     }
 
     var storageState: DashboardStorageState {
-        selectedScenario?.storageState ?? .available(Self.defaultStorageSummary)
+        selectedScenario?.storageState ?? contentProvider.scenario(forDeviceAt: 0).storageState
     }
 
     var featureSheetDeviceState: DashboardFeatureDeviceState {
         guard let selectedDevice = selectedDevice else {
-            return Self.placeholderFeatureSheetDeviceState
+            return contentProvider.placeholderFeatureDeviceState
         }
 
         return DashboardFeatureDeviceState(
             pairedDeviceName: selectedDevice.name,
-            connectionStatusText: Self.placeholderConnectionStatusText
+            connectionStatusText: contentProvider.connectionStatusText(for: selectedDevice)
         )
     }
 
@@ -149,14 +168,14 @@ final class DashboardStore: ObservableObject {
             DashboardDeviceItem(
                 id: device.id,
                 name: device.name,
-                status: status(for: index),
+                status: contentProvider.status(for: device, at: index),
                 hotspotSSID: device.hotspotSSID
             )
         }
 
         devices = items
         recordingStatesByDeviceID = items.enumerated().reduce(into: [:]) { partialResult, item in
-            let defaultValue = scenario(forIndex: item.offset).startsRecording
+            let defaultValue = contentProvider.scenario(forDeviceAt: item.offset).startsRecording
             partialResult[item.element.id] = currentRecordingStates[item.element.id] ?? defaultValue
         }
 
@@ -188,7 +207,7 @@ final class DashboardStore: ObservableObject {
             return
         }
 
-        knownDeviceRepository.store(Self.placeholderDevices)
+        knownDeviceRepository.store(contentProvider.placeholderDevices)
         refresh()
     }
 
@@ -197,7 +216,29 @@ final class DashboardStore: ObservableObject {
         shouldShowFeatureSheet = false
     }
 
-    private func status(for index: Int) -> DashboardDeviceStatus {
+    private var selectedScenario: DashboardDeviceScenario? {
+        guard let selectedDeviceID = selectedDeviceID,
+              let selectedIndex = devices.firstIndex(where: { $0.id == selectedDeviceID }) else {
+            return nil
+        }
+
+        return contentProvider.scenario(forDeviceAt: selectedIndex)
+    }
+}
+
+struct PlaceholderDashboardContentProvider: DashboardContentProviding {
+    var placeholderDevices: [KnownDeviceSummary] {
+        Self.placeholderDevices
+    }
+
+    var placeholderFeatureDeviceState: DashboardFeatureDeviceState {
+        DashboardFeatureDeviceState(
+            pairedDeviceName: Self.placeholderDevices.first?.name ?? "Placeholder Dashcam",
+            connectionStatusText: Self.placeholderConnectionStatusText
+        )
+    }
+
+    func status(for device: KnownDeviceSummary, at index: Int) -> DashboardDeviceStatus {
         switch index {
         case 0:
             return .connected
@@ -208,24 +249,17 @@ final class DashboardStore: ObservableObject {
         }
     }
 
-    private var selectedScenario: DashboardDeviceScenario? {
-        guard let selectedDeviceID = selectedDeviceID,
-              let selectedIndex = devices.firstIndex(where: { $0.id == selectedDeviceID }) else {
-            return nil
-        }
+    func scenario(forDeviceAt index: Int) -> DashboardDeviceScenario {
+        let normalizedIndex = index % Self.placeholderScenarios.count
+        return Self.placeholderScenarios[normalizedIndex]
+    }
 
-        return scenario(forIndex: selectedIndex)
+    func connectionStatusText(for device: DashboardDeviceItem) -> String {
+        Self.placeholderConnectionStatusText
     }
 }
 
-private extension DashboardStore {
-    struct DashboardDeviceScenario {
-        let startsRecording: Bool
-        let previewState: DashboardPreviewState
-        let storageState: DashboardStorageState
-        let events: [DashboardRecentEvent]
-    }
-
+private extension PlaceholderDashboardContentProvider {
     static let placeholderDevices: [KnownDeviceSummary] = [
         KnownDeviceSummary(
             id: "dashboard-device-main",
@@ -266,11 +300,6 @@ private extension DashboardStore {
     )
 
     static let placeholderConnectionStatusText = "Signal Strength: Optimal"
-
-    static let placeholderFeatureSheetDeviceState = DashboardFeatureDeviceState(
-        pairedDeviceName: placeholderDevices.first?.name ?? "Placeholder Dashcam",
-        connectionStatusText: placeholderConnectionStatusText
-    )
 
     static let placeholderScenarios: [DashboardDeviceScenario] = [
         DashboardDeviceScenario(
@@ -359,9 +388,4 @@ private extension DashboardStore {
             events: []
         )
     ]
-
-    func scenario(forIndex index: Int) -> DashboardDeviceScenario {
-        let normalizedIndex = index % Self.placeholderScenarios.count
-        return Self.placeholderScenarios[normalizedIndex]
-    }
 }

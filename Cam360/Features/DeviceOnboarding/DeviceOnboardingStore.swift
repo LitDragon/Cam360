@@ -24,11 +24,11 @@ final class DeviceOnboardingStore: ObservableObject {
         self.knownDeviceRepository = knownDeviceRepository
         self.appPreferenceStore = appPreferenceStore
         route = .introduction
-        networkName = "MyHome_WiFi_2.4G"
-        password = "securecam360"
+        networkName = DeviceOnboardingPlaceholder.networkName
+        password = DeviceOnboardingPlaceholder.password
         isPasswordVisible = false
-        addedDeviceName = "Vigilant DL-400 Pro"
-        pendingDeviceName = "Vigilant DL-400 Pro"
+        addedDeviceName = DeviceOnboardingPlaceholder.deviceName
+        pendingDeviceName = DeviceOnboardingPlaceholder.deviceName
     }
 
     deinit {
@@ -43,7 +43,7 @@ final class DeviceOnboardingStore: ObservableObject {
         cancelScheduledTransition()
         pendingDeviceName = nextDeviceName()
         route = .searching
-        scheduleTransition(after: 1.2) { [weak self] in
+        scheduleTransition(after: DeviceOnboardingTiming.searchToWiFiDetailsDelay) { [weak self] in
             self?.advanceFromSearching()
         }
     }
@@ -63,7 +63,7 @@ final class DeviceOnboardingStore: ObservableObject {
 
         cancelScheduledTransition()
         route = .connecting
-        scheduleTransition(after: 1.4) { [weak self] in
+        scheduleTransition(after: DeviceOnboardingTiming.connectingToSuccessDelay) { [weak self] in
             self?.completeConnection()
         }
     }
@@ -141,7 +141,7 @@ final class DeviceOnboardingStore: ObservableObject {
         let device = KnownDeviceSummary(
             id: "cam360-device-\(nextIndex)",
             name: nextDeviceName(for: nextIndex),
-            hotspotSSID: "Cam360_DL400_\(nextIndex)",
+            hotspotSSID: "\(DeviceOnboardingPlaceholder.hotspotSSIDPrefix)\(nextIndex)",
             lastConnectedAt: Date()
         )
         devices.append(device)
@@ -154,6 +154,18 @@ final class DeviceOnboardingStore: ObservableObject {
     }
 
     private func nextDeviceName(for index: Int) -> String {
-        index == 1 ? "Vigilant DL-400 Pro" : "Vigilant DL-400 Pro \(index)"
+        index == 1 ? DeviceOnboardingPlaceholder.deviceName : "\(DeviceOnboardingPlaceholder.deviceName) \(index)"
     }
+}
+
+private enum DeviceOnboardingPlaceholder {
+    static let networkName = "MyHome_WiFi_2.4G"
+    static let password = "password123"
+    static let deviceName = "Vigilant DL-400 Pro"
+    static let hotspotSSIDPrefix = "Cam360_DL400_"
+}
+
+private enum DeviceOnboardingTiming {
+    static let searchToWiFiDetailsDelay: TimeInterval = 1.2
+    static let connectingToSuccessDelay: TimeInterval = 1.4
 }
