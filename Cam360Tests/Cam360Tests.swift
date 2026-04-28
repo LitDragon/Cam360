@@ -199,6 +199,57 @@ struct Cam360Tests {
     }
 
     @Test
+    func deviceOnboardingRequiresPasswordBeforeConnecting() {
+        let testDefaults = makeUserDefaults()
+        defer { clear(testDefaults) }
+
+        let repository = UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults)
+        let preferenceStore = UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults)
+        let router = AppRouter(route: .main(.dashboard))
+        let store = DeviceOnboardingStore(
+            router: router,
+            knownDeviceRepository: repository,
+            appPreferenceStore: preferenceStore
+        )
+
+        store.startSearch()
+        store.advanceFromSearching()
+        store.password = "  "
+        store.continueFromWiFiDetails()
+
+        #expect(store.route == .wifiDetails)
+        #expect(repository.fetchKnownDevices().isEmpty)
+        #expect(preferenceStore.hasCompletedOnboarding == false)
+    }
+
+    @Test
+    func deviceOnboardingCancelConnectionIgnoresStaleCompletion() {
+        let testDefaults = makeUserDefaults()
+        defer { clear(testDefaults) }
+
+        let repository = UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults)
+        let preferenceStore = UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults)
+        let router = AppRouter(route: .main(.dashboard))
+        let store = DeviceOnboardingStore(
+            router: router,
+            knownDeviceRepository: repository,
+            appPreferenceStore: preferenceStore
+        )
+
+        store.startSearch()
+        store.advanceFromSearching()
+        store.continueFromWiFiDetails()
+        #expect(store.route == .connecting)
+
+        store.cancelConnection()
+        store.completeConnection()
+
+        #expect(store.route == .wifiDetails)
+        #expect(repository.fetchKnownDevices().isEmpty)
+        #expect(preferenceStore.hasCompletedOnboarding == false)
+    }
+
+    @Test
     func userDefaultsStorageRoundTrips() {
         let testDefaults = makeUserDefaults()
         defer { clear(testDefaults) }

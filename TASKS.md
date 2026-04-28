@@ -16,9 +16,9 @@
 
 ## 最近完成
 
+- `2026-04-28`：补充接入真实握手前的测试护栏，覆盖 `DeviceOnboardingStore` 密码校验、取消连接后的旧完成回调忽略，以及 `DeviceSession` reset 后过期握手结果忽略。
 - `2026-04-28`：`DeviceSession` 已接入 `DeviceProtocolClient` 握手编排，并补成功、设备 errno、请求超时和握手中断开测试。
 - `2026-04-28`：新增 `Core/DeviceProtocol` 基础层和测试，覆盖 JSON 编解码、`\n` 分帧、`reply_to` 响应匹配、事件路由、iOS 握手命令顺序和 Network.framework transport。
-- `2026-04-28`：新增 `device-protocol` 规格，收敛外部资料中 iOS 可用的控制通道、握手、错误码、Topic 和模拟器参考入口。
 
 ## 待决事项
 

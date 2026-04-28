@@ -10,6 +10,7 @@
 - 新增 `DeviceProtocolTests`，覆盖兼容解析、半包/粘包、非法帧后续处理、`reply_to` 匹配、事件路由和 iOS 握手命令顺序。
 - `DeviceSession` 新增协议客户端依赖入口和握手编排，成功后从协议响应生成 `DeviceInfo`，设备 errno、请求超时和握手中断开会回落到显式失败态；UI、`DeviceOnboarding`、Dashboard 和 Settings 仍未接入真实链路。
 - 新增 `DeviceSessionProtocolTests`，覆盖握手成功、设备 errno、响应超时和握手中断开。
+- 补充接入真实握手前的测试护栏，覆盖 `DeviceOnboardingStore` 密码校验、取消连接后的旧完成回调忽略，以及 `DeviceSession` reset 后过期握手结果忽略。
 
 ## 2026-04-27
 

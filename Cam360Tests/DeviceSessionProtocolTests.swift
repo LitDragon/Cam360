@@ -67,6 +67,26 @@ struct DeviceSessionProtocolTests {
 
         #expect(await waitForSessionState { failedError(from: session.state) == .connectionLost })
     }
+
+    @Test
+    func protocolHandshakeResultAfterResetIsIgnored() async {
+        let transport = SessionFakeDeviceProtocolTransport()
+        let session = makeSession(transport: transport, handshakeCommandTimeout: 1)
+        transport.responseProvider = { _ in nil }
+
+        startHandshake(session)
+        #expect(await waitForSessionState { transport.sentMessages.count == 1 })
+        guard let request = transport.sentMessages.first else {
+            #expect(Bool(false))
+            return
+        }
+
+        session.send(.reset)
+        transport.push(makeHandshakeResponse(request))
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        #expect(session.state == .idle)
+    }
 }
 
 private func makeSession(
@@ -182,7 +202,7 @@ private final class SessionFakeDeviceProtocolTransport: DeviceProtocolTransport 
         onDisconnect?(nil)
     }
 
-    private func push(_ message: DeviceProtocolMessage) {
+    func push(_ message: DeviceProtocolMessage) {
         guard let data = try? codec.encode(message) else {
             return
         }
