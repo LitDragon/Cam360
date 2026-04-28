@@ -26,6 +26,15 @@ struct DeviceProtocolCommand: Equatable {
             parameters: parameters
         )
     }
+
+    func withTimeout(_ timeout: TimeInterval) -> DeviceProtocolCommand {
+        DeviceProtocolCommand(
+            topic: topic,
+            operation: operation,
+            parameters: parameters,
+            timeout: timeout
+        )
+    }
 }
 
 extension DeviceProtocolCommand {
@@ -59,9 +68,15 @@ extension DeviceProtocolCommand {
 
 struct DeviceProtocolHandshakePlan {
     let appVersion: String
+    let commandTimeout: TimeInterval
+
+    init(appVersion: String, commandTimeout: TimeInterval = 10) {
+        self.appVersion = appVersion
+        self.commandTimeout = commandTimeout
+    }
 
     var commands: [DeviceProtocolCommand] {
-        [
+        let baseCommands: [DeviceProtocolCommand] = [
             .appAccess(appVersion: appVersion),
             .protocolVersion,
             .openApp(),
@@ -72,5 +87,7 @@ struct DeviceProtocolHandshakePlan {
             .tfCapacity,
             .cameraCapability
         ]
+
+        return baseCommands.map { $0.withTimeout(commandTimeout) }
     }
 }

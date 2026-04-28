@@ -11,6 +11,7 @@ protocol DeviceProtocolTransport: AnyObject {
 
 final class DeviceProtocolClient {
     var onEvent: ((DeviceProtocolMessage) -> Void)?
+    var onDisconnect: ((DeviceProtocolError?) -> Void)?
 
     private let transport: DeviceProtocolTransport
     private let codec: DeviceProtocolCodec
@@ -119,10 +120,11 @@ final class DeviceProtocolClient {
 
     func startHandshake(
         appVersion: String,
+        commandTimeout: TimeInterval = 10,
         completion: @escaping (Result<[DeviceProtocolMessage], DeviceProtocolError>) -> Void
     ) {
         sendHandshakeCommands(
-            DeviceProtocolHandshakePlan(appVersion: appVersion).commands,
+            DeviceProtocolHandshakePlan(appVersion: appVersion, commandTimeout: commandTimeout).commands,
             responses: [],
             completion: completion
         )
@@ -218,8 +220,10 @@ final class DeviceProtocolClient {
             let pendingRequests = self.pendingRequests
             self.pendingRequests.removeAll()
             self.frameBuffer.clear()
+            let protocolError = error.map { DeviceProtocolError.transportFailed($0.localizedDescription) }
 
             self.callbackQueue.async {
+                self.onDisconnect?(protocolError)
                 pendingRequests.values.forEach { request in
                     request.timeoutWorkItem.cancel()
                     request.completion(.failure(.transportDisconnected))

@@ -8,6 +8,8 @@
 - 根 `README.md` 增加设备协议规格入口，`DeviceSession` 规格改为引用 `device-protocol` 作为真实协议事实源。
 - 新增 `Core/DeviceProtocol` 基础层，包含协议值模型、消息模型、JSON 编解码、`\n` 分帧、请求响应匹配、事件路由、握手命令计划和 Network.framework transport。
 - 新增 `DeviceProtocolTests`，覆盖兼容解析、半包/粘包、非法帧后续处理、`reply_to` 匹配、事件路由和 iOS 握手命令顺序。
+- `DeviceSession` 新增协议客户端依赖入口和握手编排，成功后从协议响应生成 `DeviceInfo`，设备 errno、请求超时和握手中断开会回落到显式失败态；UI、`DeviceOnboarding`、Dashboard 和 Settings 仍未接入真实链路。
+- 新增 `DeviceSessionProtocolTests`，覆盖握手成功、设备 errno、响应超时和握手中断开。
 
 ## 2026-04-27
 
