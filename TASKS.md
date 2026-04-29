@@ -5,20 +5,20 @@
 ## 当前任务
 
 1. 继续确认真设备 `DeviceProtocolEndpoint` 自动发现规则；当前只确认调试 host/port 和模拟器可达 IP 方案。
-2. 先接文件/回放只读入口：`FILE_LIST`、`FILE_INFO`、`FILE_DOWNLOAD_URL`、`THUMB_LIST`、`THUMB_GET`。
-3. 实时预览正式流协议未定义，暂只按 `VIDEO_CTRL`、`SNAPSHOT_CTRL`、`SNAPSHOT_DATA` 规划能力入口。
+2. 再处理截图和录像控制：`SNAPSHOT_CTRL`、`SNAPSHOT_DATA`、`VIDEO_CTRL`。
+3. 实时预览正式流协议未定义，等硬件补充协议后再接预览流。
 
 ## 下一步计划
 
-1. 在 `DeviceSession` 下补会话安全的只读命令入口，Feature 仍不直接拼协议 JSON。
-2. 让 Gallery/Playback 从文件 Topic 读取真实列表、缩略图和回放地址。
-3. 再处理截图和录像控制；预览流等硬件补充协议后再接。
+1. 用设备模拟器或真设备确认文件 Topic 字段与缩略图体积口径。
+2. 在 `DeviceSession` 下补截图/录像控制入口，Feature 仍不直接拼协议 JSON。
+3. 预览流等硬件补充协议后再接。
 
 ## 完成记录
 
+- `2026-04-29`：`DeviceSession` 已提供会话安全的文件只读命令入口；Gallery 会从 `FILE_LIST`/`THUMB_LIST` 读设备文件和缩略图，Playback 会从 `FILE_INFO`/`FILE_DOWNLOAD_URL` 读首个录像的回放资源。
 - `2026-04-29`：Dashboard/Settings 已消费共享 `DeviceSession` 的只读设备状态；Settings 会读取握手设备名、固件和能力，Dashboard 会按 ready/failed/disconnected 派生已知设备连接态。
 - `2026-04-29`：`AppContainer` 已组合共享 `DeviceSession` 和真实 TCP 协议客户端 factory；`DeviceOnboarding` 的 connecting 阶段已改为消费握手成功/失败态，成功后写入协议设备信息，未配置 endpoint 时不再假成功。
-- `2026-04-29`：新增 GitHub Refactor Agent workflow、配置和 Python CLI，支持按仓库文档扫描 Swift 架构债、受限生成小范围补丁、跑 CI 验证后创建 PR；P3 当前仅进报告。
 
 ## 待决事项
 

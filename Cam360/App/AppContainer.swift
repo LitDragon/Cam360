@@ -48,9 +48,9 @@ final class AppContainer {
             deviceSession: deviceSession
         )
         deviceListStore = DeviceListStore(knownDeviceRepository: knownDeviceRepository)
-        galleryStore = GalleryStore()
+        galleryStore = GalleryStore(deviceSession: deviceSession)
         livePreviewStore = LivePreviewStore()
-        playbackStore = PlaybackStore()
+        playbackStore = PlaybackStore(deviceSession: deviceSession)
         downloadsStore = DownloadsStore()
         settingsStore = SettingsStore(
             router: router,

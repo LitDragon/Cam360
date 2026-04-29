@@ -25,6 +25,13 @@ indirect enum DeviceSessionState: Equatable {
         }
         return false
     }
+
+    var canSendReadOnlyCommand: Bool {
+        if case .ready = self {
+            return true
+        }
+        return false
+    }
 }
 
 struct DeviceInfo: Equatable {

@@ -64,6 +64,52 @@ extension DeviceProtocolCommand {
     static func exitApp(page: String = "home") -> DeviceProtocolCommand {
         DeviceProtocolCommand(topic: "CTP_CMD_EXITAPP", operation: .post, parameters: ["page": .string(page)])
     }
+
+    static func fileList(query: DeviceFileListQuery) -> DeviceProtocolCommand {
+        DeviceProtocolCommand(
+            topic: "FILE_LIST",
+            operation: .get,
+            parameters: [
+                "type": .string(query.type.rawValue),
+                "page": .int(query.page),
+                "page_size": .int(query.pageSize),
+                "sort_by": .string(query.sortBy),
+                "sort_order": .string(query.sortOrder)
+            ]
+        )
+    }
+
+    static func fileInfo(path: String) -> DeviceProtocolCommand {
+        DeviceProtocolCommand(
+            topic: "FILE_INFO",
+            operation: .get,
+            parameters: ["path": .string(path)]
+        )
+    }
+
+    static func filePlaybackResource(path: String) -> DeviceProtocolCommand {
+        DeviceProtocolCommand(
+            topic: "FILE_DOWNLOAD_URL",
+            operation: .get,
+            parameters: ["path": .string(path)]
+        )
+    }
+
+    static func thumbnailList(paths: [String]) -> DeviceProtocolCommand {
+        DeviceProtocolCommand(
+            topic: "THUMB_LIST",
+            operation: .get,
+            parameters: ["paths": .array(paths.map { .string($0) })]
+        )
+    }
+
+    static func thumbnail(path: String) -> DeviceProtocolCommand {
+        DeviceProtocolCommand(
+            topic: "THUMB_GET",
+            operation: .get,
+            parameters: ["path": .string(path)]
+        )
+    }
 }
 
 struct DeviceProtocolHandshakePlan {

@@ -87,6 +87,96 @@ struct DeviceSessionProtocolTests {
 
         #expect(session.state == .idle)
     }
+
+    @Test
+    func fileListReadOnlyCommandRequiresReadySession() async {
+        let transport = SessionFakeDeviceProtocolTransport()
+        let session = makeSession(transport: transport)
+        var result: Result<DeviceFileListPage, DeviceSessionReadOnlyError>?
+
+        session.fetchFileList { commandResult in
+            result = commandResult
+        }
+
+        #expect(await waitForSessionState { result != nil })
+        if case .failure(.sessionNotReady)? = result {
+            #expect(Bool(true))
+        } else {
+            #expect(Bool(false))
+        }
+        #expect(transport.sentMessages.isEmpty)
+    }
+
+    @Test
+    func fileListReadOnlyCommandSendsFileListThroughSession() async {
+        let transport = SessionFakeDeviceProtocolTransport()
+        let session = makeSession(transport: transport)
+        transport.responseProvider = { request in
+            makeFileTopicResponse(request) ?? makeHandshakeResponse(request)
+        }
+        var page: DeviceFileListPage?
+
+        startHandshake(session)
+        #expect(await waitForSessionState { session.state.isConnected })
+
+        session.fetchFileList(
+            query: DeviceFileListQuery(type: .video, page: 1, pageSize: 20)
+        ) { result in
+            if case .success(let filePage) = result {
+                page = filePage
+            }
+        }
+
+        #expect(await waitForSessionState { page != nil })
+        #expect(transport.sentMessages.last?.topic == "FILE_LIST")
+        #expect(transport.sentMessages.last?.parameters["type"]?.stringValue == "video")
+        #expect(transport.sentMessages.last?.parameters["page"]?.intValue == 1)
+        #expect(page?.total == 1)
+        #expect(page?.files.first?.path == "/DCIMA/REC00001.AVI")
+        #expect(page?.files.first?.hasThumbnail == true)
+    }
+
+    @Test
+    func fileReadOnlyCommandsSendExpectedTopicsThroughSession() async {
+        let transport = SessionFakeDeviceProtocolTransport()
+        let session = makeSession(transport: transport)
+        transport.responseProvider = { request in
+            makeFileTopicResponse(request) ?? makeHandshakeResponse(request)
+        }
+        var completedTopics: [String] = []
+
+        startHandshake(session)
+        #expect(await waitForSessionState { session.state.isConnected })
+
+        session.fetchFileInfo(path: "/DCIMA/REC00001.AVI") { result in
+            if case .success(let info) = result, info.path == "/DCIMA/REC00001.AVI" {
+                completedTopics.append("FILE_INFO")
+            }
+        }
+        session.fetchPlaybackResource(path: "/DCIMA/REC00001.AVI") { result in
+            if case .success(let resource) = result, resource.rtspURL == "rtsp://192.168.169.1:554/playback/DCIMA/REC00001.AVI" {
+                completedTopics.append("FILE_DOWNLOAD_URL")
+            }
+        }
+        session.fetchThumbnails(paths: ["/DCIMA/REC00001.AVI"]) { result in
+            if case .success(let thumbnails) = result, thumbnails.first?.path == "/DCIMA/REC00001.AVI" {
+                completedTopics.append("THUMB_LIST")
+            }
+        }
+        session.fetchThumbnail(path: "/DCIMA/REC00001.AVI") { result in
+            if case .success(let thumbnail) = result, thumbnail.imageBase64 == "base64-jpeg" {
+                completedTopics.append("THUMB_GET")
+            }
+        }
+
+        #expect(await waitForSessionState { completedTopics.count == 4 })
+        #expect(Array(transport.sentMessages.map(\.topic).suffix(4)) == [
+            "FILE_INFO",
+            "FILE_DOWNLOAD_URL",
+            "THUMB_LIST",
+            "THUMB_GET"
+        ])
+    }
 }
 
 private func makeSession(
@@ -140,6 +230,93 @@ private func responseParameters(for topic: String) -> [String: DeviceProtocolVal
     default:
         return [:]
     }
+}
+
+private func makeFileTopicResponse(_ request: DeviceProtocolMessage) -> DeviceProtocolMessage? {
+    let parameters: [String: DeviceProtocolValue]
+
+    switch request.topic {
+    case "FILE_LIST":
+        parameters = [
+            "type": "video",
+            "total": 1,
+            "page": 1,
+            "page_size": 20,
+            "files": .array([makeDeviceFileItemParameters()])
+        ]
+    case "FILE_INFO":
+        parameters = makeDeviceFileInfoParameters()
+    case "FILE_DOWNLOAD_URL":
+        parameters = [
+            "path": "/DCIMA/REC00001.AVI",
+            "rtsp_url": "rtsp://192.168.169.1:554/playback/DCIMA/REC00001.AVI",
+            "transport": "TCP",
+            "size": 524_288_000,
+            "duration": 180,
+            "seekable": true,
+            "session_timeout": 60
+        ]
+    case "THUMB_LIST":
+        parameters = [
+            "thumbs": .array([makeDeviceThumbnailParameters()])
+        ]
+    case "THUMB_GET":
+        parameters = makeDeviceThumbnailObject()
+    default:
+        return nil
+    }
+
+    return DeviceProtocolMessage(
+        topic: request.topic,
+        operation: .notify,
+        messageID: "dev-\(request.messageID)",
+        notifyType: .response,
+        replyTo: request.messageID,
+        errno: 0,
+        parameters: parameters
+    )
+}
+
+private func makeDeviceFileItemParameters() -> DeviceProtocolValue {
+    .object([
+        "name": "REC00001.AVI",
+        "path": "/DCIMA/REC00001.AVI",
+        "size": 524_288_000,
+        "duration": 180,
+        "resolution": "1920x1080",
+        "create_time": "20230607103056",
+        "has_thumbnail": true,
+        "locked": 1,
+        "type": "normal"
+    ])
+}
+
+private func makeDeviceFileInfoParameters() -> [String: DeviceProtocolValue] {
+    guard case .object(let parameters) = makeDeviceFileItemParameters() else {
+        return [:]
+    }
+
+    return parameters.merging([
+        "codec": "H.264",
+        "bitrate": 8_000_000,
+        "framerate": 30,
+        "gps_data": "2022/05/27 21:20:29 N:22.525370 E:114.429984"
+    ]) { _, new in new }
+}
+
+private func makeDeviceThumbnailParameters() -> DeviceProtocolValue {
+    .object(makeDeviceThumbnailObject())
+}
+
+private func makeDeviceThumbnailObject() -> [String: DeviceProtocolValue] {
+    [
+        "path": "/DCIMA/REC00001.AVI",
+        "format": "JPEG",
+        "width": 320,
+        "height": 180,
+        "size": 18_342,
+        "image_base64": "base64-jpeg"
+    ]
 }
 
 private func failedError(from state: DeviceSessionState) -> DeviceError? {

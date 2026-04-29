@@ -96,7 +96,7 @@ struct GalleryItem: Identifiable {
     let thumbnailSymbol: String
     let thumbnailStyle: GalleryArtworkStyle
 
-    init(
+    nonisolated init(
         id: UUID = UUID(),
         title: String,
         subtitle: String,

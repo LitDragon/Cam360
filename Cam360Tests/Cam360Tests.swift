@@ -713,6 +713,13 @@ private final class OnboardingFakeProtocolClient: DeviceSessionProtocolClient {
         handshakeCompletion = completion
     }
 
+    func send(
+        _ command: DeviceProtocolCommand,
+        completion: @escaping (Result<DeviceProtocolMessage, DeviceProtocolError>) -> Void
+    ) {
+        completion(.failure(.transportDisconnected))
+    }
+
     func disconnect() {}
 
     func completeHandshakeSuccessfully(deviceID: String) {

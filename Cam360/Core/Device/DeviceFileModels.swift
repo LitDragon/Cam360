@@ -1,0 +1,237 @@
+import Foundation
+
+enum DeviceSessionReadOnlyError: Error, Equatable {
+    case sessionNotReady
+    case protocolClientUnavailable
+    case staleSession
+    case invalidResponse(String)
+    case protocolFailure(DeviceProtocolError)
+
+    var message: String {
+        switch self {
+        case .sessionNotReady:
+            return "设备会话未就绪"
+        case .protocolClientUnavailable:
+            return "控制通道未配置"
+        case .staleSession:
+            return "设备会话已变更"
+        case .invalidResponse(let reason):
+            return "设备响应无效: \(reason)"
+        case .protocolFailure(let error):
+            return DeviceSession.protocolFailureReason(for: error)
+        }
+    }
+}
+
+enum DeviceFileType: String, Equatable {
+    case video
+    case photo
+}
+
+struct DeviceFileListQuery: Equatable {
+    let type: DeviceFileType
+    let page: Int
+    let pageSize: Int
+    let sortBy: String
+    let sortOrder: String
+
+    init(
+        type: DeviceFileType = .video,
+        page: Int = 1,
+        pageSize: Int = 20,
+        sortBy: String = "time",
+        sortOrder: String = "desc"
+    ) {
+        self.type = type
+        self.page = page
+        self.pageSize = pageSize
+        self.sortBy = sortBy
+        self.sortOrder = sortOrder
+    }
+}
+
+struct DeviceFileListPage: Equatable {
+    let type: DeviceFileType?
+    let total: Int
+    let page: Int
+    let pageSize: Int
+    let files: [DeviceFileItem]
+}
+
+struct DeviceFileItem: Equatable {
+    let name: String
+    let path: String
+    let size: Int?
+    let duration: Int?
+    let resolution: String?
+    let createTime: String?
+    let hasThumbnail: Bool
+    let locked: Bool
+    let recordType: String?
+}
+
+struct DeviceFileInfo: Equatable {
+    let item: DeviceFileItem
+    let codec: String?
+    let bitrate: Int?
+    let framerate: Int?
+    let gpsData: String?
+
+    var path: String {
+        item.path
+    }
+}
+
+struct DeviceFilePlaybackResource: Equatable {
+    let path: String
+    let rtspURL: String
+    let transport: String?
+    let size: Int?
+    let duration: Int?
+    let seekable: Bool
+    let sessionTimeout: Int?
+}
+
+struct DeviceFileThumbnail: Equatable {
+    let path: String
+    let format: String?
+    let width: Int?
+    let height: Int?
+    let size: Int?
+    let imageBase64: String?
+    let thumbURL: String?
+}
+
+enum DeviceFileResponseParser {
+    static func fileListPage(from parameters: [String: DeviceProtocolValue]) throws -> DeviceFileListPage {
+        guard let fileValues = parameters["files"]?.arrayValue else {
+            throw DeviceSessionReadOnlyError.invalidResponse("FILE_LIST.files 缺失")
+        }
+
+        let files = try fileValues.map { value -> DeviceFileItem in
+            guard let object = value.objectValue else {
+                throw DeviceSessionReadOnlyError.invalidResponse("FILE_LIST.files 包含非对象")
+            }
+            return try fileItem(from: object)
+        }
+
+        return DeviceFileListPage(
+            type: parameters.string("type").flatMap(DeviceFileType.init(rawValue:)),
+            total: parameters.int("total") ?? files.count,
+            page: parameters.int("page") ?? 1,
+            pageSize: parameters.int("page_size") ?? files.count,
+            files: files
+        )
+    }
+
+    static func fileInfo(from parameters: [String: DeviceProtocolValue]) throws -> DeviceFileInfo {
+        DeviceFileInfo(
+            item: try fileItem(from: parameters),
+            codec: parameters.string("codec"),
+            bitrate: parameters.int("bitrate"),
+            framerate: parameters.int("framerate"),
+            gpsData: parameters.string("gps_data")
+        )
+    }
+
+    static func playbackResource(from parameters: [String: DeviceProtocolValue]) throws -> DeviceFilePlaybackResource {
+        guard let path = parameters.string("path") else {
+            throw DeviceSessionReadOnlyError.invalidResponse("FILE_DOWNLOAD_URL.path 缺失")
+        }
+
+        guard let rtspURL = parameters.string("rtsp_url") ?? parameters.string("url") else {
+            throw DeviceSessionReadOnlyError.invalidResponse("FILE_DOWNLOAD_URL.rtsp_url 缺失")
+        }
+
+        return DeviceFilePlaybackResource(
+            path: path,
+            rtspURL: rtspURL,
+            transport: parameters.string("transport"),
+            size: parameters.int("size"),
+            duration: parameters.int("duration"),
+            seekable: parameters.bool("seekable") ?? false,
+            sessionTimeout: parameters.int("session_timeout")
+        )
+    }
+
+    static func thumbnails(from parameters: [String: DeviceProtocolValue]) throws -> [DeviceFileThumbnail] {
+        guard let thumbnailValues = parameters["thumbs"]?.arrayValue else {
+            throw DeviceSessionReadOnlyError.invalidResponse("THUMB_LIST.thumbs 缺失")
+        }
+
+        return try thumbnailValues.map { value -> DeviceFileThumbnail in
+            guard let object = value.objectValue else {
+                throw DeviceSessionReadOnlyError.invalidResponse("THUMB_LIST.thumbs 包含非对象")
+            }
+            return try thumbnail(from: object)
+        }
+    }
+
+    static func thumbnail(from parameters: [String: DeviceProtocolValue]) throws -> DeviceFileThumbnail {
+        guard let path = parameters.string("path") else {
+            throw DeviceSessionReadOnlyError.invalidResponse("THUMB_GET.path 缺失")
+        }
+
+        return DeviceFileThumbnail(
+            path: path,
+            format: parameters.string("format"),
+            width: parameters.int("width"),
+            height: parameters.int("height"),
+            size: parameters.int("size"),
+            imageBase64: parameters.string("image_base64"),
+            thumbURL: parameters.string("thumb_url")
+        )
+    }
+
+    private static func fileItem(from parameters: [String: DeviceProtocolValue]) throws -> DeviceFileItem {
+        guard let name = parameters.string("name") else {
+            throw DeviceSessionReadOnlyError.invalidResponse("文件 name 缺失")
+        }
+
+        guard let path = parameters.string("path") else {
+            throw DeviceSessionReadOnlyError.invalidResponse("文件 path 缺失")
+        }
+
+        return DeviceFileItem(
+            name: name,
+            path: path,
+            size: parameters.int("size"),
+            duration: parameters.int("duration"),
+            resolution: parameters.string("resolution"),
+            createTime: parameters.string("create_time"),
+            hasThumbnail: parameters.bool("has_thumbnail") ?? false,
+            locked: parameters.bool("locked") ?? false,
+            recordType: parameters.string("type")
+        )
+    }
+}
+
+extension DeviceProtocolValue {
+    var objectValue: [String: DeviceProtocolValue]? {
+        if case .object(let object) = self {
+            return object
+        }
+        return nil
+    }
+
+    var arrayValue: [DeviceProtocolValue]? {
+        if case .array(let array) = self {
+            return array
+        }
+        return nil
+    }
+}
+
+private extension Dictionary where Key == String, Value == DeviceProtocolValue {
+    func string(_ key: String) -> String? {
+        self[key]?.stringValue
+    }
+
+    func int(_ key: String) -> Int? {
+        self[key]?.intValue
+    }
+
+    func bool(_ key: String) -> Bool? {
+        self[key]?.boolValue
+    }
+}

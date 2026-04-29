@@ -10,6 +10,10 @@ protocol DeviceSessionProtocolClient: AnyObject {
         commandTimeout: TimeInterval,
         completion: @escaping (Result<[DeviceProtocolMessage], DeviceProtocolError>) -> Void
     )
+    func send(
+        _ command: DeviceProtocolCommand,
+        completion: @escaping (Result<DeviceProtocolMessage, DeviceProtocolError>) -> Void
+    )
     func disconnect()
 }
 
@@ -25,6 +29,7 @@ final class DeviceSession: ObservableObject {
     private let handshakeCommandTimeout: TimeInterval
     private var previousStateBeforeRecovery: DeviceSessionState?
     private var handshakeGeneration = 0
+    private var readOnlyCommandGeneration = 0
 
     init(
         protocolClient: DeviceSessionProtocolClient? = nil,
@@ -60,6 +65,51 @@ final class DeviceSession: ObservableObject {
         }
     }
 
+    func fetchFileList(
+        query: DeviceFileListQuery = DeviceFileListQuery(),
+        completion: @escaping (Result<DeviceFileListPage, DeviceSessionReadOnlyError>) -> Void
+    ) {
+        performReadOnlyCommand(.fileList(query: query), completion: completion) { message in
+            try DeviceFileResponseParser.fileListPage(from: message.parameters)
+        }
+    }
+
+    func fetchFileInfo(
+        path: String,
+        completion: @escaping (Result<DeviceFileInfo, DeviceSessionReadOnlyError>) -> Void
+    ) {
+        performReadOnlyCommand(.fileInfo(path: path), completion: completion) { message in
+            try DeviceFileResponseParser.fileInfo(from: message.parameters)
+        }
+    }
+
+    func fetchPlaybackResource(
+        path: String,
+        completion: @escaping (Result<DeviceFilePlaybackResource, DeviceSessionReadOnlyError>) -> Void
+    ) {
+        performReadOnlyCommand(.filePlaybackResource(path: path), completion: completion) { message in
+            try DeviceFileResponseParser.playbackResource(from: message.parameters)
+        }
+    }
+
+    func fetchThumbnails(
+        paths: [String],
+        completion: @escaping (Result<[DeviceFileThumbnail], DeviceSessionReadOnlyError>) -> Void
+    ) {
+        performReadOnlyCommand(.thumbnailList(paths: paths), completion: completion) { message in
+            try DeviceFileResponseParser.thumbnails(from: message.parameters)
+        }
+    }
+
+    func fetchThumbnail(
+        path: String,
+        completion: @escaping (Result<DeviceFileThumbnail, DeviceSessionReadOnlyError>) -> Void
+    ) {
+        performReadOnlyCommand(.thumbnail(path: path), completion: completion) { message in
+            try DeviceFileResponseParser.thumbnail(from: message.parameters)
+        }
+    }
+
     func send(_ event: DeviceSessionEvent) {
         let shouldDisconnectProtocol = shouldDisconnectProtocol(for: event)
         if shouldDisconnectProtocol {
@@ -69,11 +119,16 @@ final class DeviceSession: ObservableObject {
         rememberRecoveryStateIfNeeded(for: event)
 
         let nextState = transition(from: state, event: event)
+        let shouldInvalidateReadOnlyCommands = shouldInvalidateReadOnlyCommands(from: state, to: nextState)
         if nextState != state {
             state = nextState
         }
 
         updateDerivedState(for: nextState)
+
+        if shouldInvalidateReadOnlyCommands {
+            invalidateReadOnlyCommands()
+        }
 
         if shouldDisconnectProtocol {
             protocolClient?.disconnect()
@@ -168,6 +223,47 @@ final class DeviceSession: ObservableObject {
         }
     }
 
+    private func performReadOnlyCommand<T>(
+        _ command: DeviceProtocolCommand,
+        completion: @escaping (Result<T, DeviceSessionReadOnlyError>) -> Void,
+        parse: @escaping (DeviceProtocolMessage) throws -> T
+    ) {
+        guard state.canSendReadOnlyCommand else {
+            completion(.failure(.sessionNotReady))
+            return
+        }
+
+        guard let protocolClient else {
+            completion(.failure(.protocolClientUnavailable))
+            return
+        }
+
+        let generation = readOnlyCommandGeneration
+        protocolClient.send(command) { [weak self] result in
+            guard let self else {
+                return
+            }
+
+            guard self.isCurrentReadOnlyCommand(generation) else {
+                completion(.failure(.staleSession))
+                return
+            }
+
+            switch result {
+            case .success(let message):
+                do {
+                    completion(.success(try parse(message)))
+                } catch let error as DeviceSessionReadOnlyError {
+                    completion(.failure(error))
+                } catch {
+                    completion(.failure(.invalidResponse(error.localizedDescription)))
+                }
+            case .failure(let error):
+                completion(.failure(.protocolFailure(error)))
+            }
+        }
+    }
+
     private func handleProtocolConnect(
         _ result: Result<Void, DeviceProtocolError>,
         generation: Int
@@ -233,11 +329,26 @@ final class DeviceSession: ObservableObject {
         handshakeGeneration += 1
     }
 
+    private func invalidateReadOnlyCommands() {
+        readOnlyCommandGeneration += 1
+    }
+
     private func isCurrentHandshake(_ generation: Int) -> Bool {
         if case .handshaking = state {
             return generation == handshakeGeneration
         }
         return false
+    }
+
+    private func isCurrentReadOnlyCommand(_ generation: Int) -> Bool {
+        state.canSendReadOnlyCommand && generation == readOnlyCommandGeneration
+    }
+
+    private func shouldInvalidateReadOnlyCommands(
+        from currentState: DeviceSessionState,
+        to nextState: DeviceSessionState
+    ) -> Bool {
+        currentState.canSendReadOnlyCommand && nextState.canSendReadOnlyCommand == false
     }
 
     private static func deviceInfo(
@@ -292,7 +403,7 @@ final class DeviceSession: ObservableObject {
         return nil
     }
 
-    private static func handshakeFailureReason(for error: DeviceProtocolError) -> String {
+    static func protocolFailureReason(for error: DeviceProtocolError) -> String {
         switch error {
         case .transportDisconnected:
             return "控制通道已断开"
@@ -311,5 +422,9 @@ final class DeviceSession: ObservableObject {
         case .responseWithoutRequest(let replyTo):
             return "未匹配的设备响应: \(replyTo)"
         }
+    }
+
+    private static func handshakeFailureReason(for error: DeviceProtocolError) -> String {
+        protocolFailureReason(for: error)
     }
 }
