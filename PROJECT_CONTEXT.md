@@ -7,7 +7,6 @@
 ## 项目定位
 
 - 项目名称：`Cam360`
-- 平台：iOS
 - 产品类型：行车记录仪 App
 - 连接模型：设备热点 AP 模式 + 局域网通信
 
@@ -20,9 +19,9 @@
 - 当前主界面只有 3 个 tab：`dashboard`、`gallery`、`settings`。
 - `events` 页面文件存在，但没有接入当前主 tab。
 - `Dashboard` 当前包含设备聚合页样式的已连接设备态、侧边设备抽屉、无设备态和首次安装全屏引导；`Open Full Gallery` 和右上齿轮分别切到 `gallery`、`settings` tab。
-- `DeviceOnboarding` 已接入首页 `Add Device` 的 5 步静态流程，成功页会回写本地占位设备；`Settings` 已扩展为设备设置 M0 骨架，包含首页、一级子页、设备内嵌设置流转和本地占位状态。
+- `DeviceOnboarding` 已接入首页 `Add Device` 的 5 步流程，连接阶段消费 `DeviceSession` 握手结果；成功页会回写协议 `DeviceInfo` 派生设备，未配置控制通道 endpoint 时不会假成功。
 - `LivePreview`、`Playback`、`Downloads` 仍是占位实现。
-- `Core/Device/DeviceSession.swift` 已有本地状态机骨架，并能通过注入的 `DeviceProtocolClient` 执行 TCP 控制协议握手；当前尚未由 `AppContainer` 组合下发，也未接入 `DeviceOnboarding`、Dashboard 或 Settings。
+- `Core/Device/DeviceSession.swift` 已有本地状态机骨架，并能通过注入的 `DeviceProtocolClient` 执行 TCP 控制协议握手；当前已由 `AppContainer` 组合下发并接入 `DeviceOnboarding`，Dashboard 和 Settings 仍未订阅真实会话状态。
 - `Core/DeviceProtocol` 已有 TCP 控制协议基础层，覆盖 JSON message/value、`\n` 分帧、请求响应匹配、事件路由、握手命令计划和 Network.framework transport；当前尚未接入真实 AP 连接、UI、媒体或下载链路。
 - 当前测试 target 只有 `Cam360Tests`。
 

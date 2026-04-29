@@ -8,15 +8,14 @@
 - 首次启动提示由首页根据 `AppPreferenceStore.hasCompletedOnboarding` 展示 3 页全屏引导 flow，不直接进入 `DeviceOnboarding` 5 步接入页。
 - 首页空设备态和设备抽屉中的 `Add Device` 都通过根路由进入 `DeviceOnboarding`。
 - `DeviceOnboardingRoute` 当前包含 `introduction`、`searching`、`wifiDetails`、`connecting`、`success` 五步。
-- `DeviceOnboardingStore` 负责分步状态、临时 Wi‑Fi 输入、自动推进和成功落库；`DeviceOnboardingView` 只渲染 UI 并转发用户动作。
-- 成功闭环会向 `KnownDeviceRepository` 写入 1 条本地占位设备，将 `hasCompletedOnboarding` 置为 `true`，再返回首页。
+- `DeviceOnboardingStore` 负责分步状态、临时 Wi‑Fi 输入和成功落库；`connecting` 阶段已消费 `DeviceSession` 握手成功/失败态。
+- 成功闭环会向 `KnownDeviceRepository` 写入协议 `DeviceInfo` 派生设备，将 `hasCompletedOnboarding` 置为 `true`，再返回首页。
 
 ## 当前范围外
 
 - 真实热点发现
 - Wi-Fi 连接
-- 局域网握手
-- 设备能力探测
+- endpoint 自动发现
 - 失败重试与恢复
 
 ## 后续接入约束

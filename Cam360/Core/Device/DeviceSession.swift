@@ -43,8 +43,12 @@ final class DeviceSession: ObservableObject {
     }
 
     func startProtocolHandshake() {
-        guard case .handshaking = state,
-              let protocolClient else {
+        guard case .handshaking = state else {
+            return
+        }
+
+        guard let protocolClient else {
+            send(.handshakeFailed(reason: "控制通道未配置"))
             return
         }
 

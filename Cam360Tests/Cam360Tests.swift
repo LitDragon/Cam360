@@ -42,6 +42,16 @@ struct Cam360Tests {
     }
 
     @Test
+    func appContainerSharesDeviceSessionWithOnboarding() {
+        let testDefaults = makeUserDefaults()
+        defer { clear(testDefaults) }
+
+        let bootstrap = AppBootstrap.launch(arguments: ["Cam360Tests"], userDefaults: testDefaults.userDefaults)
+
+        #expect(bootstrap.container.deviceOnboardingStore.deviceSession === bootstrap.container.deviceSession)
+    }
+
+    @Test
     func deviceSessionCompletesOperationBackToReadyDevice() {
         let session = DeviceSession()
         let deviceInfo = makeDeviceInfo()
@@ -164,18 +174,26 @@ struct Cam360Tests {
     }
 
     @Test
-    func deviceOnboardingStoreHappyPathPersistsDeviceAndReturnsToDashboard() {
+    func deviceOnboardingStoreHappyPathPersistsDeviceAndReturnsToDashboard() async {
         let testDefaults = makeUserDefaults()
         defer { clear(testDefaults) }
 
         let repository = UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults)
         let preferenceStore = UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults)
         let router = AppRouter(route: .main(.dashboard))
+        let protocolClient = OnboardingFakeProtocolClient()
+        let session = DeviceSession(
+            protocolClient: protocolClient,
+            appVersion: "1.2.3",
+            deviceName: "Road Camera"
+        )
         let store = DeviceOnboardingStore(
             router: router,
             knownDeviceRepository: repository,
-            appPreferenceStore: preferenceStore
+            appPreferenceStore: preferenceStore,
+            deviceSession: session
         )
+        store.networkName = "RoadCam_AP"
 
         store.startSearch()
         #expect(store.route == .searching)
@@ -187,11 +205,14 @@ struct Cam360Tests {
         store.continueFromWiFiDetails()
         #expect(store.route == .connecting)
 
-        store.completeConnection()
+        protocolClient.completeHandshakeSuccessfully(deviceID: "road-camera-001")
+        #expect(await waitForOnboardingState { store.route == .success })
         #expect(store.route == .success)
-        #expect(store.addedDeviceName == "Vigilant DL-400 Pro")
+        #expect(store.addedDeviceName == "Road Camera")
         #expect(repository.fetchKnownDevices().count == 1)
-        #expect(repository.fetchKnownDevices().first?.name == "Vigilant DL-400 Pro")
+        #expect(repository.fetchKnownDevices().first?.id == "road-camera-001")
+        #expect(repository.fetchKnownDevices().first?.name == "Road Camera")
+        #expect(repository.fetchKnownDevices().first?.hotspotSSID == "RoadCam_AP")
         #expect(preferenceStore.hasCompletedOnboarding)
 
         store.enterHome()
@@ -223,17 +244,24 @@ struct Cam360Tests {
     }
 
     @Test
-    func deviceOnboardingCancelConnectionIgnoresStaleCompletion() {
+    func deviceOnboardingCancelConnectionIgnoresStaleCompletion() async {
         let testDefaults = makeUserDefaults()
         defer { clear(testDefaults) }
 
         let repository = UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults)
         let preferenceStore = UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults)
         let router = AppRouter(route: .main(.dashboard))
+        let protocolClient = OnboardingFakeProtocolClient()
+        let session = DeviceSession(
+            protocolClient: protocolClient,
+            appVersion: "1.2.3",
+            deviceName: "Road Camera"
+        )
         let store = DeviceOnboardingStore(
             router: router,
             knownDeviceRepository: repository,
-            appPreferenceStore: preferenceStore
+            appPreferenceStore: preferenceStore,
+            deviceSession: session
         )
 
         store.startSearch()
@@ -242,9 +270,39 @@ struct Cam360Tests {
         #expect(store.route == .connecting)
 
         store.cancelConnection()
-        store.completeConnection()
+        protocolClient.completeHandshakeSuccessfully(deviceID: "road-camera-001")
+        try? await Task.sleep(nanoseconds: 100_000_000)
 
         #expect(store.route == .wifiDetails)
+        #expect(repository.fetchKnownDevices().isEmpty)
+        #expect(preferenceStore.hasCompletedOnboarding == false)
+    }
+
+    @Test
+    func deviceOnboardingHandshakeFailureDoesNotPersistDevice() async {
+        let testDefaults = makeUserDefaults()
+        defer { clear(testDefaults) }
+
+        let repository = UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults)
+        let preferenceStore = UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults)
+        let router = AppRouter(route: .main(.dashboard))
+        let protocolClient = OnboardingFakeProtocolClient()
+        let session = DeviceSession(protocolClient: protocolClient)
+        let store = DeviceOnboardingStore(
+            router: router,
+            knownDeviceRepository: repository,
+            appPreferenceStore: preferenceStore,
+            deviceSession: session
+        )
+
+        store.startSearch()
+        store.advanceFromSearching()
+        store.continueFromWiFiDetails()
+        #expect(store.route == .connecting)
+
+        protocolClient.failHandshake(.requestTimedOut(topic: "APP_ACCESS"))
+
+        #expect(await waitForOnboardingState { store.route == .wifiDetails })
         #expect(repository.fetchKnownDevices().isEmpty)
         #expect(preferenceStore.hasCompletedOnboarding == false)
     }
@@ -530,4 +588,62 @@ extension UserDefaults {
 private struct TestDefaults {
     let suiteName: String
     let userDefaults: UserDefaults
+}
+
+@MainActor
+private func waitForOnboardingState(
+    timeout: TimeInterval = 1,
+    condition: @escaping @MainActor () -> Bool
+) async -> Bool {
+    let deadline = Date().addingTimeInterval(timeout)
+
+    while Date() < deadline {
+        if condition() {
+            return true
+        }
+        try? await Task.sleep(nanoseconds: 10_000_000)
+    }
+
+    return condition()
+}
+
+private final class OnboardingFakeProtocolClient: DeviceSessionProtocolClient {
+    var onDisconnect: ((DeviceProtocolError?) -> Void)?
+    private var handshakeCompletion: ((Result<[DeviceProtocolMessage], DeviceProtocolError>) -> Void)?
+
+    func connect(completion: @escaping (Result<Void, DeviceProtocolError>) -> Void) {
+        completion(.success(()))
+    }
+
+    func startHandshake(
+        appVersion: String,
+        commandTimeout: TimeInterval,
+        completion: @escaping (Result<[DeviceProtocolMessage], DeviceProtocolError>) -> Void
+    ) {
+        handshakeCompletion = completion
+    }
+
+    func disconnect() {}
+
+    func completeHandshakeSuccessfully(deviceID: String) {
+        handshakeCompletion?(.success(makeOnboardingHandshakeResponses(deviceID: deviceID)))
+    }
+
+    func failHandshake(_ error: DeviceProtocolError) {
+        handshakeCompletion?(.failure(error))
+    }
+
+    private func makeOnboardingHandshakeResponses(deviceID: String) -> [DeviceProtocolMessage] {
+        [
+            DeviceProtocolMessage(
+                topic: "UUID",
+                operation: .notify,
+                messageID: "dev-uuid",
+                notifyType: .response,
+                replyTo: "ios-uuid",
+                errno: 0,
+                parameters: ["uuid": .string(deviceID)]
+            )
+        ]
+    }
 }

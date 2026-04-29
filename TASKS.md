@@ -4,25 +4,24 @@
 
 ## 当前任务
 
-1. 决定 `DeviceSession` 共享实例如何从 `AppContainer` 下发到接入、首页和设置页。
-2. 将 `DeviceOnboarding` 的连接进度从本地自动推进切到真实握手结果，继续保持页面结构不变。
-3. 握手接入稳定后，再把 Dashboard/Settings 的只读设备状态切到真实状态源。
+1. 明确真实设备或联调模拟器的 `DeviceProtocolEndpoint` 来源，避免写死未确认 host。
+2. 将 Dashboard/Settings 的只读设备状态切到 `DeviceSession` 派生状态。
+3. 再继续评估预览、回放和下载链路的真实协议入口。
 
 ## 下一步计划
 
-1. 先在 `AppContainer` 明确 `DeviceSession` 与协议客户端工厂的组合边界。
-2. 再让 `DeviceOnboardingStore` 的 connecting 阶段消费 `DeviceSession` 握手完成/失败态。
-3. 最后再把 Dashboard/Settings 的只读状态改为订阅 `DeviceSession` 派生状态。
+1. 先确定 endpoint provider：设备网关、调试 host 参数或后续 AP 探测结果。
+2. 再让 Dashboard 以 `DeviceSession.ready/failed/disconnected` 派生连接状态。
+3. 最后让 Settings 读取会话设备信息和能力，暂不接写操作。
 
 ## 完成记录
 
+- `2026-04-29`：`AppContainer` 已组合共享 `DeviceSession` 和真实 TCP 协议客户端 factory；`DeviceOnboarding` 的 connecting 阶段已改为消费握手成功/失败态，成功后写入协议设备信息，未配置 endpoint 时不再假成功。
 - `2026-04-29`：新增 GitHub Refactor Agent workflow、配置和 Python CLI，支持按仓库文档扫描 Swift 架构债、受限生成小范围补丁、跑 CI 验证后创建 PR；P3 当前仅进报告。
-- `2026-04-28`：补充接入真实握手前的测试护栏，覆盖 `DeviceOnboardingStore` 密码校验、取消连接后的旧完成回调忽略，以及 `DeviceSession` reset 后过期握手结果忽略。
-- `2026-04-28`：`DeviceSession` 已接入 `DeviceProtocolClient` 握手编排，并补成功、设备 errno、请求超时和握手中断开测试。
+- `2026-04-28`：`DeviceSession` 已接入 `DeviceProtocolClient` 握手编排，并补充 onboarding/session 最小测试护栏。
 
 ## 待决事项
 
-- 主界面最终目标到底是 3-tab 还是 4-tab。
 - 是否需要恢复独立的 UI 冒烟测试 target。
 - M1 第一优先级到底是 onboarding、session，还是预览链路。
 

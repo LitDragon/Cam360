@@ -6,6 +6,8 @@ final class AppBootstrap {
         static let forceMain = "-uitest-force-main"
         static let forceOnboarding = "-uitest-force-onboarding"
         static let selectedTab = "-uitest-selected-tab"
+        static let deviceProtocolHost = "-device-protocol-host"
+        static let deviceProtocolPort = "-device-protocol-port"
     }
 
     let container: AppContainer
@@ -42,7 +44,10 @@ final class AppBootstrap {
         let container = AppContainer(
             router: router,
             knownDeviceRepository: knownDeviceRepository,
-            appPreferenceStore: appPreferenceStore
+            appPreferenceStore: appPreferenceStore,
+            deviceProtocolEndpointProvider: {
+                deviceProtocolEndpoint(from: arguments)
+            }
         )
 
         return AppBootstrap(container: container, router: router)
@@ -55,7 +60,22 @@ final class AppBootstrap {
     }
 
     private static func tabOverride(from arguments: [String]) -> MainTab? {
-        guard let index = arguments.firstIndex(of: LaunchArgument.selectedTab) else {
+        argumentValue(after: LaunchArgument.selectedTab, in: arguments).flatMap(MainTab.init(rawValue:))
+    }
+
+    private static func deviceProtocolEndpoint(from arguments: [String]) -> DeviceProtocolEndpoint? {
+        guard let host = argumentValue(after: LaunchArgument.deviceProtocolHost, in: arguments),
+              host.isEmpty == false else {
+            return nil
+        }
+
+        let portValue = argumentValue(after: LaunchArgument.deviceProtocolPort, in: arguments)
+        let port = portValue.flatMap { UInt16($0) } ?? 8765
+        return DeviceProtocolEndpoint(host: host, port: port)
+    }
+
+    private static func argumentValue(after flag: String, in arguments: [String]) -> String? {
+        guard let index = arguments.firstIndex(of: flag) else {
             return nil
         }
 
@@ -64,6 +84,6 @@ final class AppBootstrap {
             return nil
         }
 
-        return MainTab(rawValue: arguments[valueIndex])
+        return arguments[valueIndex]
     }
 }

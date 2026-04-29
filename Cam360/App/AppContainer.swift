@@ -1,8 +1,21 @@
 import Foundation
 
+struct DeviceProtocolEndpoint: Equatable {
+    let host: String
+    let port: UInt16
+
+    init(host: String, port: UInt16 = 8765) {
+        self.host = host
+        self.port = port
+    }
+}
+
 final class AppContainer {
+    typealias DeviceProtocolEndpointProvider = () -> DeviceProtocolEndpoint?
+
     let knownDeviceRepository: KnownDeviceRepository
     let appPreferenceStore: AppPreferenceStore
+    let deviceSession: DeviceSession
 
     let dashboardStore: DashboardStore
     let deviceOnboardingStore: DeviceOnboardingStore
@@ -16,10 +29,12 @@ final class AppContainer {
     init(
         router: AppRouter,
         knownDeviceRepository: KnownDeviceRepository,
-        appPreferenceStore: AppPreferenceStore
+        appPreferenceStore: AppPreferenceStore,
+        deviceProtocolEndpointProvider: @escaping DeviceProtocolEndpointProvider = { nil }
     ) {
         self.knownDeviceRepository = knownDeviceRepository
         self.appPreferenceStore = appPreferenceStore
+        deviceSession = Self.makeDeviceSession(endpointProvider: deviceProtocolEndpointProvider)
 
         dashboardStore = DashboardStore(
             knownDeviceRepository: knownDeviceRepository,
@@ -28,7 +43,8 @@ final class AppContainer {
         deviceOnboardingStore = DeviceOnboardingStore(
             router: router,
             knownDeviceRepository: knownDeviceRepository,
-            appPreferenceStore: appPreferenceStore
+            appPreferenceStore: appPreferenceStore,
+            deviceSession: deviceSession
         )
         deviceListStore = DeviceListStore(knownDeviceRepository: knownDeviceRepository)
         galleryStore = GalleryStore()
@@ -39,6 +55,18 @@ final class AppContainer {
             router: router,
             knownDeviceRepository: knownDeviceRepository,
             appPreferenceStore: appPreferenceStore
+        )
+    }
+
+    private static func makeDeviceSession(endpointProvider: DeviceProtocolEndpointProvider) -> DeviceSession {
+        guard let endpoint = endpointProvider() else {
+            return DeviceSession()
+        }
+
+        return DeviceSession(
+            protocolClient: DeviceProtocolClient(
+                transport: NetworkDeviceProtocolTransport(host: endpoint.host, port: endpoint.port)
+            )
         )
     }
 }

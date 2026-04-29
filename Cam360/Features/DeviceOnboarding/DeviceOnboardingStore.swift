@@ -9,26 +9,33 @@ final class DeviceOnboardingStore: ObservableObject {
     @Published private(set) var addedDeviceName: String
     @Published private(set) var pendingDeviceName: String
 
+    let deviceSession: DeviceSession
+
     private let router: AppRouter
     private let knownDeviceRepository: KnownDeviceRepository
     private let appPreferenceStore: AppPreferenceStore
 
     private var pendingTransition: DispatchWorkItem?
+    private var cancellables = Set<AnyCancellable>()
 
     init(
         router: AppRouter,
         knownDeviceRepository: KnownDeviceRepository,
-        appPreferenceStore: AppPreferenceStore
+        appPreferenceStore: AppPreferenceStore,
+        deviceSession: DeviceSession = DeviceSession()
     ) {
         self.router = router
         self.knownDeviceRepository = knownDeviceRepository
         self.appPreferenceStore = appPreferenceStore
+        self.deviceSession = deviceSession
         route = .introduction
         networkName = DeviceOnboardingPlaceholder.networkName
         password = DeviceOnboardingPlaceholder.password
         isPasswordVisible = false
         addedDeviceName = DeviceOnboardingPlaceholder.deviceName
         pendingDeviceName = DeviceOnboardingPlaceholder.deviceName
+
+        bindDeviceSession()
     }
 
     deinit {
@@ -63,17 +70,15 @@ final class DeviceOnboardingStore: ObservableObject {
 
         cancelScheduledTransition()
         route = .connecting
-        scheduleTransition(after: DeviceOnboardingTiming.connectingToSuccessDelay) { [weak self] in
-            self?.completeConnection()
-        }
+        startDeviceSessionHandshake()
     }
 
-    func completeConnection() {
+    private func completeConnection(with deviceInfo: DeviceInfo) {
         guard route == .connecting else {
             return
         }
 
-        let device = persistPlaceholderDevice()
+        let device = persistDevice(deviceInfo)
         addedDeviceName = device.name
         appPreferenceStore.hasCompletedOnboarding = true
         route = .success
@@ -91,12 +96,14 @@ final class DeviceOnboardingStore: ObservableObject {
         case .wifiDetails:
             route = .introduction
         case .connecting:
+            deviceSession.send(.reset)
             route = .wifiDetails
         }
     }
 
     func cancelConnection() {
         cancelScheduledTransition()
+        deviceSession.send(.reset)
         route = .wifiDetails
     }
 
@@ -108,6 +115,7 @@ final class DeviceOnboardingStore: ObservableObject {
 
     func addAnotherDevice() {
         cancelScheduledTransition()
+        deviceSession.send(.reset)
         pendingDeviceName = nextDeviceName()
         route = .introduction
     }
@@ -118,6 +126,7 @@ final class DeviceOnboardingStore: ObservableObject {
 
     func clearPlaceholderData() {
         cancelScheduledTransition()
+        deviceSession.send(.reset)
         knownDeviceRepository.clear()
         appPreferenceStore.reset()
         route = .introduction
@@ -135,16 +144,52 @@ final class DeviceOnboardingStore: ObservableObject {
         pendingTransition = nil
     }
 
-    private func persistPlaceholderDevice() -> KnownDeviceSummary {
+    private func startDeviceSessionHandshake() {
+        deviceSession.send(.reset)
+        deviceSession.send(.startAPConnection(ssid: networkName))
+        deviceSession.send(.apConnectionSucceeded)
+        deviceSession.startProtocolHandshake()
+    }
+
+    private func bindDeviceSession() {
+        deviceSession.$state
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] state in
+                self?.handleDeviceSessionState(state)
+            }
+            .store(in: &cancellables)
+    }
+
+    private func handleDeviceSessionState(_ state: DeviceSessionState) {
+        guard route == .connecting else {
+            return
+        }
+
+        switch state {
+        case .ready(let deviceInfo):
+            completeConnection(with: deviceInfo)
+        case .failed:
+            route = .wifiDetails
+        default:
+            break
+        }
+    }
+
+    private func persistDevice(_ deviceInfo: DeviceInfo) -> KnownDeviceSummary {
         var devices = knownDeviceRepository.fetchKnownDevices()
-        let nextIndex = devices.count + 1
         let device = KnownDeviceSummary(
-            id: "cam360-device-\(nextIndex)",
-            name: nextDeviceName(for: nextIndex),
-            hotspotSSID: "\(DeviceOnboardingPlaceholder.hotspotSSIDPrefix)\(nextIndex)",
+            id: deviceInfo.id,
+            name: deviceInfo.name,
+            hotspotSSID: networkName,
             lastConnectedAt: Date()
         )
-        devices.append(device)
+
+        if let existingIndex = devices.firstIndex(where: { $0.id == device.id }) {
+            devices[existingIndex] = device
+        } else {
+            devices.append(device)
+        }
+
         knownDeviceRepository.store(devices)
         return device
     }
@@ -162,10 +207,8 @@ private enum DeviceOnboardingPlaceholder {
     static let networkName = "MyHome_WiFi_2.4G"
     static let password = "password123"
     static let deviceName = "Vigilant DL-400 Pro"
-    static let hotspotSSIDPrefix = "Cam360_DL400_"
 }
 
 private enum DeviceOnboardingTiming {
     static let searchToWiFiDetailsDelay: TimeInterval = 1.2
-    static let connectingToSuccessDelay: TimeInterval = 1.4
 }
