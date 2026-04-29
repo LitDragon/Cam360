@@ -14,11 +14,11 @@
 2. 再让 `DeviceOnboardingStore` 的 connecting 阶段消费 `DeviceSession` 握手完成/失败态。
 3. 最后再把 Dashboard/Settings 的只读状态改为订阅 `DeviceSession` 派生状态。
 
-## 最近完成
+## 完成记录
 
+- `2026-04-29`：新增 GitHub Refactor Agent workflow、配置和 Python CLI，支持按仓库文档扫描 Swift 架构债、受限生成小范围补丁、跑 CI 验证后创建 PR；P3 当前仅进报告。
 - `2026-04-28`：补充接入真实握手前的测试护栏，覆盖 `DeviceOnboardingStore` 密码校验、取消连接后的旧完成回调忽略，以及 `DeviceSession` reset 后过期握手结果忽略。
 - `2026-04-28`：`DeviceSession` 已接入 `DeviceProtocolClient` 握手编排，并补成功、设备 errno、请求超时和握手中断开测试。
-- `2026-04-28`：新增 `Core/DeviceProtocol` 基础层和测试，覆盖 JSON 编解码、`\n` 分帧、`reply_to` 响应匹配、事件路由、iOS 握手命令顺序和 Network.framework transport。
 
 ## 待决事项
 
@@ -30,7 +30,7 @@
 
 - 做完一轮改动后：
   - 把新的短期目标写回“当前任务”或“下一步计划”
-  - “最近完成”只保留最近 3 条结果记录，不复述 `CHANGELOG`
+  - “完成记录”只保留 3 条结果记录，不复述 `CHANGELOG`
   - 不记录编译、测试等直观验证信息
   - 如果有用户新指令，优先覆盖旧计划
   - 文档内容保持精简，不重复复述长期事实

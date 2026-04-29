@@ -23,3 +23,8 @@ Cam360 采用文档优先的开发方式：当前状态、已实现能力、下�
 - [.monkeycode/specs/device-session/README.md](.monkeycode/specs/device-session/README.md)：`DeviceSession` 规格
 - [.monkeycode/specs/live-preview/README.md](.monkeycode/specs/live-preview/README.md)：实时预览规格
 - [.monkeycode/MEMORY.md](.monkeycode/MEMORY.md)：用户长期指令和项目记忆
+
+## 自动化
+
+- `.github/workflows/ci.yml`：push / PR 时执行 Simulator build/test。
+- `.github/workflows/refactor-agent.yml`：手动或定时扫描 Swift 架构债；配置在 `.github/refactor-agent.json`，脚本为 `scripts/refactor_agent.py`，产物写入被忽略的 `build/refactor-agent/`。

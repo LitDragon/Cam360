@@ -1,0 +1,31 @@
+{
+  "report_path": "build/refactor-agent/report.md",
+  "prompt_path": "build/refactor-agent/prompt.txt",
+  "patch_path": "build/refactor-agent/proposed.patch",
+  "model_env": "OPENAI_MODEL",
+  "api_key_env": "OPENAI_API_KEY",
+  "max_files": 3,
+  "max_changed_lines": 400,
+  "max_file_chars": 18000,
+  "max_context_chars": 70000,
+  "scan_paths": [
+    "Cam360",
+    "Cam360Tests"
+  ],
+  "editable_paths": [
+    "Cam360/",
+    "Cam360Tests/"
+  ],
+  "context_docs": [
+    "README.md",
+    "AGENTS.md",
+    "PROJECT_CONTEXT.md",
+    "TASKS.md",
+    ".monkeycode/docs/Cam360技术架构文档.md",
+    ".monkeycode/specs/device-onboarding/README.md",
+    ".monkeycode/specs/device-protocol/README.md",
+    ".monkeycode/specs/device-session/README.md",
+    ".monkeycode/specs/live-preview/README.md"
+  ],
+  "validation_command": "xcodebuild -project Cam360.xcodeproj -scheme Cam360 -configuration Debug -destination \"$SIMULATOR_DESTINATION\" CODE_SIGNING_ALLOWED=NO test"
+}

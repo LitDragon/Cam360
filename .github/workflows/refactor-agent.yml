@@ -1,0 +1,83 @@
+name: Refactor Agent
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Scan and report only"
+        required: true
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+      focus:
+        description: "Optional refactor focus"
+        required: false
+        default: ""
+      max_files:
+        description: "Maximum files the agent may edit"
+        required: true
+        default: "3"
+  schedule:
+    - cron: "0 18 * * 1"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refactor:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve simulator destination
+        run: |
+          SIMULATOR_ID=$(xcrun simctl list devices available | awk -F '[()]' '/iPhone/ { print $2; exit }')
+          if [ -z "$SIMULATOR_ID" ]; then
+            echo "No available iPhone simulator found"
+            exit 1
+          fi
+          echo "SIMULATOR_DESTINATION=platform=iOS Simulator,id=$SIMULATOR_ID" >> "$GITHUB_ENV"
+
+      - name: Run refactor agent
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
+        run: |
+          DRY_RUN="${{ github.event.inputs.dry_run || 'false' }}"
+          FOCUS="${{ github.event.inputs.focus || '' }}"
+          MAX_FILES="${{ github.event.inputs.max_files || '3' }}"
+          python3 scripts/refactor_agent.py run \
+            --config .github/refactor-agent.json \
+            --dry-run "$DRY_RUN" \
+            --focus "$FOCUS" \
+            --max-files "$MAX_FILES"
+
+      - name: Upload refactor report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: refactor-agent-report
+          path: |
+            build/refactor-agent/report.md
+            build/refactor-agent/proposed.patch
+            build/refactor-agent/prompt.txt
+          if-no-files-found: ignore
+
+      - name: Create refactor PR
+        if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.dry_run != 'true' }}
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: refactor-agent/cam360-architecture-debt
+          delete-branch: true
+          commit-message: "refactor: apply architecture debt agent patch"
+          title: "Refactor: architecture debt agent patch"
+          body-path: build/refactor-agent/report.md
+          labels: |
+            automated-refactor
+            needs-review

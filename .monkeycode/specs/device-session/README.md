@@ -9,11 +9,13 @@
 - 当前事件枚举覆盖 AP 连接、握手、操作开始/结束、恢复、断开和重置。
 - 当前操作枚举覆盖 `livePreview`、`playback(recordingId:)`、`download(recordingId:)`、`updateSettings`。
 - 现有 transition 已定义 AP 连接成功/失败、握手成功/失败、操作完成/失败、恢复成功/失败、断开和重置语义。
+- `DeviceSession` 可注入 `DeviceSessionProtocolClient`；`DeviceProtocolClient` 已适配该入口。
+- `startProtocolHandshake()` 在 `handshaking` 状态下先建立控制通道，再执行 `DeviceProtocolHandshakePlan`；成功后从 `UUID`、`FW_VERSION`、`CAMERA_CAPABILITY` 响应派生 `DeviceInfo`。
 
 ## 当前范围外
 
-- 真实 AP、局域网或媒体传输实现
-- 自动重试与超时调度
+- 真实 AP 连接、`AppContainer` 共享实例下发和 Feature 主路径消费
+- 自动重试与会话级超时调度
 - 多设备并发会话
 - 会话持久化和跨启动恢复
 

@@ -2,6 +2,11 @@
 
 本文件记录仓库中已经实际发生的改动历史。按日期保留结果和边界，不展开过程细节或验证信息。
 
+## 2026-04-29
+
+- 新增 GitHub `Refactor Agent` workflow、配置和标准库 Python CLI：按仓库文档扫描 Swift 架构债，受限生成小范围补丁，验证通过后自动创建重构 PR；当前默认仅允许 P1/P2 架构边界问题触发自动补丁。
+- 同步 `DeviceProtocol` 与 `DeviceSession` 文档口径：控制协议握手已进入 `DeviceSession` 内部编排，但 `AppContainer`、`DeviceOnboarding`、Dashboard 和 Settings 仍未接入真实会话主路径。
+
 ## 2026-04-28
 
 - 新增 `.monkeycode/specs/device-protocol/README.md`，从外部资料中收敛 iOS 可用的设备控制协议、握手流程、错误码、P0 Topic 和原始资料入口。
