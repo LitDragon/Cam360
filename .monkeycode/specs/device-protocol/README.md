@@ -121,6 +121,12 @@
 - 文件与截图：`FILE_LIST`、`FILE_INFO`、`FILE_DELETE`、`FILE_DOWNLOAD_URL`、`THUMB_LIST`、`THUMB_GET`、`FILE_LOCK`、`SNAPSHOT_CTRL`、`SNAPSHOT_DATA`、`FORMAT`
 - 主动推送：`SD_STATUS`、`BAT_STATUS`、`VIDEO_CTRL`、`FORMAT_PROGRESS`、`UPGRADE_PROGRESS`、`DOWNLOAD_PROGRESS`
 
+## 文件、缩略图与截图
+
+- `THUMB_LIST` 使用 `paths[]` 请求，联调模拟器限制单次不超过 20 个路径、总原始缩略图大小不超过 `512KB`。
+- `SNAPSHOT_CTRL` 使用 `POST mode=preview` 触发截图，响应 `snapshot_id` 后再用 `SNAPSHOT_DATA` 获取截图资源。
+- `VIDEO_CTRL` 使用 `GET` 查询录像状态，使用 `POST status=0/1` 停止或开始录像，成功后以设备响应或推送作为最终状态。
+
 ## 后续接入约束
 
 - 协议 JSON、分帧、请求队列和 Topic 解析必须封装在 Core 侧，Feature 不直接拼接原始 JSON。

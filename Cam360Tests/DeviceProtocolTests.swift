@@ -187,6 +187,27 @@ struct DeviceProtocolTests {
         #expect(transport.sentMessages.first?.parameters["type"]?.intValue == 1)
         #expect(transport.sentMessages.first?.parameters["ver"]?.stringValue == "1.2.3")
     }
+
+    @Test
+    func controlCommandsUseConfirmedTopicsAndParameters() {
+        let startRecording = DeviceProtocolCommand.setRecording(enabled: true)
+        let stopRecording = DeviceProtocolCommand.setRecording(enabled: false)
+        let snapshotControl = DeviceProtocolCommand.snapshotControl(mode: .preview)
+        let snapshotData = DeviceProtocolCommand.snapshotData(snapshotID: "snap-1")
+
+        #expect(DeviceProtocolCommand.recordingState.topic == "VIDEO_CTRL")
+        #expect(DeviceProtocolCommand.recordingState.operation == .get)
+        #expect(startRecording.topic == "VIDEO_CTRL")
+        #expect(startRecording.operation == .post)
+        #expect(startRecording.parameters["status"]?.intValue == 1)
+        #expect(stopRecording.parameters["status"]?.intValue == 0)
+        #expect(snapshotControl.topic == "SNAPSHOT_CTRL")
+        #expect(snapshotControl.operation == .post)
+        #expect(snapshotControl.parameters["mode"]?.stringValue == "preview")
+        #expect(snapshotData.topic == "SNAPSHOT_DATA")
+        #expect(snapshotData.operation == .get)
+        #expect(snapshotData.parameters["snapshot_id"]?.stringValue == "snap-1")
+    }
 }
 
 private final class FakeDeviceProtocolTransport: DeviceProtocolTransport {

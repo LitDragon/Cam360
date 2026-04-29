@@ -177,6 +177,72 @@ struct DeviceSessionProtocolTests {
             "THUMB_GET"
         ])
     }
+
+    @Test
+    func recordingCommandsSendVideoCtrlThroughSession() async {
+        let transport = SessionFakeDeviceProtocolTransport()
+        let session = makeSession(transport: transport)
+        transport.responseProvider = { request in
+            makeControlTopicResponse(request) ?? makeHandshakeResponse(request)
+        }
+        var states: [DeviceRecordingState] = []
+
+        startHandshake(session)
+        #expect(await waitForSessionState { session.state.isConnected })
+
+        session.fetchRecordingState { result in
+            if case .success(let state) = result {
+                states.append(state)
+            }
+        }
+        session.setRecording(enabled: true) { result in
+            if case .success(let state) = result {
+                states.append(state)
+            }
+        }
+
+        #expect(await waitForSessionState { states.count == 2 })
+        #expect(states[0] == DeviceRecordingState(isRecording: false, path: nil))
+        #expect(states[1] == DeviceRecordingState(isRecording: true, path: "/DCIMA/REC99999.AVI"))
+        #expect(Array(transport.sentMessages.map(\.topic).suffix(2)) == [
+            "VIDEO_CTRL",
+            "VIDEO_CTRL"
+        ])
+        #expect(transport.sentMessages.suffix(2).first?.operation == .get)
+        #expect(transport.sentMessages.last?.operation == .post)
+        #expect(transport.sentMessages.last?.parameters["status"]?.intValue == 1)
+    }
+
+    @Test
+    func captureSnapshotSendsSnapshotControlThenSnapshotDataThroughSession() async {
+        let transport = SessionFakeDeviceProtocolTransport()
+        let session = makeSession(transport: transport)
+        transport.responseProvider = { request in
+            makeControlTopicResponse(request) ?? makeHandshakeResponse(request)
+        }
+        var snapshot: DeviceSnapshotResource?
+
+        startHandshake(session)
+        #expect(await waitForSessionState { session.state.isConnected })
+
+        session.captureSnapshot { result in
+            if case .success(let resource) = result {
+                snapshot = resource
+            }
+        }
+
+        #expect(await waitForSessionState { snapshot != nil })
+        #expect(snapshot?.snapshotID == "snap-1")
+        #expect(snapshot?.imageBase64 == "base64-snapshot")
+        #expect(snapshot?.width == 1280)
+        #expect(snapshot?.height == 720)
+        #expect(Array(transport.sentMessages.map(\.topic).suffix(2)) == [
+            "SNAPSHOT_CTRL",
+            "SNAPSHOT_DATA"
+        ])
+        #expect(transport.sentMessages.suffix(2).first?.parameters["mode"]?.stringValue == "preview")
+        #expect(transport.sentMessages.last?.parameters["snapshot_id"]?.stringValue == "snap-1")
+    }
 }
 
 private func makeSession(
@@ -262,6 +328,45 @@ private func makeFileTopicResponse(_ request: DeviceProtocolMessage) -> DevicePr
         ]
     case "THUMB_GET":
         parameters = makeDeviceThumbnailObject()
+    default:
+        return nil
+    }
+
+    return DeviceProtocolMessage(
+        topic: request.topic,
+        operation: .notify,
+        messageID: "dev-\(request.messageID)",
+        notifyType: .response,
+        replyTo: request.messageID,
+        errno: 0,
+        parameters: parameters
+    )
+}
+
+private func makeControlTopicResponse(_ request: DeviceProtocolMessage) -> DeviceProtocolMessage? {
+    let parameters: [String: DeviceProtocolValue]
+
+    switch request.topic {
+    case "VIDEO_CTRL":
+        parameters = [
+            "status": request.operation == .post ? (request.parameters["status"] ?? 0) : 0,
+            "path": request.operation == .post ? "/DCIMA/REC99999.AVI" : ""
+        ]
+    case "SNAPSHOT_CTRL":
+        parameters = [
+            "snapshot_id": "snap-1",
+            "status": "ok"
+        ]
+    case "SNAPSHOT_DATA":
+        parameters = [
+            "snapshot_id": "snap-1",
+            "format": "JPEG",
+            "width": 1280,
+            "height": 720,
+            "size": 24_000,
+            "create_time": "20260429103000",
+            "image_base64": "base64-snapshot"
+        ]
     default:
         return nil
     }

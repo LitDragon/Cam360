@@ -110,6 +110,41 @@ final class DeviceSession: ObservableObject {
         }
     }
 
+    func fetchRecordingState(
+        completion: @escaping (Result<DeviceRecordingState, DeviceSessionCommandError>) -> Void
+    ) {
+        performControlCommand(.recordingState, completion: completion) { message in
+            try DeviceFileResponseParser.recordingState(from: message.parameters)
+        }
+    }
+
+    func setRecording(
+        enabled: Bool,
+        completion: @escaping (Result<DeviceRecordingState, DeviceSessionCommandError>) -> Void
+    ) {
+        performControlCommand(.setRecording(enabled: enabled), completion: completion) { message in
+            try DeviceFileResponseParser.recordingState(from: message.parameters)
+        }
+    }
+
+    func captureSnapshot(
+        mode: DeviceSnapshotMode = .preview,
+        completion: @escaping (Result<DeviceSnapshotResource, DeviceSessionCommandError>) -> Void
+    ) {
+        performControlCommand(.snapshotControl(mode: mode)) { [weak self] result in
+            switch result {
+            case .success(let snapshotID):
+                self?.performControlCommand(.snapshotData(snapshotID: snapshotID), completion: completion) { message in
+                    try DeviceFileResponseParser.snapshotResource(from: message.parameters)
+                }
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        } parse: { message in
+            try DeviceFileResponseParser.snapshotID(from: message.parameters)
+        }
+    }
+
     func send(_ event: DeviceSessionEvent) {
         let shouldDisconnectProtocol = shouldDisconnectProtocol(for: event)
         if shouldDisconnectProtocol {
@@ -254,6 +289,47 @@ final class DeviceSession: ObservableObject {
                 do {
                     completion(.success(try parse(message)))
                 } catch let error as DeviceSessionReadOnlyError {
+                    completion(.failure(error))
+                } catch {
+                    completion(.failure(.invalidResponse(error.localizedDescription)))
+                }
+            case .failure(let error):
+                completion(.failure(.protocolFailure(error)))
+            }
+        }
+    }
+
+    private func performControlCommand<T>(
+        _ command: DeviceProtocolCommand,
+        completion: @escaping (Result<T, DeviceSessionCommandError>) -> Void,
+        parse: @escaping (DeviceProtocolMessage) throws -> T
+    ) {
+        guard state.canSendReadOnlyCommand else {
+            completion(.failure(.sessionNotReady))
+            return
+        }
+
+        guard let protocolClient else {
+            completion(.failure(.protocolClientUnavailable))
+            return
+        }
+
+        let generation = readOnlyCommandGeneration
+        protocolClient.send(command) { [weak self] result in
+            guard let self else {
+                return
+            }
+
+            guard self.isCurrentReadOnlyCommand(generation) else {
+                completion(.failure(.staleSession))
+                return
+            }
+
+            switch result {
+            case .success(let message):
+                do {
+                    completion(.success(try parse(message)))
+                } catch let error as DeviceSessionCommandError {
                     completion(.failure(error))
                 } catch {
                     completion(.failure(.invalidResponse(error.localizedDescription)))

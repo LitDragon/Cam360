@@ -23,6 +23,29 @@ enum DeviceSessionReadOnlyError: Error, Equatable {
     }
 }
 
+enum DeviceSessionCommandError: Error, Equatable {
+    case sessionNotReady
+    case protocolClientUnavailable
+    case staleSession
+    case invalidResponse(String)
+    case protocolFailure(DeviceProtocolError)
+
+    var message: String {
+        switch self {
+        case .sessionNotReady:
+            return "设备会话未就绪"
+        case .protocolClientUnavailable:
+            return "控制通道未配置"
+        case .staleSession:
+            return "设备会话已变更"
+        case .invalidResponse(let reason):
+            return "设备响应无效: \(reason)"
+        case .protocolFailure(let error):
+            return DeviceSession.protocolFailureReason(for: error)
+        }
+    }
+}
+
 enum DeviceFileType: String, Equatable {
     case video
     case photo
@@ -100,6 +123,26 @@ struct DeviceFileThumbnail: Equatable {
     let size: Int?
     let imageBase64: String?
     let thumbURL: String?
+}
+
+enum DeviceSnapshotMode: String, Equatable {
+    case preview
+}
+
+struct DeviceSnapshotResource: Equatable {
+    let snapshotID: String
+    let url: String?
+    let format: String?
+    let width: Int?
+    let height: Int?
+    let size: Int?
+    let createTime: String?
+    let imageBase64: String?
+}
+
+struct DeviceRecordingState: Equatable {
+    let isRecording: Bool
+    let path: String?
 }
 
 enum DeviceFileResponseParser {
@@ -180,6 +223,42 @@ enum DeviceFileResponseParser {
             size: parameters.int("size"),
             imageBase64: parameters.string("image_base64"),
             thumbURL: parameters.string("thumb_url")
+        )
+    }
+
+    static func snapshotResource(from parameters: [String: DeviceProtocolValue]) throws -> DeviceSnapshotResource {
+        guard let snapshotID = parameters.string("snapshot_id") else {
+            throw DeviceSessionCommandError.invalidResponse("SNAPSHOT_DATA.snapshot_id 缺失")
+        }
+
+        return DeviceSnapshotResource(
+            snapshotID: snapshotID,
+            url: parameters.string("url"),
+            format: parameters.string("format"),
+            width: parameters.int("width"),
+            height: parameters.int("height"),
+            size: parameters.int("size"),
+            createTime: parameters.string("create_time"),
+            imageBase64: parameters.string("image_base64")
+        )
+    }
+
+    static func snapshotID(from parameters: [String: DeviceProtocolValue]) throws -> String {
+        guard let snapshotID = parameters.string("snapshot_id") else {
+            throw DeviceSessionCommandError.invalidResponse("SNAPSHOT_CTRL.snapshot_id 缺失")
+        }
+        return snapshotID
+    }
+
+    static func recordingState(from parameters: [String: DeviceProtocolValue]) throws -> DeviceRecordingState {
+        guard let isRecording = parameters.bool("status") else {
+            throw DeviceSessionCommandError.invalidResponse("VIDEO_CTRL.status 缺失")
+        }
+
+        let path = parameters.string("path") ?? parameters.string("dir")
+        return DeviceRecordingState(
+            isRecording: isRecording,
+            path: path?.isEmpty == true ? nil : path
         )
     }
 

@@ -110,6 +110,32 @@ extension DeviceProtocolCommand {
             parameters: ["path": .string(path)]
         )
     }
+
+    static let recordingState = DeviceProtocolCommand(topic: "VIDEO_CTRL", operation: .get)
+
+    static func setRecording(enabled: Bool) -> DeviceProtocolCommand {
+        DeviceProtocolCommand(
+            topic: "VIDEO_CTRL",
+            operation: .post,
+            parameters: ["status": .int(enabled ? 1 : 0)]
+        )
+    }
+
+    static func snapshotControl(mode: DeviceSnapshotMode = .preview) -> DeviceProtocolCommand {
+        DeviceProtocolCommand(
+            topic: "SNAPSHOT_CTRL",
+            operation: .post,
+            parameters: ["mode": .string(mode.rawValue)]
+        )
+    }
+
+    static func snapshotData(snapshotID: String) -> DeviceProtocolCommand {
+        DeviceProtocolCommand(
+            topic: "SNAPSHOT_DATA",
+            operation: .get,
+            parameters: ["snapshot_id": .string(snapshotID)]
+        )
+    }
 }
 
 struct DeviceProtocolHandshakePlan {
