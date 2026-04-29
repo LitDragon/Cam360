@@ -10,21 +10,6 @@
 - 产品类型：行车记录仪 App
 - 连接模型：设备热点 AP 模式 + 局域网通信
 
-## 当前代码事实
-
-- 当前阶段仍以 `M0 骨架` 为主。
-- App 入口为 UIKit 生命周期桥接 + SwiftUI 根视图。
-- 根级结构由 `AppBootstrap`、`AppRouter`、`AppContainer`、`AppRootView` 驱动。
-- `AppBootstrap` 当前默认直接进入 `main(MainTab)`；首页根据 `AppPreferenceStore.hasCompletedOnboarding` 决定是否展示首次安装 3 页全屏引导。
-- 当前主界面只有 3 个 tab：`dashboard`、`gallery`、`settings`。
-- `events` 页面文件存在，但没有接入当前主 tab。
-- `Dashboard` 当前包含设备聚合页样式的已连接设备态、侧边设备抽屉、无设备态和首次安装全屏引导；`Open Full Gallery` 和右上齿轮分别切到 `gallery`、`settings` tab。
-- `DeviceOnboarding` 已接入首页 `Add Device` 的 5 步流程，连接阶段消费 `DeviceSession` 握手结果；成功页会回写协议 `DeviceInfo` 派生设备，未配置控制通道 endpoint 时不会假成功。
-- `LivePreview`、`Playback`、`Downloads` 仍是占位实现。
-- `Core/Device/DeviceSession.swift` 已有本地状态机骨架，并能通过注入的 `DeviceProtocolClient` 执行 TCP 控制协议握手；当前已由 `AppContainer` 组合下发并接入 `DeviceOnboarding`，Dashboard 和 Settings 仍未订阅真实会话状态。
-- `Core/DeviceProtocol` 已有 TCP 控制协议基础层，覆盖 JSON message/value、`\n` 分帧、请求响应匹配、事件路由、握手命令计划和 Network.framework transport；当前尚未接入真实 AP 连接、UI、媒体或下载链路。
-- 当前测试 target 只有 `Cam360Tests`。
-
 ## 技术基线
 
 - 开发语言：Swift
@@ -32,11 +17,7 @@
 - 最低支持版本：`iOS 13`
 - 主路径风格：优先沿用 `iOS 15` 时代稳定写法
 - UI：SwiftUI 为主，UIKit 生命周期桥接
-- 状态模型：`ObservableObject`、`@Published`、`@ObservedObject`、`@State`
-- 持久化：`UserDefaults` + App Sandbox
 - 测试：`Swift Testing`
-- 第三方依赖：当前已见 `Lottie`
-- GitHub 自动化：`ci.yml` 跑 Simulator build/test；`refactor-agent.yml` 调用 `scripts/refactor_agent.py` 按仓库文档扫描 Swift 架构债并生成受限补丁/PR
 
 ## 目录边界
 

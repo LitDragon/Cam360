@@ -1,17 +1,6 @@
 # DeviceSession 规格
 
-本文件只记录当前状态机骨架和未来真实接入时的边界。真实设备协议事实以 [`device-protocol`](../device-protocol/README.md) 为准。
-
-## 当前代码对齐结果
-
-- `DeviceSession` 是 `ObservableObject`，当前对外发布 `state` 和 `currentOperation`。
-- 当前状态枚举为 `idle`、`apConnecting`、`handshaking`、`ready`、`busy`、`recovering`、`failed`、`disconnected`。
-- 当前事件枚举覆盖 AP 连接、握手、操作开始/结束、恢复、断开和重置。
-- 当前操作枚举覆盖 `livePreview`、`playback(recordingId:)`、`download(recordingId:)`、`updateSettings`。
-- 现有 transition 已定义 AP 连接成功/失败、握手成功/失败、操作完成/失败、恢复成功/失败、断开和重置语义。
-- `DeviceSession` 可注入 `DeviceSessionProtocolClient`；`DeviceProtocolClient` 已适配该入口。
-- `startProtocolHandshake()` 在 `handshaking` 状态下先建立控制通道，再执行 `DeviceProtocolHandshakePlan`；成功后从 `UUID`、`FW_VERSION`、`CAMERA_CAPABILITY` 响应派生 `DeviceInfo`。
-- `AppContainer` 已组合共享 `DeviceSession`；`DeviceOnboarding` 已消费握手成功/失败态。
+本文件只记录 `DeviceSession` 真实接入边界。真实设备协议事实以 [`device-protocol`](../device-protocol/README.md) 为准。
 
 ## 当前范围外
 

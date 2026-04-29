@@ -1,13 +1,6 @@
 # 实时预览规格
 
-本文件只记录当前占位实现和后续最小可用链路的边界。
-
-## 当前代码对齐结果
-
-- `LivePreviewView` 当前使用 `SectionCard` 和 `ErrorStateView` 展示占位内容，并暴露 `screen-livePreview` accessibility id。
-- `LivePreviewStore` 目前只有占位标题和说明文案，没有真实流状态。
-- `LivePreviewRoute` 当前只声明 `immersive`。
-- 当前主界面仍是 3-tab，`LivePreview` Feature 已存在，但没有接入当前主导航。
+本文件只记录实时预览最小可用链路的边界。
 
 ## 当前范围外
 

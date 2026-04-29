@@ -8,6 +8,7 @@
 - `DeviceOnboardingStore` 的连接阶段从本地定时假成功切到 `DeviceSession` 握手成功/失败态；成功后写入协议 `DeviceInfo` 派生设备，取消或失败不落库。
 - 新增 GitHub `Refactor Agent` workflow、配置和标准库 Python CLI：按仓库文档扫描 Swift 架构债，受限生成小范围补丁，验证通过后自动创建重构 PR；当前默认仅允许 P1/P2 架构边界问题触发自动补丁。
 - 同步 `DeviceProtocol` 与 `DeviceSession` 文档口径：控制协议握手已进入 `DeviceSession` 内部编排，Dashboard 和 Settings 仍未接入真实会话主路径。
+- 精简项目文档体系，删除过期 `.monkeycode/docs` 补充入口和架构文档，并移除协议、会话、接入和预览规格中的代码状态追踪。
 
 ## 2026-04-28
 

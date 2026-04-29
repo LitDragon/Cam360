@@ -2,14 +2,6 @@
 
 本文件只沉淀 Cam360 iOS 后续接入真实设备时可直接使用的协议事实。原始资料中包含 Android 实现建议，本文件不继承 Android 技术栈和工程分层。
 
-## 当前代码对齐结果
-
-- `Core/DeviceProtocol` 已实现控制协议基础层，覆盖 JSON message/value、`\n` 分帧、请求响应匹配、事件路由、握手命令计划和 Network.framework transport。
-- 当前 iOS 工程仍未实现真实 AP 连接、HTTP 资源下载或媒体预览链路。
-- `DeviceProtocolClient` 已通过 `DeviceSession` 的可注入协议客户端入口进入握手编排；当前尚未由 `AppContainer` 组合下发，也未接入 `DeviceOnboarding` 或页面状态。
-- `DeviceSession` 已有状态机骨架和控制协议握手编排，后续真实连接、恢复和失败语义仍应先收敛到 `DeviceSession`。
-- `LivePreview`、`Playback`、`Downloads`、`Settings` 当前仍按 M0 占位或本地状态闭环，不直接持有底层连接。
-
 ## 控制通道
 
 - 设备连接模型为手机连接设备 Wi-Fi AP 后，通过局域网访问设备。
