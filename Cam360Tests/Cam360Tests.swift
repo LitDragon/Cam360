@@ -174,6 +174,49 @@ struct Cam360Tests {
     }
 
     @Test
+    func dashboardStoreDerivesKnownDeviceStatusFromDeviceSession() async {
+        let testDefaults = makeUserDefaults()
+        defer { clear(testDefaults) }
+
+        let repository = UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults)
+        let preferenceStore = UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults)
+        let session = DeviceSession()
+        repository.store([
+            makeKnownDevice(id: "cam360-main", name: "DriveCam X Pro"),
+            makeKnownDevice(id: "cam360-rear", name: "Rear View")
+        ])
+        let store = DashboardStore(
+            knownDeviceRepository: repository,
+            appPreferenceStore: preferenceStore,
+            contentProvider: TestDashboardContentProvider(),
+            deviceSession: session
+        )
+
+        #expect(store.devices.first(where: { $0.id == "cam360-rear" })?.status == .offline)
+
+        session.send(.startAPConnection(ssid: "Cam360_AP"))
+        session.send(.apConnectionSucceeded)
+        session.send(.handshakeSucceeded(
+            DeviceInfo(
+                id: "cam360-rear",
+                name: "Rear View",
+                firmwareVersion: "v1.1.0",
+                capabilities: [.settings]
+            )
+        ))
+
+        #expect(await waitForOnboardingState {
+            store.devices.first(where: { $0.id == "cam360-rear" })?.status == .connected
+        })
+
+        session.send(.connectionLost)
+
+        #expect(await waitForOnboardingState {
+            store.devices.first(where: { $0.id == "cam360-rear" })?.status == .offline
+        })
+    }
+
+    @Test
     func deviceOnboardingStoreHappyPathPersistsDeviceAndReturnsToDashboard() async {
         let testDefaults = makeUserDefaults()
         defer { clear(testDefaults) }
@@ -483,6 +526,53 @@ struct Cam360Tests {
             appPreferenceStore: preferenceStore
         )
         #expect(dashboardStore.selectedDevice?.name == "RoadGuard Pro")
+    }
+
+    @Test
+    func settingsStoreReadsReadyDeviceInfoFromDeviceSession() async {
+        let testDefaults = makeUserDefaults()
+        defer { clear(testDefaults) }
+
+        let repository = UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults)
+        let preferenceStore = UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults)
+        let router = AppRouter(route: .main(.settings))
+        let session = DeviceSession()
+        repository.store([
+            makeKnownDevice(id: "road-camera-001", name: "Old Name")
+        ])
+        let store = SettingsStore(
+            router: router,
+            knownDeviceRepository: repository,
+            appPreferenceStore: preferenceStore,
+            deviceSession: session
+        )
+
+        session.send(.startAPConnection(ssid: "Cam360_AP"))
+        session.send(.apConnectionSucceeded)
+        session.send(.handshakeSucceeded(
+            DeviceInfo(
+                id: "road-camera-001",
+                name: "Road Camera",
+                firmwareVersion: "v3.0.0",
+                capabilities: [.download, .settings]
+            )
+        ))
+
+        #expect(await waitForOnboardingState {
+            store.devicePreferences.deviceName == "Road Camera"
+        })
+        #expect(store.devicePreferences.connectionName == "Cam360_AP_road-camera-001")
+        #expect(store.devicePreferences.firmwareVersion == "v3.0.0")
+        #expect(store.deviceCapabilities == [.download, .settings])
+        #expect(store.deviceConnectionStatusTitle == "CONNECTED")
+        #expect(store.deviceConnectionStatusTone == .success)
+
+        session.send(.disconnect)
+
+        #expect(await waitForOnboardingState {
+            store.deviceConnectionStatusTitle == "OFFLINE"
+        })
+        #expect(store.deviceCapabilities.isEmpty)
     }
 
     @Test

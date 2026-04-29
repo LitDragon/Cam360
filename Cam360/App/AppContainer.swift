@@ -38,7 +38,8 @@ final class AppContainer {
 
         dashboardStore = DashboardStore(
             knownDeviceRepository: knownDeviceRepository,
-            appPreferenceStore: appPreferenceStore
+            appPreferenceStore: appPreferenceStore,
+            deviceSession: deviceSession
         )
         deviceOnboardingStore = DeviceOnboardingStore(
             router: router,
@@ -54,7 +55,8 @@ final class AppContainer {
         settingsStore = SettingsStore(
             router: router,
             knownDeviceRepository: knownDeviceRepository,
-            appPreferenceStore: appPreferenceStore
+            appPreferenceStore: appPreferenceStore,
+            deviceSession: deviceSession
         )
     }
 

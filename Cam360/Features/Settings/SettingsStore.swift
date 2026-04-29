@@ -20,21 +20,33 @@ final class SettingsStore: ObservableObject {
     @Published private(set) var safetySettings = SafetySettingsState.defaultValue
     @Published private(set) var firmwareUpdateStage: FirmwareUpdateStage = .available
     @Published private(set) var renameDeviceDraft = SettingsPlaceholder.deviceName
+    @Published private(set) var deviceConnectionStatusTitle = "OFFLINE"
+    @Published private(set) var deviceConnectionStatusText = "Not connected"
+    @Published private(set) var deviceConnectionStatusTone: StatusTagTone = .neutral
+    @Published private(set) var deviceCapabilities: Set<DeviceCapability> = []
 
     private let router: AppRouter
     private let knownDeviceRepository: KnownDeviceRepository
     private let appPreferenceStore: AppPreferenceStore
+    private let deviceSession: DeviceSession?
     private var seededDeviceID: KnownDeviceSummary.ID?
+    private var deviceSessionState: DeviceSessionState = .idle
+    private var appliedSessionDeviceInfo: DeviceInfo?
+    private var cancellables = Set<AnyCancellable>()
 
     init(
         router: AppRouter,
         knownDeviceRepository: KnownDeviceRepository,
-        appPreferenceStore: AppPreferenceStore
+        appPreferenceStore: AppPreferenceStore,
+        deviceSession: DeviceSession? = nil
     ) {
         self.router = router
         self.knownDeviceRepository = knownDeviceRepository
         self.appPreferenceStore = appPreferenceStore
+        self.deviceSession = deviceSession
+        deviceSessionState = deviceSession?.state ?? .idle
         seedDeviceState(from: knownDeviceRepository.fetchKnownDevices().first)
+        bindDeviceSession()
         refresh()
     }
 
@@ -45,6 +57,7 @@ final class SettingsStore: ObservableObject {
         hasCompletedOnboarding = appPreferenceStore.hasCompletedOnboarding
         shareAnonymousLogs = appPreferenceStore.shareAnonymousLogs
         notificationPreferences = appPreferenceStore.notificationPreferences
+        syncDeviceSessionState(deviceSessionState)
     }
 
     var appVersionText: String {
@@ -250,6 +263,64 @@ final class SettingsStore: ObservableObject {
         safetySettings = .defaultValue
         firmwareUpdateStage = .available
         renameDeviceDraft = deviceName
+    }
+
+    private func bindDeviceSession() {
+        deviceSession?.$state
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] state in
+                self?.syncDeviceSessionState(state)
+            }
+            .store(in: &cancellables)
+    }
+
+    private func syncDeviceSessionState(_ state: DeviceSessionState) {
+        deviceSessionState = state
+
+        switch state {
+        case .idle:
+            deviceConnectionStatusTitle = "OFFLINE"
+            deviceConnectionStatusText = "Not connected"
+            deviceConnectionStatusTone = .neutral
+            deviceCapabilities = []
+        case .apConnecting, .handshaking, .recovering:
+            deviceConnectionStatusTitle = "CONNECTING"
+            deviceConnectionStatusText = "Connecting to device"
+            deviceConnectionStatusTone = .warning
+        case .ready(let deviceInfo), .busy(operation: _, deviceInfo: let deviceInfo):
+            if appliedSessionDeviceInfo != deviceInfo {
+                applyDeviceInfo(deviceInfo)
+                appliedSessionDeviceInfo = deviceInfo
+            }
+            deviceConnectionStatusTitle = "CONNECTED"
+            deviceConnectionStatusText = "Connected and ready to record"
+            deviceConnectionStatusTone = .success
+            deviceCapabilities = deviceInfo.capabilities
+        case .failed(let error):
+            deviceConnectionStatusTitle = "FAILED"
+            deviceConnectionStatusText = error.localizedDescription
+            deviceConnectionStatusTone = .danger
+            deviceCapabilities = []
+        case .disconnected:
+            deviceConnectionStatusTitle = "OFFLINE"
+            deviceConnectionStatusText = "Disconnected"
+            deviceConnectionStatusTone = .neutral
+            deviceCapabilities = []
+        }
+    }
+
+    private func applyDeviceInfo(_ deviceInfo: DeviceInfo) {
+        let knownDevice = knownDeviceRepository.fetchKnownDevices().first { $0.id == deviceInfo.id }
+        let connectionName = knownDevice?.hotspotSSID ?? devicePreferences.connectionName
+        var updatedPreferences = DevicePreferencesState.defaultValue(
+            deviceName: deviceInfo.name,
+            connectionName: connectionName
+        )
+        updatedPreferences.firmwareVersion = deviceInfo.firmwareVersion
+        devicePreferences = updatedPreferences
+        networkIdentity = .defaultValue(networkName: connectionName)
+        renameDeviceDraft = deviceInfo.name
+        seededDeviceID = knownDevice?.id ?? seededDeviceID
     }
 }
 

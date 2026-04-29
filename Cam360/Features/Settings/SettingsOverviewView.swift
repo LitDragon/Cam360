@@ -7,7 +7,7 @@ struct SettingsOverviewView: View {
         VStack(spacing: 0) {
             AppTopBar(
                 title: store.devicePreferences.deviceName,
-                subtitle: "Connected and ready to record"
+                subtitle: store.deviceConnectionStatusText
             )
 
             ScrollView(showsIndicators: false) {
@@ -93,7 +93,7 @@ struct SettingsOverviewView: View {
                     }
 
                     SettingsFootnote(
-                        text: "This M0 settings shell is backed by local placeholder state until DeviceSession and device capabilities are wired in."
+                        text: "Device identity and capabilities follow the active session; write operations stay local until command topics are wired in."
                     )
                 }
                 .padding(.horizontal, AppSpacing.xxl)
@@ -108,7 +108,7 @@ struct SettingsOverviewView: View {
     private var connectionSummary: some View {
         VStack(alignment: .leading, spacing: AppSpacing.md) {
             HStack(spacing: AppSpacing.md) {
-                StatusTag(title: "CONNECTED", tone: .success)
+                StatusTag(title: store.deviceConnectionStatusTitle, tone: store.deviceConnectionStatusTone)
 
                 Text(store.devicePreferences.connectionName)
                     .font(AppTypography.caption)

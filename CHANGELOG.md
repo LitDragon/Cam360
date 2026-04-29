@@ -4,6 +4,8 @@
 
 ## 2026-04-29
 
+- `DashboardStore` 和 `SettingsStore` 开始消费共享 `DeviceSession` 的只读派生状态；Dashboard 会按会话 ready/failed/disconnected 更新已知设备连接态，Settings 会读取握手返回的设备名、固件版本和能力集。
+- 依据外部真实资料确认 endpoint 边界：联调模拟器当前采用手动热点和可达 IP / host-port 配置，真设备自动发现规则仍未确认，App 不写死固定 host。
 - `AppContainer` 增加共享 `DeviceSession` 和 `DeviceProtocolEndpoint` 组合边界，控制通道 endpoint 可通过启动参数传入后创建真实 `NetworkDeviceProtocolTransport`。
 - `DeviceOnboardingStore` 的连接阶段从本地定时假成功切到 `DeviceSession` 握手成功/失败态；成功后写入协议 `DeviceInfo` 派生设备，取消或失败不落库。
 - 新增 GitHub `Refactor Agent` workflow、配置和标准库 Python CLI：按仓库文档扫描 Swift 架构债，受限生成小范围补丁，验证通过后自动创建重构 PR；当前默认仅允许 P1/P2 架构边界问题触发自动补丁。

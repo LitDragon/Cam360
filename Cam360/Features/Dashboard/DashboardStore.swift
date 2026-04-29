@@ -103,19 +103,28 @@ final class DashboardStore: ObservableObject {
     private let knownDeviceRepository: KnownDeviceRepository
     private let appPreferenceStore: AppPreferenceStore
     private let contentProvider: DashboardContentProviding
+    private let deviceSession: DeviceSession?
+    private var deviceSessionState: DeviceSessionState = .idle
+    private var lastSessionDeviceID: KnownDeviceSummary.ID?
+    private var cancellables = Set<AnyCancellable>()
 
     init(
         knownDeviceRepository: KnownDeviceRepository,
         appPreferenceStore: AppPreferenceStore,
-        contentProvider: DashboardContentProviding = PlaceholderDashboardContentProvider()
+        contentProvider: DashboardContentProviding = PlaceholderDashboardContentProvider(),
+        deviceSession: DeviceSession? = nil
     ) {
         self.knownDeviceRepository = knownDeviceRepository
         self.appPreferenceStore = appPreferenceStore
         self.contentProvider = contentProvider
+        self.deviceSession = deviceSession
         devices = []
         selectedDeviceID = nil
         shouldShowFeatureSheet = false
         recordingStatesByDeviceID = [:]
+        deviceSessionState = deviceSession?.state ?? .idle
+        updateLastSessionDeviceID(from: deviceSessionState)
+        bindDeviceSession()
         refresh()
     }
 
@@ -168,7 +177,7 @@ final class DashboardStore: ObservableObject {
             DashboardDeviceItem(
                 id: device.id,
                 name: device.name,
-                status: contentProvider.status(for: device, at: index),
+                status: status(for: device, at: index),
                 hotspotSSID: device.hotspotSSID
             )
         }
@@ -223,6 +232,43 @@ final class DashboardStore: ObservableObject {
         }
 
         return contentProvider.scenario(forDeviceAt: selectedIndex)
+    }
+
+    private func bindDeviceSession() {
+        deviceSession?.$state
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] state in
+                self?.deviceSessionState = state
+                self?.updateLastSessionDeviceID(from: state)
+                self?.refresh()
+            }
+            .store(in: &cancellables)
+    }
+
+    private func updateLastSessionDeviceID(from state: DeviceSessionState) {
+        switch state {
+        case .ready(let deviceInfo), .busy(operation: _, deviceInfo: let deviceInfo):
+            lastSessionDeviceID = deviceInfo.id
+        default:
+            break
+        }
+    }
+
+    private func status(for device: KnownDeviceSummary, at index: Int) -> DashboardDeviceStatus {
+        switch deviceSessionState {
+        case .ready(let deviceInfo), .busy(operation: _, deviceInfo: let deviceInfo):
+            if device.id == deviceInfo.id {
+                return .connected
+            }
+        case .failed, .disconnected:
+            if device.id == lastSessionDeviceID {
+                return .offline
+            }
+        default:
+            break
+        }
+
+        return contentProvider.status(for: device, at: index)
     }
 }
 

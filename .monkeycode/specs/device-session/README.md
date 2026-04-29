@@ -4,7 +4,7 @@
 
 ## 当前范围外
 
-- 真实 AP 连接、endpoint 自动发现、Dashboard/Settings 真实状态消费
+- 真实 AP 连接、endpoint 自动发现、Dashboard/Settings 写操作和完整业务状态同步
 - 自动重试与会话级超时调度
 - 多设备并发会话
 - 会话持久化和跨启动恢复

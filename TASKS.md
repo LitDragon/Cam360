@@ -4,21 +4,21 @@
 
 ## 当前任务
 
-1. 明确真实设备或联调模拟器的 `DeviceProtocolEndpoint` 来源，避免写死未确认 host。
-2. 将 Dashboard/Settings 的只读设备状态切到 `DeviceSession` 派生状态。
-3. 再继续评估预览、回放和下载链路的真实协议入口。
+1. 继续确认真设备 `DeviceProtocolEndpoint` 自动发现规则；当前只确认调试 host/port 和模拟器可达 IP 方案。
+2. 先接文件/回放只读入口：`FILE_LIST`、`FILE_INFO`、`FILE_DOWNLOAD_URL`、`THUMB_LIST`、`THUMB_GET`。
+3. 实时预览正式流协议未定义，暂只按 `VIDEO_CTRL`、`SNAPSHOT_CTRL`、`SNAPSHOT_DATA` 规划能力入口。
 
 ## 下一步计划
 
-1. 先确定 endpoint provider：设备网关、调试 host 参数或后续 AP 探测结果。
-2. 再让 Dashboard 以 `DeviceSession.ready/failed/disconnected` 派生连接状态。
-3. 最后让 Settings 读取会话设备信息和能力，暂不接写操作。
+1. 在 `DeviceSession` 下补会话安全的只读命令入口，Feature 仍不直接拼协议 JSON。
+2. 让 Gallery/Playback 从文件 Topic 读取真实列表、缩略图和回放地址。
+3. 再处理截图和录像控制；预览流等硬件补充协议后再接。
 
 ## 完成记录
 
+- `2026-04-29`：Dashboard/Settings 已消费共享 `DeviceSession` 的只读设备状态；Settings 会读取握手设备名、固件和能力，Dashboard 会按 ready/failed/disconnected 派生已知设备连接态。
 - `2026-04-29`：`AppContainer` 已组合共享 `DeviceSession` 和真实 TCP 协议客户端 factory；`DeviceOnboarding` 的 connecting 阶段已改为消费握手成功/失败态，成功后写入协议设备信息，未配置 endpoint 时不再假成功。
 - `2026-04-29`：新增 GitHub Refactor Agent workflow、配置和 Python CLI，支持按仓库文档扫描 Swift 架构债、受限生成小范围补丁、跑 CI 验证后创建 PR；P3 当前仅进报告。
-- `2026-04-28`：`DeviceSession` 已接入 `DeviceProtocolClient` 握手编排，并补充 onboarding/session 最小测试护栏。
 
 ## 待决事项
 
