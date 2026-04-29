@@ -29,7 +29,7 @@
   - `notificationSettings`
   - `systemPermissions`
 - 当前 `Privacy Policy`、`Terms of Service` 只有列表入口或占位交互，还不是完整页面。
-- `Network Identity`、`Firmware Update` 已在 `DeviceSettingsDetailView` 内以本地内嵌流转落壳，尚未接真实能力。
+- `SettingsStore` 已从 `DeviceSession` 只读消费设备身份、固件版本和能力集；`Network Identity`、`Firmware Update` 写操作仍是本地内嵌流转。
 
 ## 当前可复用组件
 
