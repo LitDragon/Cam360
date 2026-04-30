@@ -19,8 +19,8 @@
   "context_docs": [
     "README.md",
     "AGENTS.md",
-    "PROJECT_CONTEXT.md",
-    "TASKS.md",
+    "docs/PROJECT_CONTEXT.md",
+    "docs/TASKS.md",
     "docs/specs/device-onboarding/README.md",
     "docs/specs/device-protocol/README.md",
     "docs/specs/device-session/README.md",

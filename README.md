@@ -10,9 +10,9 @@ Cam360 采用文档优先的开发方式：当前状态、已实现能力、下�
 
 | 文件 | 用途 |
 | --- | --- |
-| `PROJECT_CONTEXT.md` | 长期有效事实、技术基线、目录边界 |
-| `TASKS.md` | 当前任务、下一步、待决事项 |
-| `CHANGELOG.md` | 实际改动历史 |
+| `docs/PROJECT_CONTEXT.md` | 长期有效事实、技术基线、目录边界 |
+| `docs/TASKS.md` | 当前任务、下一步、待决事项 |
+| `docs/CHANGELOG.md` | 实际改动历史 |
 
 补充文档按需读取：
 

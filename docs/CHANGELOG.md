@@ -4,7 +4,8 @@
 
 ## 2026-04-30
 
-- 将补充规格文档从 `.monkeycode/specs/` 迁移到 `docs/specs/`，同步更新 README 和 Refactor Agent 文档入口；删除已被 AGENTS / PROJECT_CONTEXT 覆盖的 `.monkeycode/MEMORY.md`。
+- 将项目正文文档收敛到 `docs/`：`PROJECT_CONTEXT.md`、`TASKS.md`、`CHANGELOG.md` 移入 `docs/`，根目录保留 README 和 AGENTS 作为自动识别入口。
+- 将补充规格文档从 `.monkeycode/specs/` 迁移到 `docs/specs/`，同步更新 README 和 Refactor Agent 文档入口；删除已被 `AGENTS.md` / `docs/PROJECT_CONTEXT.md` 覆盖的 `.monkeycode/MEMORY.md`。
 
 ## 2026-04-29
 
