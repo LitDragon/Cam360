@@ -21,11 +21,10 @@
     "AGENTS.md",
     "PROJECT_CONTEXT.md",
     "TASKS.md",
-    ".monkeycode/docs/Cam360技术架构文档.md",
-    ".monkeycode/specs/device-onboarding/README.md",
-    ".monkeycode/specs/device-protocol/README.md",
-    ".monkeycode/specs/device-session/README.md",
-    ".monkeycode/specs/live-preview/README.md"
+    "docs/specs/device-onboarding/README.md",
+    "docs/specs/device-protocol/README.md",
+    "docs/specs/device-session/README.md",
+    "docs/specs/live-preview/README.md"
   ],
   "validation_command": "xcodebuild -project Cam360.xcodeproj -scheme Cam360 -configuration Debug -destination \"$SIMULATOR_DESTINATION\" CODE_SIGNING_ALLOWED=NO test"
 }

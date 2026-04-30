@@ -443,7 +443,7 @@ def validate_diff(config: dict, diff_text: str, max_files: int) -> None:
             raise RuntimeError(f"Patch creates or references a missing file: {item}")
         if not any(item.startswith(prefix) for prefix in editable):
             raise RuntimeError(f"Patch touches a non-editable path: {item}")
-        if item.endswith((".xcodeproj", ".pbxproj")) or item.startswith((".github/", ".monkeycode/")):
+        if item.endswith((".xcodeproj", ".pbxproj")) or item.startswith(".github/"):
             raise RuntimeError(f"Patch touches a protected path: {item}")
 
     changed = changed_line_count(diff_text)

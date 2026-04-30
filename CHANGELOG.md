@@ -2,6 +2,10 @@
 
 本文件记录仓库中已经实际发生的改动历史。按日期保留结果和边界，不展开过程细节或验证信息。
 
+## 2026-04-30
+
+- 将补充规格文档从 `.monkeycode/specs/` 迁移到 `docs/specs/`，同步更新 README 和 Refactor Agent 文档入口；删除已被 AGENTS / PROJECT_CONTEXT 覆盖的 `.monkeycode/MEMORY.md`。
+
 ## 2026-04-29
 
 - `DeviceSession` 新增截图与录像控制入口，封装 `SNAPSHOT_CTRL`、`SNAPSHOT_DATA`、`VIDEO_CTRL`；协议规格补充联调模拟器的缩略图批量限制和截图/录像字段口径。
