@@ -79,6 +79,9 @@ flowchart TD
   - `notificationSettings`
   - `systemPermissions`
   - `helpCenter`
+- `HelpCenterView` 还有本地子路由：
+  - `faq`
+  - `contactSupport`
 - `DeviceSettingsDetailView` 还有本地子路由：
   - `networkIdentity`
   - `firmwareUpdate`

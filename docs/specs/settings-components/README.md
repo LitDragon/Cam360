@@ -15,6 +15,8 @@
   - `DeviceSettingsDetailView`
   - `RenameDeviceView`
   - `HelpCenterView`
+  - `FAQView`
+  - `ContactSupportView`
   - `NotificationSettingsView`
   - `SystemPermissionsView`
 - 已接入路由：
@@ -28,7 +30,8 @@
   - `helpCenter`
   - `notificationSettings`
   - `systemPermissions`
-- 当前 `Privacy Policy`、`Terms of Service` 只有列表入口或占位交互，还不是完整页面。
+- 当前 `Privacy Policy`、`Terms of Service` 只有列表入口或占位交互；真实 legal copy 未提供前不补完整页面。
+- `ContactSupportView` 的电话、邮箱和在线客服地址仍是占位展示；真实联系方式未在业务资料中给出。
 - `SettingsStore` 已从 `DeviceSession` 只读消费设备身份、固件版本和能力集；`Network Identity`、`Firmware Update` 写操作仍是本地内嵌流转。
 
 ## 当前可复用组件
@@ -56,6 +59,7 @@
 
 - `Firmware Update` 的下载、失败和成功反馈仍是本地占位流转，不是真实升级链路。
 - `Storage Policy` 的 no-card / ready / error 仍是本地状态切换，不接真实存储事件。
+- `FAQ` 和 `Contact Support` 只补 UI 清单与 PRD 明确要求的离线支持页面，不接外部网页、电话或邮件动作。
 
 ## 维护规则
 

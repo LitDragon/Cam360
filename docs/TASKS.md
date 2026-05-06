@@ -10,16 +10,16 @@
 
 ## 下一步计划
 
-1. 按 `docs/UI_PAGE_GAP_CHECKLIST.md` 继续补离线可确认的低风险 UI 缺口；未确认的实时预览、回放和下载链路继续保持占位。
+1. 按 `docs/UI_PAGE_GAP_CHECKLIST.md` 继续补有截图或业务文档证据的低风险 UI 缺口；未确认的实时预览、回放和下载链路继续保持占位。
 2. 收敛 onboarding/AP 连接文档到项目规格，明确无硬件阶段能实现的 Store/Session 状态和不能验证的边界。
 3. 只为协议解析、状态转换和会话契约补离线测试；不新增依赖真实设备响应的运行时代码路径。
 4. 将 `DeviceProtocolEndpoint` 自动发现、`SNAPSHOT_CTRL -> SNAPSHOT_DATA`、`VIDEO_CTRL`、预览流和下载链路保留为硬件恢复后的联调队列。
 
 ## 完成记录
 
+- `2026-05-06`：将 UI 页面缺口清单补成证据表；按 Settings 截图、UI 清单和 PRD 补 FAQ、Contact Support 本地支持页，Privacy/Terms 继续保持占位。
 - `2026-05-06`：完成 UI 页面缺口清单；补强 Events、DeviceList、LivePreview、Playback、Downloads 的离线占位和空/错/加载展示，未接入主路由或真实链路。
 - `2026-05-06`：补回 `ui-flow` 与 `ui-components` 精简规格，记录当前页面跳转、路由归属、公共组件清单和页面组件关系。
-- `2026-05-06`：DesignSystem 收敛通用 surface、进度条、主按钮、空态和状态标签样式；Dashboard、Gallery、Onboarding、Settings 只替换纯展示重复实现。
 
 ## 待决事项
 

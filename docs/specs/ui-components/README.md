@@ -63,6 +63,7 @@
 | `DeviceOnboardingView` | `PrimaryButton`, `AppProgressBar`, `appSurface` | `DeviceOnboardingNavigationBar`, `DeviceOnboardingSignalIllustration`, `DeviceOnboardingTipCard`, `DeviceOnboardingReadonlyField`, `DeviceOnboardingPasswordField` |
 | `SettingsView` / `SettingsOverviewView` | `AppTopBar`, `StatusTag`, Settings 组件族 | 无独立私有组件 |
 | `SystemPreferencesView` | `AppTopBar`, Settings 组件族 | 本地 `SystemPreferencesRoute` |
+| `HelpCenterView` | `AppTopBar`, Settings 组件族 | 本地 `HelpCenterRoute`, `FAQView`, `ContactSupportView` |
 | `DeviceSettingsDetailView` | `AppTopBar`, `PrimaryButton`, `DestructiveButton`, `AppProgressBar`, Settings 组件族 | `NetworkIdentityView`, `FirmwareUpdateView`, 本地 `DeviceSettingsDetailRoute` |
 | 设置二级页 | `AppTopBar`, `PrimaryButton`, `DestructiveButton`, Settings 组件族 | 页面内 binding 和局部状态 |
 | `DeviceListView` | `AppTopBar`, `SectionCard`, `StatusTag`, `EmptyStateView` | `DeviceCell` |
