@@ -19,12 +19,13 @@ struct SectionCard<Content: View>: View {
         }
         .padding(AppSpacing.lg)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(AppColor.surface)
-        .cornerRadius(AppRadius.medium)
-        .overlay(
-            RoundedRectangle(cornerRadius: AppRadius.medium)
-                .stroke(AppColor.border.opacity(0.7), lineWidth: 1)
+        .appSurface(
+            shadow: ShadowStyle(
+                color: Color.black.opacity(0.06),
+                radius: 18,
+                x: 0,
+                y: 10
+            )
         )
-        .shadow(color: Color.black.opacity(0.06), radius: 18, x: 0, y: 10)
     }
 }

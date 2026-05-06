@@ -55,7 +55,7 @@ private extension DeviceOnboardingView {
 
                 Spacer(minLength: 0)
 
-                DeviceOnboardingPrimaryButton(
+                PrimaryButton(
                     title: "Start Search",
                     action: store.startSearch
                 )
@@ -178,7 +178,7 @@ private extension DeviceOnboardingView {
 
                 Spacer(minLength: 0)
 
-                DeviceOnboardingPrimaryButton(
+                PrimaryButton(
                     title: "Continue",
                     isEnabled: store.canContinueWithWiFiDetails,
                     trailingSystemImageName: "arrow.right",
@@ -218,7 +218,10 @@ private extension DeviceOnboardingView {
                     .padding(.top, AppSpacing.md)
                     .padding(.horizontal, AppSpacing.xl)
 
-                DeviceOnboardingProgressBar(progress: 0.64)
+                AppProgressBar(
+                    progress: 0.64,
+                    minimumFillWidth: 24
+                )
                     .padding(.top, AppSpacing.xxxl)
                     .padding(.horizontal, 72)
 
@@ -268,7 +271,7 @@ private extension DeviceOnboardingView {
             Spacer(minLength: 0)
 
             VStack(spacing: AppSpacing.lg) {
-                DeviceOnboardingPrimaryButton(
+                PrimaryButton(
                     title: "Go to Home",
                     action: store.enterHome
                 )
@@ -382,12 +385,7 @@ private struct DeviceOnboardingReadonlyField: View {
         .padding(.horizontal, AppSpacing.lg)
         .padding(.vertical, AppSpacing.lg)
         .frame(maxWidth: .infinity)
-        .background(AppColor.surface)
-        .cornerRadius(AppRadius.medium)
-        .overlay(
-            RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous)
-                .stroke(AppColor.border.opacity(0.72), lineWidth: 1)
-        )
+        .appSurface(borderColor: AppColor.border.opacity(0.72))
     }
 }
 
@@ -434,62 +432,6 @@ private struct DeviceOnboardingPasswordField: View {
         .padding(.horizontal, AppSpacing.lg)
         .padding(.vertical, AppSpacing.lg)
         .frame(maxWidth: .infinity)
-        .background(AppColor.surface)
-        .cornerRadius(AppRadius.medium)
-        .overlay(
-            RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous)
-                .stroke(AppColor.border.opacity(0.72), lineWidth: 1)
-        )
-    }
-}
-
-private struct DeviceOnboardingProgressBar: View {
-    let progress: CGFloat
-
-    var body: some View {
-        GeometryReader { geometry in
-            ZStack(alignment: .leading) {
-                Capsule()
-                    .fill(AppColor.border.opacity(0.5))
-                    .frame(height: 6)
-
-                Capsule()
-                    .fill(AppColor.brand)
-                    .frame(
-                        width: max(geometry.size.width * progress, 24),
-                        height: 6
-                    )
-            }
-        }
-        .frame(height: 6)
-    }
-}
-
-private struct DeviceOnboardingPrimaryButton: View {
-    let title: String
-    var isEnabled: Bool = true
-    var trailingSystemImageName: String? = nil
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: AppSpacing.sm) {
-                Text(title)
-                    .font(AppTypography.button)
-
-                if let trailingSystemImageName = trailingSystemImageName {
-                    Image(systemName: trailingSystemImageName)
-                        .font(.system(size: 14, weight: .semibold))
-                }
-            }
-            .foregroundColor(.white)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, AppSpacing.lg)
-            .background(isEnabled ? AppColor.brand : AppColor.brand.opacity(0.35))
-            .cornerRadius(AppRadius.medium)
-        }
-        .buttonStyle(PlainButtonStyle())
-        .disabled(isEnabled == false)
-        .shadow(color: Color.black.opacity(0.08), radius: 16, x: 0, y: 8)
+        .appSurface(borderColor: AppColor.border.opacity(0.72))
     }
 }

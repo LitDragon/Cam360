@@ -4,19 +4,20 @@
 
 ## 当前任务
 
-1. 继续确认真设备 `DeviceProtocolEndpoint` 自动发现规则；当前只确认调试 host/port 和模拟器可达 IP 方案。
-2. 将 Dashboard/LivePreview 的截图和录像动作接到 `DeviceSession` 控制入口，Feature 仍不直接拼协议 JSON。
-3. 实时预览正式流协议未定义，等硬件补充协议后再接预览流。
+1. 当前无真设备和硬件联调条件，暂停依赖端到端设备验证的接入任务。
+2. 现阶段只基于现有 UI 和 `/Users/naxclow/camera-360-secives` 的连接、协议、UI 文档推进，不把外部资料当作已验证硬件行为。
+3. 继续完善可离线确认的 UI、onboarding/AP 连接流程边界和 `DeviceSession` 契约；预览、下载、截图、录像的真实端到端行为等硬件恢复后再接。
 
 ## 下一步计划
 
-1. 用设备模拟器或真设备跑通 `SNAPSHOT_CTRL -> SNAPSHOT_DATA` 和 `VIDEO_CTRL` 的端到端联调。
-2. 再接 Feature 层按钮行为，保持控制命令只从 `DeviceSession` 发出。
-3. 预览流等硬件补充协议后再接。
+1. 对照 `/Users/naxclow/camera-360-secives` 的 UI 页面清单、PRD 和连接资料，补齐高确信的页面状态、路由和空/失败态。
+2. 收敛 onboarding/AP 连接文档到项目规格，明确无硬件阶段能实现的 Store/Session 状态和不能验证的边界。
+3. 只为协议解析、状态转换和会话契约补离线测试；不新增依赖真实设备响应的运行时代码路径。
+4. 将 `DeviceProtocolEndpoint` 自动发现、`SNAPSHOT_CTRL -> SNAPSHOT_DATA`、`VIDEO_CTRL`、预览流和下载链路保留为硬件恢复后的联调队列。
 
 ## 完成记录
 
-- `2026-04-29`：`DeviceSession` 已提供截图与录像控制入口，封装 `SNAPSHOT_CTRL`、`SNAPSHOT_DATA`、`VIDEO_CTRL`，并记录联调模拟器的缩略图批量限制。
+- `2026-05-06`：DesignSystem 收敛通用 surface、进度条、主按钮、空态和状态标签样式；Dashboard、Gallery、Onboarding、Settings 只替换纯展示重复实现。
 - `2026-04-29`：`DeviceSession` 已提供会话安全的文件只读命令入口；Gallery 会从 `FILE_LIST`/`THUMB_LIST` 读设备文件和缩略图，Playback 会从 `FILE_INFO`/`FILE_DOWNLOAD_URL` 读首个录像的回放资源。
 - `2026-04-29`：Dashboard/Settings 已消费共享 `DeviceSession` 的只读设备状态；Settings 会读取握手设备名、固件和能力，Dashboard 会按 ready/failed/disconnected 派生已知设备连接态。
 
@@ -24,6 +25,7 @@
 
 - 是否需要恢复独立的 UI 冒烟测试 target。
 - 真设备 `DeviceProtocolEndpoint` 自动发现规则需要硬件或固件侧确认。
+- 截图、录像、预览流和下载链路的真实端到端行为需要真设备或可信设备端模拟器确认。
 
 ## 更新规则
 

@@ -33,12 +33,13 @@ struct QuickActionCard: View {
         }
         .padding(AppSpacing.lg)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(AppColor.surface)
-        .cornerRadius(AppRadius.medium)
-        .overlay(
-            RoundedRectangle(cornerRadius: AppRadius.medium)
-                .stroke(AppColor.border.opacity(0.7), lineWidth: 1)
+        .appSurface(
+            shadow: ShadowStyle(
+                color: Color.black.opacity(0.05),
+                radius: 16,
+                x: 0,
+                y: 8
+            )
         )
-        .shadow(color: Color.black.opacity(0.05), radius: 16, x: 0, y: 8)
     }
 }

@@ -133,27 +133,14 @@ struct GalleryEmptyState: View {
     let message: String
 
     var body: some View {
-        VStack(spacing: AppSpacing.xl) {
-            Spacer(minLength: 0)
-
-            Image(systemName: "photo.on.rectangle.angled")
-                .font(.system(size: 38, weight: .regular))
-                .foregroundColor(AppColor.textSecondary)
-
-            VStack(spacing: AppSpacing.sm) {
-                Text("暂无匹配内容")
-                    .font(AppTypography.sectionTitle)
-                    .foregroundColor(AppColor.textPrimary)
-
-                Text(message)
-                    .font(AppTypography.body)
-                    .foregroundColor(AppColor.textSecondary)
-                    .multilineTextAlignment(.center)
-            }
-            .padding(.horizontal, AppSpacing.xxl)
-
-            Spacer(minLength: 0)
-        }
+        EmptyStateView(
+            iconName: "photo.on.rectangle.angled",
+            title: "暂无匹配内容",
+            message: message,
+            style: .plain,
+            contentSpacing: AppSpacing.xl,
+            textSpacing: AppSpacing.sm
+        )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }

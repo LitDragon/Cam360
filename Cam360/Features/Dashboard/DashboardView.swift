@@ -474,27 +474,16 @@ private struct DashboardStorageCard: View {
                 .font(AppTypography.body)
                 .foregroundColor(AppColor.textSecondary)
 
-            GeometryReader { geometry in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 3, style: .continuous)
-                        .fill(AppColor.border.opacity(0.35))
-                        .frame(height: 6)
-
-                    RoundedRectangle(cornerRadius: 3, style: .continuous)
-                        .fill(AppColor.brand)
-                        .frame(width: max(geometry.size.width * CGFloat(summary.usageFraction), 12), height: 6)
-                }
-            }
-            .frame(height: 6)
+            AppProgressBar(
+                progress: CGFloat(summary.usageFraction),
+                minimumFillWidth: 12,
+                trackColor: AppColor.border.opacity(0.35),
+                cornerRadius: 3
+            )
         }
         .padding(.horizontal, AppSpacing.lg)
         .padding(.vertical, AppSpacing.lg)
-        .background(AppColor.surface)
-        .cornerRadius(AppRadius.medium)
-        .overlay(
-            RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous)
-                .stroke(AppColor.border.opacity(0.7), lineWidth: 1)
-        )
+        .appSurface()
     }
 }
 
@@ -527,12 +516,7 @@ private struct DashboardStorageUnavailableCard: View {
         .frame(maxWidth: .infinity)
         .padding(.horizontal, AppSpacing.xl)
         .padding(.vertical, AppSpacing.xxl)
-        .background(AppColor.surface)
-        .cornerRadius(AppRadius.medium)
-        .overlay(
-            RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous)
-                .stroke(AppColor.border.opacity(0.7), lineWidth: 1)
-        )
+        .appSurface()
     }
 }
 
@@ -558,12 +542,7 @@ private struct DashboardGalleryRow: View {
             }
             .padding(.horizontal, AppSpacing.lg)
             .padding(.vertical, AppSpacing.lg)
-            .background(AppColor.surface)
-            .cornerRadius(AppRadius.medium)
-            .overlay(
-                RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous)
-                    .stroke(AppColor.border.opacity(0.7), lineWidth: 1)
-            )
+            .appSurface()
         }
         .buttonStyle(PlainButtonStyle())
     }
@@ -616,9 +595,11 @@ private struct DashboardEventRow: View {
                     .foregroundColor(AppColor.textPrimary)
 
                 HStack(spacing: AppSpacing.sm) {
-                    DashboardEventBadge(
+                    StatusTag(
                         title: event.badgeTitle,
-                        tone: event.badgeTone
+                        tone: event.badgeTone,
+                        size: .compact,
+                        style: event.badgeTone == .danger ? .filled : .subtle
                     )
 
                     Text(event.detail)
@@ -635,12 +616,7 @@ private struct DashboardEventRow: View {
         }
         .padding(.horizontal, AppSpacing.md)
         .padding(.vertical, AppSpacing.sm)
-        .background(AppColor.surface)
-        .cornerRadius(AppRadius.medium)
-        .overlay(
-            RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous)
-                .stroke(AppColor.border.opacity(0.65), lineWidth: 1)
-        )
+        .appSurface(borderColor: AppColor.border.opacity(0.65))
     }
 }
 
@@ -702,51 +678,6 @@ private struct DashboardEventArtworkView: View {
     }
 }
 
-private struct DashboardEventBadge: View {
-    let title: String
-    let tone: StatusTagTone
-
-    var body: some View {
-        Text(title)
-            .font(.system(size: 9, weight: .bold))
-            .foregroundColor(foregroundColor)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 4)
-            .background(backgroundColor)
-            .cornerRadius(6)
-    }
-
-    private var foregroundColor: Color {
-        switch tone {
-        case .danger:
-            return .white
-        case .neutral:
-            return AppColor.textSecondary
-        case .accent:
-            return AppColor.brand
-        case .success:
-            return AppColor.success
-        case .warning:
-            return AppColor.warning
-        }
-    }
-
-    private var backgroundColor: Color {
-        switch tone {
-        case .danger:
-            return AppColor.danger
-        case .neutral:
-            return AppColor.surfaceMuted
-        case .accent:
-            return AppColor.accentSurface
-        case .success:
-            return AppColor.success.opacity(0.16)
-        case .warning:
-            return AppColor.warning.opacity(0.18)
-        }
-    }
-}
-
 private struct DashboardEmptyStateView: View {
     let onAddDevice: () -> Void
 
@@ -769,22 +700,11 @@ private struct DashboardEmptyStateView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            Button(action: onAddDevice) {
-                HStack(spacing: AppSpacing.sm) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 14, weight: .bold))
-
-                    Text("Add Device")
-                        .font(AppTypography.button)
-                }
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, AppSpacing.lg)
-                .background(AppColor.brand)
-                .cornerRadius(AppRadius.medium)
-            }
-            .buttonStyle(PlainButtonStyle())
-            .shadow(color: Color.black.opacity(0.08), radius: 16, x: 0, y: 8)
+            PrimaryButton(
+                title: "Add Device",
+                leadingSystemImageName: "plus",
+                action: onAddDevice
+            )
 
             Button(action: {}) {
                 Text("Need help pairing?")

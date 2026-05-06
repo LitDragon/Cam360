@@ -73,11 +73,6 @@ struct MediaListItem: View {
         }
         .padding(AppSpacing.lg)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(AppColor.surface)
-        .cornerRadius(AppRadius.medium)
-        .overlay(
-            RoundedRectangle(cornerRadius: AppRadius.medium)
-                .stroke(AppColor.border.opacity(0.7), lineWidth: 1)
-        )
+        .appSurface()
     }
 }

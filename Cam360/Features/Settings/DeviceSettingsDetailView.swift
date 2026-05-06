@@ -300,15 +300,15 @@ private struct FirmwareUpdateView: View {
                     tone: .accent
                 )
 
-                UpdateProgressBar(progress: progress)
+                AppProgressBar(
+                    progress: CGFloat(progress),
+                    height: AppLayout.settingsProgressHeight,
+                    trackColor: AppColor.surfaceMuted,
+                    cornerRadius: AppRadius.small
+                )
             }
             .padding(AppSpacing.lg)
-            .background(AppColor.surface)
-            .cornerRadius(AppRadius.medium)
-            .overlay(
-                RoundedRectangle(cornerRadius: AppRadius.medium)
-                    .stroke(AppColor.border.opacity(0.7), lineWidth: 1)
-            )
+            .appSurface()
         case .failed:
             updateStateCard(
                 iconName: "exclamationmark.triangle.fill",
@@ -391,12 +391,7 @@ private struct FirmwareUpdateView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(AppSpacing.xxxl)
-        .background(AppColor.surface)
-        .cornerRadius(AppRadius.medium)
-        .overlay(
-            RoundedRectangle(cornerRadius: AppRadius.medium)
-                .stroke(AppColor.border.opacity(0.7), lineWidth: 1)
-        )
+        .appSurface()
     }
 
     private func tagColor(for tone: StatusTagTone) -> Color {
@@ -412,24 +407,5 @@ private struct FirmwareUpdateView: View {
         case .neutral:
             return AppColor.textSecondary
         }
-    }
-}
-
-private struct UpdateProgressBar: View {
-    let progress: Double
-
-    var body: some View {
-        GeometryReader { geometry in
-            ZStack(alignment: .leading) {
-                RoundedRectangle(cornerRadius: AppRadius.small)
-                    .fill(AppColor.surfaceMuted)
-                    .frame(height: 12)
-
-                RoundedRectangle(cornerRadius: AppRadius.small)
-                    .fill(AppColor.brand)
-                    .frame(width: geometry.size.width * CGFloat(progress), height: 12)
-            }
-        }
-        .frame(height: 12)
     }
 }

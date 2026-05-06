@@ -27,7 +27,6 @@ struct ErrorStateView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(AppSpacing.xxl)
-        .background(AppColor.surface)
-        .cornerRadius(AppRadius.medium)
+        .appSurface(borderColor: nil)
     }
 }

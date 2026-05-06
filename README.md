@@ -16,11 +16,7 @@ Cam360 采用文档优先的开发方式：当前状态、已实现能力、下�
 
 补充文档按需读取：
 
-- [docs/specs/settings-components/README.md](docs/specs/settings-components/README.md)：设置相关规格
-- [docs/specs/device-protocol/README.md](docs/specs/device-protocol/README.md)：设备协议规格，收敛 iOS 可用的控制通道、握手、错误码与 Topic 口径
-- [docs/specs/device-onboarding/README.md](docs/specs/device-onboarding/README.md)：设备接入规格
-- [docs/specs/device-session/README.md](docs/specs/device-session/README.md)：`DeviceSession` 规格
-- [docs/specs/live-preview/README.md](docs/specs/live-preview/README.md)：实时预览规格
+- [docs/specs/README.md](docs/specs/README.md)：能力规格索引，按需进入具体规格
 
 ## 自动化
 
