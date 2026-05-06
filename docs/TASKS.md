@@ -10,16 +10,16 @@
 
 ## 下一步计划
 
-1. 对照 `/Users/naxclow/camera-360-secives` 的 UI 页面清单、PRD 和连接资料，补齐高确信的页面状态、路由和空/失败态。
+1. 按 `docs/UI_PAGE_GAP_CHECKLIST.md` 继续补离线可确认的低风险 UI 缺口；未确认的实时预览、回放和下载链路继续保持占位。
 2. 收敛 onboarding/AP 连接文档到项目规格，明确无硬件阶段能实现的 Store/Session 状态和不能验证的边界。
 3. 只为协议解析、状态转换和会话契约补离线测试；不新增依赖真实设备响应的运行时代码路径。
 4. 将 `DeviceProtocolEndpoint` 自动发现、`SNAPSHOT_CTRL -> SNAPSHOT_DATA`、`VIDEO_CTRL`、预览流和下载链路保留为硬件恢复后的联调队列。
 
 ## 完成记录
 
+- `2026-05-06`：完成 UI 页面缺口清单；补强 Events、DeviceList、LivePreview、Playback、Downloads 的离线占位和空/错/加载展示，未接入主路由或真实链路。
 - `2026-05-06`：补回 `ui-flow` 与 `ui-components` 精简规格，记录当前页面跳转、路由归属、公共组件清单和页面组件关系。
 - `2026-05-06`：DesignSystem 收敛通用 surface、进度条、主按钮、空态和状态标签样式；Dashboard、Gallery、Onboarding、Settings 只替换纯展示重复实现。
-- `2026-04-29`：`DeviceSession` 已提供会话安全的文件只读命令入口；Gallery 会从 `FILE_LIST`/`THUMB_LIST` 读设备文件和缩略图，Playback 会从 `FILE_INFO`/`FILE_DOWNLOAD_URL` 读首个录像的回放资源。
 
 ## 待决事项
 

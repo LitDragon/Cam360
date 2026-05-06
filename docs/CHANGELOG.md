@@ -4,6 +4,8 @@
 
 ## 2026-05-06
 
+- 新增 UI 页面缺口清单；补强 Events、DeviceList、LivePreview、Playback、Downloads 的离线占位和空/错/加载展示，并保持未接主路由页面不接入真实设备链路。
+- Dashboard 首启功能引导和 Settings 固件升级页面拆出独立 View 文件，保持原路由、Store 和交互语义不变。
 - 补回 `ui-flow` 与 `ui-components` 两份精简规格，记录当前页面跳转、路由归属、公共组件清单和页面组件关系。
 - DesignSystem 新增通用 surface 和进度条展示组件，扩展主按钮、空态和状态标签样式；Dashboard、Gallery、Onboarding、Settings 替换重复的纯展示实现，不改变 Store、路由或设备会话边界。
 
