@@ -17,9 +17,9 @@
 
 ## 完成记录
 
+- `2026-05-06`：补回 `ui-flow` 与 `ui-components` 精简规格，记录当前页面跳转、路由归属、公共组件清单和页面组件关系。
 - `2026-05-06`：DesignSystem 收敛通用 surface、进度条、主按钮、空态和状态标签样式；Dashboard、Gallery、Onboarding、Settings 只替换纯展示重复实现。
 - `2026-04-29`：`DeviceSession` 已提供会话安全的文件只读命令入口；Gallery 会从 `FILE_LIST`/`THUMB_LIST` 读设备文件和缩略图，Playback 会从 `FILE_INFO`/`FILE_DOWNLOAD_URL` 读首个录像的回放资源。
-- `2026-04-29`：Dashboard/Settings 已消费共享 `DeviceSession` 的只读设备状态；Settings 会读取握手设备名、固件和能力，Dashboard 会按 ready/failed/disconnected 派生已知设备连接态。
 
 ## 待决事项
 

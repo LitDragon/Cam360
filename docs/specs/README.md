@@ -4,11 +4,13 @@
 
 ## 读取顺序
 
-1. [device-protocol](device-protocol/README.md)：设备控制通道、消息结构、握手、Topic 与错误码口径。
-2. [device-session](device-session/README.md)：`DeviceSession` 状态源、会话边界和 Feature 接入约束。
-3. [device-onboarding](device-onboarding/README.md)：设备热点接入流程边界。
-4. [live-preview](live-preview/README.md)：实时预览最小链路边界。
-5. [settings-components](settings-components/README.md)：设置页已落地页面、路由和组件口径。
+1. [ui-flow](ui-flow/README.md)：当前已落地页面、路由归属和页面跳转关系。
+2. [ui-components](ui-components/README.md)：UI 组件分层、公共组件清单和页面使用关系。
+3. [device-protocol](device-protocol/README.md)：设备控制通道、消息结构、握手、Topic 与错误码口径。
+4. [device-session](device-session/README.md)：`DeviceSession` 状态源、会话边界和 Feature 接入约束。
+5. [device-onboarding](device-onboarding/README.md)：设备热点接入流程边界。
+6. [live-preview](live-preview/README.md)：实时预览最小链路边界。
+7. [settings-components](settings-components/README.md)：设置页已落地页面、路由和组件口径。
 
 ## 维护规则
 

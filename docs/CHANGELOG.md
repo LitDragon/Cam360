@@ -4,6 +4,7 @@
 
 ## 2026-05-06
 
+- 补回 `ui-flow` 与 `ui-components` 两份精简规格，记录当前页面跳转、路由归属、公共组件清单和页面组件关系。
 - DesignSystem 新增通用 surface 和进度条展示组件，扩展主按钮、空态和状态标签样式；Dashboard、Gallery、Onboarding、Settings 替换重复的纯展示实现，不改变 Store、路由或设备会话边界。
 
 ## 2026-04-30
