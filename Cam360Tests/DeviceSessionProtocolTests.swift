@@ -89,6 +89,25 @@ struct DeviceSessionProtocolTests {
     }
 
     @Test
+    func disconnectSendsExitAppBeforeClosingProtocolConnection() async {
+        let transport = SessionFakeDeviceProtocolTransport()
+        let session = makeSession(transport: transport)
+        transport.responseProvider = { request in
+            makeHandshakeResponse(request)
+        }
+
+        startHandshake(session)
+        #expect(await waitForSessionState { session.state.isConnected })
+
+        session.send(.disconnect)
+
+        #expect(await waitForSessionState { transport.disconnectCount == 1 })
+        #expect(session.state == .disconnected)
+        #expect(transport.sentMessages.last?.topic == "CTP_CMD_EXITAPP")
+        #expect(transport.sentMessages.last?.operation == .post)
+    }
+
+    @Test
     func fileListReadOnlyCommandRequiresReadySession() async {
         let transport = SessionFakeDeviceProtocolTransport()
         let session = makeSession(transport: transport)
@@ -453,6 +472,7 @@ private final class SessionFakeDeviceProtocolTransport: DeviceProtocolTransport 
     var onDisconnect: ((Error?) -> Void)?
     var responseProvider: ((DeviceProtocolMessage) -> DeviceProtocolMessage?)?
     private(set) var sentMessages: [DeviceProtocolMessage] = []
+    private(set) var disconnectCount = 0
 
     private let codec = DeviceProtocolCodec()
 
@@ -477,6 +497,7 @@ private final class SessionFakeDeviceProtocolTransport: DeviceProtocolTransport 
     }
 
     func disconnect() {
+        disconnectCount += 1
         onDisconnect?(nil)
     }
 

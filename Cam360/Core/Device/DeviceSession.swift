@@ -147,6 +147,7 @@ final class DeviceSession: ObservableObject {
 
     func send(_ event: DeviceSessionEvent) {
         let shouldDisconnectProtocol = shouldDisconnectProtocol(for: event)
+        let shouldSendExitApp = shouldSendExitAppBeforeDisconnect(from: state, event: event)
         if shouldDisconnectProtocol {
             invalidateProtocolHandshake()
         }
@@ -166,7 +167,7 @@ final class DeviceSession: ObservableObject {
         }
 
         if shouldDisconnectProtocol {
-            protocolClient?.disconnect()
+            disconnectProtocol(sendExitApp: shouldSendExitApp)
         }
     }
 
@@ -394,6 +395,32 @@ final class DeviceSession: ObservableObject {
         default:
             return false
         }
+    }
+
+    private func shouldSendExitAppBeforeDisconnect(
+        from state: DeviceSessionState,
+        event: DeviceSessionEvent
+    ) -> Bool {
+        guard shouldDisconnectProtocol(for: event) else {
+            return false
+        }
+
+        switch state {
+        case .ready, .busy:
+            return true
+        default:
+            return false
+        }
+    }
+
+    private func disconnectProtocol(sendExitApp: Bool) {
+        guard sendExitApp, let protocolClient else {
+            protocolClient?.disconnect()
+            return
+        }
+
+        protocolClient.send(.exitApp()) { _ in }
+        protocolClient.disconnect()
     }
 
     private func nextHandshakeGeneration() -> Int {

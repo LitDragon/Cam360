@@ -15,3 +15,4 @@
 - 真实握手、错误码、重连和 Topic 路由先按 `device-protocol` 收敛到会话层，再接具体 Feature。
 - 新事件或新能力先补 `State`、`Event`、transition，再接底层实现。
 - 失败、恢复、断开语义继续保持显式枚举，避免退回到松散字符串状态。
+- `ready` / `busy` 会话主动断开或重置时，先发送 `CTP_CMD_EXITAPP`，再关闭控制连接；握手未完成或失败态只关闭本地连接。
