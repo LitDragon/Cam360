@@ -26,7 +26,7 @@ indirect enum DeviceSessionState: Equatable {
         return false
     }
 
-    var canSendReadOnlyCommand: Bool {
+    var canSendDeviceCommand: Bool {
         if case .ready = self {
             return true
         }

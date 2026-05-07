@@ -17,9 +17,9 @@
 
 ## 完成记录
 
+- `2026-05-07`：收敛 `DeviceSession` 设备命令 generation 语义，修正 `PlaybackStore` ready 通知内同步发命令的重入问题并补离线回归测试。
 - `2026-05-07`：收敛 `DeviceSession` 主动断开契约，`ready` / `busy` 会话断开或重置时先发送 `CTP_CMD_EXITAPP`，再关闭控制连接。
 - `2026-05-06`：将 UI 页面缺口清单补成证据表；按 Settings 截图、UI 清单和 PRD 补 FAQ、Contact Support 本地支持页，Privacy/Terms 继续保持占位。
-- `2026-05-06`：完成 UI 页面缺口清单；补强 Events、DeviceList、LivePreview、Playback、Downloads 的离线占位和空/错/加载展示，未接入主路由或真实链路。
 
 ## 待决事项
 

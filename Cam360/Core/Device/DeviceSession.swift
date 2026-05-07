@@ -30,6 +30,7 @@ final class DeviceSession: ObservableObject {
     private var previousStateBeforeRecovery: DeviceSessionState?
     private var handshakeGeneration = 0
     private var readOnlyCommandGeneration = 0
+    private var controlCommandGeneration = 0
 
     init(
         protocolClient: DeviceSessionProtocolClient? = nil,
@@ -155,15 +156,15 @@ final class DeviceSession: ObservableObject {
         rememberRecoveryStateIfNeeded(for: event)
 
         let nextState = transition(from: state, event: event)
-        let shouldInvalidateReadOnlyCommands = shouldInvalidateReadOnlyCommands(from: state, to: nextState)
+        let shouldInvalidateCommands = shouldInvalidateCommands(from: state, to: nextState)
         if nextState != state {
             state = nextState
         }
 
         updateDerivedState(for: nextState)
 
-        if shouldInvalidateReadOnlyCommands {
-            invalidateReadOnlyCommands()
+        if shouldInvalidateCommands {
+            invalidateCommands()
         }
 
         if shouldDisconnectProtocol {
@@ -264,40 +265,12 @@ final class DeviceSession: ObservableObject {
         completion: @escaping (Result<T, DeviceSessionReadOnlyError>) -> Void,
         parse: @escaping (DeviceProtocolMessage) throws -> T
     ) {
-        guard state.canSendReadOnlyCommand else {
-            completion(.failure(.sessionNotReady))
-            return
-        }
-
-        guard let protocolClient else {
-            completion(.failure(.protocolClientUnavailable))
-            return
-        }
-
-        let generation = readOnlyCommandGeneration
-        protocolClient.send(command) { [weak self] result in
-            guard let self else {
-                return
-            }
-
-            guard self.isCurrentReadOnlyCommand(generation) else {
-                completion(.failure(.staleSession))
-                return
-            }
-
-            switch result {
-            case .success(let message):
-                do {
-                    completion(.success(try parse(message)))
-                } catch let error as DeviceSessionReadOnlyError {
-                    completion(.failure(error))
-                } catch {
-                    completion(.failure(.invalidResponse(error.localizedDescription)))
-                }
-            case .failure(let error):
-                completion(.failure(.protocolFailure(error)))
-            }
-        }
+        performDeviceCommand(
+            command,
+            scope: .readOnly,
+            completion: completion,
+            parse: parse
+        )
     }
 
     private func performControlCommand<T>(
@@ -305,7 +278,21 @@ final class DeviceSession: ObservableObject {
         completion: @escaping (Result<T, DeviceSessionCommandError>) -> Void,
         parse: @escaping (DeviceProtocolMessage) throws -> T
     ) {
-        guard state.canSendReadOnlyCommand else {
+        performDeviceCommand(
+            command,
+            scope: .control,
+            completion: completion,
+            parse: parse
+        )
+    }
+
+    private func performDeviceCommand<T, Failure: DeviceSessionCommandFailure>(
+        _ command: DeviceProtocolCommand,
+        scope: DeviceSessionCommandScope,
+        completion: @escaping (Result<T, Failure>) -> Void,
+        parse: @escaping (DeviceProtocolMessage) throws -> T
+    ) {
+        guard state.canSendDeviceCommand else {
             completion(.failure(.sessionNotReady))
             return
         }
@@ -315,13 +302,13 @@ final class DeviceSession: ObservableObject {
             return
         }
 
-        let generation = readOnlyCommandGeneration
+        let generation = commandGeneration(for: scope)
         protocolClient.send(command) { [weak self] result in
             guard let self else {
                 return
             }
 
-            guard self.isCurrentReadOnlyCommand(generation) else {
+            guard self.isCurrentCommand(generation, scope: scope) else {
                 completion(.failure(.staleSession))
                 return
             }
@@ -330,7 +317,7 @@ final class DeviceSession: ObservableObject {
             case .success(let message):
                 do {
                     completion(.success(try parse(message)))
-                } catch let error as DeviceSessionCommandError {
+                } catch let error as Failure {
                     completion(.failure(error))
                 } catch {
                     completion(.failure(.invalidResponse(error.localizedDescription)))
@@ -432,8 +419,9 @@ final class DeviceSession: ObservableObject {
         handshakeGeneration += 1
     }
 
-    private func invalidateReadOnlyCommands() {
+    private func invalidateCommands() {
         readOnlyCommandGeneration += 1
+        controlCommandGeneration += 1
     }
 
     private func isCurrentHandshake(_ generation: Int) -> Bool {
@@ -443,15 +431,24 @@ final class DeviceSession: ObservableObject {
         return false
     }
 
-    private func isCurrentReadOnlyCommand(_ generation: Int) -> Bool {
-        state.canSendReadOnlyCommand && generation == readOnlyCommandGeneration
+    private func commandGeneration(for scope: DeviceSessionCommandScope) -> Int {
+        switch scope {
+        case .readOnly:
+            return readOnlyCommandGeneration
+        case .control:
+            return controlCommandGeneration
+        }
     }
 
-    private func shouldInvalidateReadOnlyCommands(
+    private func isCurrentCommand(_ generation: Int, scope: DeviceSessionCommandScope) -> Bool {
+        state.canSendDeviceCommand && generation == commandGeneration(for: scope)
+    }
+
+    private func shouldInvalidateCommands(
         from currentState: DeviceSessionState,
         to nextState: DeviceSessionState
     ) -> Bool {
-        currentState.canSendReadOnlyCommand && nextState.canSendReadOnlyCommand == false
+        currentState.canSendDeviceCommand && nextState.canSendDeviceCommand == false
     }
 
     private static func deviceInfo(
@@ -531,3 +528,20 @@ final class DeviceSession: ObservableObject {
         protocolFailureReason(for: error)
     }
 }
+
+private enum DeviceSessionCommandScope {
+    case readOnly
+    case control
+}
+
+private protocol DeviceSessionCommandFailure: Error {
+    static var sessionNotReady: Self { get }
+    static var protocolClientUnavailable: Self { get }
+    static var staleSession: Self { get }
+
+    static func invalidResponse(_ reason: String) -> Self
+    static func protocolFailure(_ error: DeviceProtocolError) -> Self
+}
+
+extension DeviceSessionReadOnlyError: DeviceSessionCommandFailure {}
+extension DeviceSessionCommandError: DeviceSessionCommandFailure {}

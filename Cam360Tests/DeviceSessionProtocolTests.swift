@@ -233,6 +233,33 @@ struct DeviceSessionProtocolTests {
     }
 
     @Test
+    func pendingControlCommandAfterResetCompletesAsStaleSession() async {
+        let transport = SessionFakeDeviceProtocolTransport()
+        let session = makeSession(transport: transport)
+        transport.responseProvider = { request in
+            request.topic == "VIDEO_CTRL" ? nil : makeHandshakeResponse(request)
+        }
+        var result: Result<DeviceRecordingState, DeviceSessionCommandError>?
+
+        startHandshake(session)
+        #expect(await waitForSessionState { session.state.isConnected })
+
+        session.setRecording(enabled: true) { commandResult in
+            result = commandResult
+        }
+        #expect(await waitForSessionState { transport.sentMessages.last?.topic == "VIDEO_CTRL" })
+
+        session.send(.reset)
+
+        #expect(await waitForSessionState { result != nil })
+        if case .failure(.staleSession)? = result {
+            #expect(Bool(true))
+        } else {
+            #expect(Bool(false))
+        }
+    }
+
+    @Test
     func captureSnapshotSendsSnapshotControlThenSnapshotDataThroughSession() async {
         let transport = SessionFakeDeviceProtocolTransport()
         let session = makeSession(transport: transport)
@@ -261,6 +288,62 @@ struct DeviceSessionProtocolTests {
         ])
         #expect(transport.sentMessages.suffix(2).first?.parameters["mode"]?.stringValue == "preview")
         #expect(transport.sentMessages.last?.parameters["snapshot_id"]?.stringValue == "snap-1")
+    }
+
+    @Test
+    func playbackStoreLoadsFirstPlaybackResourceWhenSessionBecomesReady() async {
+        let transport = SessionFakeDeviceProtocolTransport()
+        let session = makeSession(transport: transport)
+        transport.responseProvider = { request in
+            makeFileTopicResponse(request) ?? makeHandshakeResponse(request)
+        }
+        let store = PlaybackStore(deviceSession: session)
+
+        startHandshake(session)
+
+        #expect(await waitForSessionState { store.playbackResource != nil })
+        #expect(store.title == "REC00001.AVI")
+        #expect(store.selectedFileInfo?.path == "/DCIMA/REC00001.AVI")
+        #expect(store.playbackResource?.rtspURL == "rtsp://192.168.169.1:554/playback/DCIMA/REC00001.AVI")
+        #expect(store.message == "rtsp://192.168.169.1:554/playback/DCIMA/REC00001.AVI · Transport TCP · 180s")
+        #expect(store.lastLoadError == nil)
+        #expect(store.isLoading == false)
+        #expect(Array(transport.sentMessages.map(\.topic).suffix(3)) == [
+            "FILE_LIST",
+            "FILE_INFO",
+            "FILE_DOWNLOAD_URL"
+        ])
+    }
+
+    @Test
+    func playbackStoreIgnoresStalePlaybackResourceAfterDisconnect() async {
+        let transport = SessionFakeDeviceProtocolTransport()
+        let session = makeSession(transport: transport)
+        transport.responseProvider = { request in
+            if request.topic == "FILE_DOWNLOAD_URL" {
+                return nil
+            }
+            return makeFileTopicResponse(request) ?? makeHandshakeResponse(request)
+        }
+        let store = PlaybackStore(deviceSession: session)
+
+        startHandshake(session)
+        #expect(await waitForSessionState { transport.sentMessages.last?.topic == "FILE_DOWNLOAD_URL" })
+        guard let request = transport.sentMessages.last,
+              let staleResponse = makeFileTopicResponse(request) else {
+            #expect(Bool(false))
+            return
+        }
+
+        session.send(.disconnect)
+        transport.push(staleResponse)
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        #expect(store.playbackResource == nil)
+        #expect(store.selectedFileInfo == nil)
+        #expect(store.lastLoadError == nil)
+        #expect(store.isLoading == false)
+        #expect(store.message == "当前没有可显示的设备录像或本地媒体。")
     }
 }
 

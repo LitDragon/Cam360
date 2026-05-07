@@ -1,4 +1,5 @@
 import Combine
+import Foundation
 
 final class PlaybackStore: ObservableObject {
     @Published private(set) var title = "没有可播放内容"
@@ -33,11 +34,20 @@ final class PlaybackStore: ObservableObject {
                 return
             }
             lastLoadedDeviceID = deviceInfo.id
-            loadFirstPlaybackResource()
+            scheduleFirstPlaybackResourceLoad(for: deviceInfo.id)
         case .idle, .apConnecting, .handshaking, .failed, .disconnected:
             invalidatePlaybackResource()
         case .busy, .recovering:
             break
+        }
+    }
+
+    private func scheduleFirstPlaybackResourceLoad(for deviceID: String) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.lastLoadedDeviceID == deviceID else {
+                return
+            }
+            self.loadFirstPlaybackResource()
         }
     }
 
