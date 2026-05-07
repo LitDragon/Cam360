@@ -1,12 +1,40 @@
 import Combine
 import Foundation
 
+enum DeviceOnboardingRecoveryAction: Equatable {
+    case retryHotspot
+    case checkLocalNetworkPermission
+    case retryControlChannel
+
+    var guidance: String {
+        switch self {
+        case .retryHotspot:
+            return "Check the dashcam hotspot name and password, then try again."
+        case .checkLocalNetworkPermission:
+            return "Allow Local Network access for Cam360 in iOS Settings, then retry validation."
+        case .retryControlChannel:
+            return "Keep the phone on the dashcam hotspot and retry device validation."
+        }
+    }
+}
+
 enum DeviceOnboardingConnectionStage: Equatable {
     case idle
     case connectingHotspot
     case validatingControlChannel
     case ready
-    case retryRequired(String)
+    case retryRequired(message: String, action: DeviceOnboardingRecoveryAction)
+
+    static func retry(for error: DeviceError) -> DeviceOnboardingConnectionStage {
+        switch error {
+        case .apConnectionFailed:
+            return .retryRequired(message: error.localizedDescription, action: .retryHotspot)
+        case .handshakeFailed:
+            return .retryRequired(message: error.localizedDescription, action: .checkLocalNetworkPermission)
+        case .connectionLost, .timeout, .unknown:
+            return .retryRequired(message: error.localizedDescription, action: .retryControlChannel)
+        }
+    }
 
     func title(deviceName: String) -> String {
         switch self {
@@ -33,8 +61,8 @@ enum DeviceOnboardingConnectionStage: Equatable {
             return "Checking whether the dashcam control channel is ready."
         case .ready:
             return "The dashcam control channel is ready."
-        case .retryRequired(let reason):
-            return reason
+        case .retryRequired(let message, _):
+            return message
         }
     }
 
@@ -54,10 +82,21 @@ enum DeviceOnboardingConnectionStage: Equatable {
     }
 
     var retryMessage: String? {
-        if case .retryRequired(let message) = self {
+        if case .retryRequired(let message, _) = self {
             return message
         }
         return nil
+    }
+
+    var recoveryAction: DeviceOnboardingRecoveryAction? {
+        if case .retryRequired(_, let action) = self {
+            return action
+        }
+        return nil
+    }
+
+    var recoveryGuidance: String? {
+        recoveryAction?.guidance
     }
 }
 
@@ -244,7 +283,7 @@ final class DeviceOnboardingStore: ObservableObject {
         case .ready(let deviceInfo):
             completeConnection(with: deviceInfo)
         case .failed(let error):
-            connectionStage = .retryRequired(error.localizedDescription)
+            connectionStage = .retry(for: error)
             route = .wifiDetails
         default:
             break

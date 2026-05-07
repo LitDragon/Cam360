@@ -11,13 +11,13 @@
 ## 下一步计划
 
 1. 按 `docs/UI_PAGE_GAP_CHECKLIST.md` 继续补有截图或业务文档证据的低风险 UI 缺口；未确认的实时预览、回放和下载链路继续保持占位。
-2. 继续补 onboarding/AP 接入的失败分流和本地网络权限边界；不接真实热点自动连接。
+2. 继续收敛 onboarding/AP 的手动系统设置兜底和权限说明；不接真实热点自动连接。
 3. 只为协议解析、状态转换和会话契约补离线测试；不新增依赖真实设备响应的运行时代码路径。
 4. 将 `DeviceProtocolEndpoint` 自动发现、`SNAPSHOT_CTRL -> SNAPSHOT_DATA`、`VIDEO_CTRL`、预览流和下载链路保留为硬件恢复后的联调队列。
 
 ## 完成记录
 
-- `2026-05-07`：为 onboarding 增加 AP 热点连接、控制通道校验和可重试失败提示的离线阶段表达，并补测试护栏。
+- `2026-05-07`：为 onboarding 增加 AP 热点连接、控制通道校验和失败恢复动作的离线阶段表达，并补测试护栏。
 - `2026-05-07`：收敛 `DeviceSession` 设备命令 generation 语义，修正 `PlaybackStore` ready 通知内同步发命令的重入问题并补离线回归测试。
 - `2026-05-07`：收敛 `DeviceSession` 主动断开契约，`ready` / `busy` 会话断开或重置时先发送 `CTP_CMD_EXITAPP`，再关闭控制连接。
 

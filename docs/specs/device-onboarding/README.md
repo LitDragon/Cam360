@@ -5,6 +5,7 @@
 ## 当前离线契约
 
 - `DeviceOnboardingStore.connectionStage` 区分 `connectingHotspot`、`validatingControlChannel`、`ready` 和 `retryRequired`。
+- `retryRequired` 必须携带恢复动作：热点信息重试、本地网络权限检查或控制通道重试。
 - `connecting` 路由只表示接入流程进行中；只有 `DeviceSession.ready` 后才进入 `success` 并写入已知设备。
 - 握手失败回到 `wifiDetails`，保留失败原因作为可重试提示。
 - 当前仍以本地 AP 成功事件进入控制通道校验，不代表真机 Wi-Fi 自动连接已完成。
@@ -19,6 +20,7 @@
 ## 配置清单
 
 - 已有 `NSLocalNetworkUsageDescription`。
+- 控制通道握手失败先提示检查本地网络权限，但不把所有握手失败都声明为权限拒绝。
 - 引入 `NEHotspotConfiguration` 前，不启用 Hotspot Configuration capability。
 - 只有确认 Bonjour 发现规则后，才补 `NSBonjourServices`。
 

@@ -4,7 +4,7 @@
 
 ## 2026-05-07
 
-- Onboarding 新增离线连接阶段表达，区分 AP 热点连接、控制通道校验、成功和可重试失败，并同步更新接入规格与测试护栏。
+- Onboarding 新增离线连接阶段表达，区分 AP 热点连接、控制通道校验、成功和可重试失败恢复动作，并同步更新接入规格与测试护栏。
 - GitHub agent 模型调用支持 repository variable `OPENAI_BASE_URL`，非官方 OpenAI-compatible 网关默认走 `chat_completions`，保留 `OPENAI_API_MODE` 覆盖。
 - 将 GitHub 自动修复拆为 Build Fix、Technical Debt、Docs Alignment 三类 agent，分别使用独立 workflow/config，并复用受限 Python CLI 生成补丁、校验和创建 PR。
 

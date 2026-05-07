@@ -351,6 +351,31 @@ struct Cam360Tests {
     }
 
     @Test
+    func deviceOnboardingConnectionFailuresExposeRecoveryActions() {
+        #expect(
+            DeviceOnboardingConnectionStage.retry(for: .apConnectionFailed(reason: "Wrong password")) ==
+                .retryRequired(
+                    message: "热点连接失败: Wrong password",
+                    action: .retryHotspot
+                )
+        )
+        #expect(
+            DeviceOnboardingConnectionStage.retry(for: .handshakeFailed(reason: "请求超时: APP_ACCESS")) ==
+                .retryRequired(
+                    message: "设备握手失败: 请求超时: APP_ACCESS",
+                    action: .checkLocalNetworkPermission
+                )
+        )
+        #expect(
+            DeviceOnboardingConnectionStage.retry(for: .connectionLost) ==
+                .retryRequired(
+                    message: "连接已断开",
+                    action: .retryControlChannel
+                )
+        )
+    }
+
+    @Test
     func deviceOnboardingHandshakeFailureDoesNotPersistDevice() async {
         let testDefaults = makeUserDefaults()
         defer { clear(testDefaults) }
@@ -375,7 +400,12 @@ struct Cam360Tests {
         protocolClient.failHandshake(.requestTimedOut(topic: "APP_ACCESS"))
 
         #expect(await waitForOnboardingState { store.route == .wifiDetails })
-        #expect(store.connectionStage == .retryRequired("设备握手失败: 请求超时: APP_ACCESS"))
+        #expect(
+            store.connectionStage == .retryRequired(
+                message: "设备握手失败: 请求超时: APP_ACCESS",
+                action: .checkLocalNetworkPermission
+            )
+        )
         #expect(repository.fetchKnownDevices().isEmpty)
         #expect(preferenceStore.hasCompletedOnboarding == false)
     }

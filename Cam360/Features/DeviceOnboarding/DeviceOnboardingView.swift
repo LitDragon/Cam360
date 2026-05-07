@@ -49,7 +49,7 @@ private extension DeviceOnboardingView {
 
                 DeviceOnboardingTipCard(
                     iconName: "info.circle.fill",
-                    message: "Tip: Make sure Bluetooth is enabled and your device is in setup mode."
+                    message: "Tip: Make sure Wi-Fi is enabled and the dashcam hotspot is visible."
                 )
                 .padding(.top, AppSpacing.xl)
 
@@ -143,7 +143,9 @@ private extension DeviceOnboardingView {
                 if let retryMessage = store.connectionStage.retryMessage {
                     DeviceOnboardingTipCard(
                         iconName: "exclamationmark.triangle.fill",
-                        message: retryMessage,
+                        message: [retryMessage, store.connectionStage.recoveryGuidance]
+                            .compactMap { $0 }
+                            .joined(separator: "\n"),
                         tintColor: AppColor.warning,
                         backgroundColor: AppColor.warning.opacity(0.12)
                     )
