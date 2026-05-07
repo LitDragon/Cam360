@@ -317,6 +317,35 @@ struct Cam360Tests {
         try? await Task.sleep(nanoseconds: 100_000_000)
 
         #expect(store.route == .wifiDetails)
+        #expect(store.connectionStage == .idle)
+        #expect(repository.fetchKnownDevices().isEmpty)
+        #expect(preferenceStore.hasCompletedOnboarding == false)
+    }
+
+    @Test
+    func deviceOnboardingSeparatesHotspotConnectionFromControlValidation() {
+        let testDefaults = makeUserDefaults()
+        defer { clear(testDefaults) }
+
+        let repository = UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults)
+        let preferenceStore = UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults)
+        let router = AppRouter(route: .main(.dashboard))
+        let protocolClient = OnboardingFakeProtocolClient()
+        let session = DeviceSession(protocolClient: protocolClient)
+        let store = DeviceOnboardingStore(
+            router: router,
+            knownDeviceRepository: repository,
+            appPreferenceStore: preferenceStore,
+            deviceSession: session
+        )
+
+        store.startSearch()
+        store.advanceFromSearching()
+        store.continueFromWiFiDetails()
+
+        #expect(store.route == .connecting)
+        #expect(store.connectionStage == .validatingControlChannel)
+        #expect(session.state == .handshaking)
         #expect(repository.fetchKnownDevices().isEmpty)
         #expect(preferenceStore.hasCompletedOnboarding == false)
     }
@@ -346,6 +375,7 @@ struct Cam360Tests {
         protocolClient.failHandshake(.requestTimedOut(topic: "APP_ACCESS"))
 
         #expect(await waitForOnboardingState { store.route == .wifiDetails })
+        #expect(store.connectionStage == .retryRequired("设备握手失败: 请求超时: APP_ACCESS"))
         #expect(repository.fetchKnownDevices().isEmpty)
         #expect(preferenceStore.hasCompletedOnboarding == false)
     }

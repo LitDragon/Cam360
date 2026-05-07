@@ -2,12 +2,25 @@
 
 本文件只记录 onboarding 真实接入时必须保持的契约。
 
+## 当前离线契约
+
+- `DeviceOnboardingStore.connectionStage` 区分 `connectingHotspot`、`validatingControlChannel`、`ready` 和 `retryRequired`。
+- `connecting` 路由只表示接入流程进行中；只有 `DeviceSession.ready` 后才进入 `success` 并写入已知设备。
+- 握手失败回到 `wifiDetails`，保留失败原因作为可重试提示。
+- 当前仍以本地 AP 成功事件进入控制通道校验，不代表真机 Wi-Fi 自动连接已完成。
+
 ## 当前范围外
 
 - 真实热点发现
 - Wi-Fi 连接
 - endpoint 自动发现
 - 失败重试与恢复
+
+## 配置清单
+
+- 已有 `NSLocalNetworkUsageDescription`。
+- 引入 `NEHotspotConfiguration` 前，不启用 Hotspot Configuration capability。
+- 只有确认 Bonjour 发现规则后，才补 `NSBonjourServices`。
 
 ## 后续接入约束
 

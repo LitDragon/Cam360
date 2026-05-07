@@ -39,6 +39,7 @@ flowchart TD
   - `success`
 - 正向流程：
   - `introduction` -> `searching` -> `wifiDetails` -> `connecting`
+  - `connecting` 内由 `DeviceOnboardingStore.connectionStage` 区分热点连接、控制通道校验和失败重试提示
   - `connecting` 在 `DeviceSession` ready 后进入 `success`
   - `success` 的 `Go to Home` 回到 `main(.dashboard)`
 - 返回和取消：

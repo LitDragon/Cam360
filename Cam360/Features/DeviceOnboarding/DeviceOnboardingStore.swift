@@ -1,6 +1,66 @@
 import Combine
 import Foundation
 
+enum DeviceOnboardingConnectionStage: Equatable {
+    case idle
+    case connectingHotspot
+    case validatingControlChannel
+    case ready
+    case retryRequired(String)
+
+    func title(deviceName: String) -> String {
+        switch self {
+        case .idle:
+            return "Ready to connect"
+        case .connectingHotspot:
+            return "Connecting to \(deviceName)..."
+        case .validatingControlChannel:
+            return "Device hotspot connected"
+        case .ready:
+            return "Device ready"
+        case .retryRequired:
+            return "Connection needs retry"
+        }
+    }
+
+    var message: String {
+        switch self {
+        case .idle:
+            return "Enter the dashcam hotspot details to start setup."
+        case .connectingHotspot:
+            return "Joining the dashcam Wi-Fi hotspot before checking device control."
+        case .validatingControlChannel:
+            return "Checking whether the dashcam control channel is ready."
+        case .ready:
+            return "The dashcam control channel is ready."
+        case .retryRequired(let reason):
+            return reason
+        }
+    }
+
+    var progress: Double {
+        switch self {
+        case .idle:
+            return 0
+        case .connectingHotspot:
+            return 0.36
+        case .validatingControlChannel:
+            return 0.72
+        case .ready:
+            return 1
+        case .retryRequired:
+            return 0
+        }
+    }
+
+    var retryMessage: String? {
+        if case .retryRequired(let message) = self {
+            return message
+        }
+        return nil
+    }
+}
+
 final class DeviceOnboardingStore: ObservableObject {
     @Published private(set) var route: DeviceOnboardingRoute
     @Published var networkName: String
@@ -8,6 +68,7 @@ final class DeviceOnboardingStore: ObservableObject {
     @Published var isPasswordVisible: Bool
     @Published private(set) var addedDeviceName: String
     @Published private(set) var pendingDeviceName: String
+    @Published private(set) var connectionStage: DeviceOnboardingConnectionStage
 
     let deviceSession: DeviceSession
 
@@ -34,6 +95,7 @@ final class DeviceOnboardingStore: ObservableObject {
         isPasswordVisible = false
         addedDeviceName = DeviceOnboardingPlaceholder.deviceName
         pendingDeviceName = DeviceOnboardingPlaceholder.deviceName
+        connectionStage = .idle
 
         bindDeviceSession()
     }
@@ -49,6 +111,7 @@ final class DeviceOnboardingStore: ObservableObject {
     func startSearch() {
         cancelScheduledTransition()
         pendingDeviceName = nextDeviceName()
+        connectionStage = .idle
         route = .searching
         scheduleTransition(after: DeviceOnboardingTiming.searchToWiFiDetailsDelay) { [weak self] in
             self?.advanceFromSearching()
@@ -69,6 +132,7 @@ final class DeviceOnboardingStore: ObservableObject {
         }
 
         cancelScheduledTransition()
+        connectionStage = .connectingHotspot
         route = .connecting
         startDeviceSessionHandshake()
     }
@@ -80,6 +144,7 @@ final class DeviceOnboardingStore: ObservableObject {
 
         let device = persistDevice(deviceInfo)
         addedDeviceName = device.name
+        connectionStage = .ready
         appPreferenceStore.hasCompletedOnboarding = true
         route = .success
     }
@@ -97,6 +162,7 @@ final class DeviceOnboardingStore: ObservableObject {
             route = .introduction
         case .connecting:
             deviceSession.send(.reset)
+            connectionStage = .idle
             route = .wifiDetails
         }
     }
@@ -104,11 +170,13 @@ final class DeviceOnboardingStore: ObservableObject {
     func cancelConnection() {
         cancelScheduledTransition()
         deviceSession.send(.reset)
+        connectionStage = .idle
         route = .wifiDetails
     }
 
     func enterHome() {
         cancelScheduledTransition()
+        connectionStage = .idle
         route = .introduction
         router.showMain(tab: .dashboard)
     }
@@ -117,6 +185,7 @@ final class DeviceOnboardingStore: ObservableObject {
         cancelScheduledTransition()
         deviceSession.send(.reset)
         pendingDeviceName = nextDeviceName()
+        connectionStage = .idle
         route = .introduction
     }
 
@@ -129,6 +198,7 @@ final class DeviceOnboardingStore: ObservableObject {
         deviceSession.send(.reset)
         knownDeviceRepository.clear()
         appPreferenceStore.reset()
+        connectionStage = .idle
         route = .introduction
         router.showMain(tab: .dashboard)
     }
@@ -148,6 +218,7 @@ final class DeviceOnboardingStore: ObservableObject {
         deviceSession.send(.reset)
         deviceSession.send(.startAPConnection(ssid: networkName))
         deviceSession.send(.apConnectionSucceeded)
+        connectionStage = .validatingControlChannel
         deviceSession.startProtocolHandshake()
     }
 
@@ -166,9 +237,14 @@ final class DeviceOnboardingStore: ObservableObject {
         }
 
         switch state {
+        case .apConnecting:
+            connectionStage = .connectingHotspot
+        case .handshaking:
+            connectionStage = .validatingControlChannel
         case .ready(let deviceInfo):
             completeConnection(with: deviceInfo)
-        case .failed:
+        case .failed(let error):
+            connectionStage = .retryRequired(error.localizedDescription)
             route = .wifiDetails
         default:
             break
@@ -204,7 +280,7 @@ final class DeviceOnboardingStore: ObservableObject {
 }
 
 private enum DeviceOnboardingPlaceholder {
-    static let networkName = "MyHome_WiFi_2.4G"
+    static let networkName = "Cam360_AP"
     static let password = "password123"
     static let deviceName = "Vigilant DL-400 Pro"
 }

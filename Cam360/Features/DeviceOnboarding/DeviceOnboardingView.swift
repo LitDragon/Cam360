@@ -134,11 +134,21 @@ private extension DeviceOnboardingView {
                     .font(AppTypography.pageTitle)
                     .foregroundColor(AppColor.textPrimary)
 
-                Text("Your dashcam will use this network to stay connected and up to date.")
+                Text("Connect your phone to the dashcam hotspot before the app checks the control channel.")
                     .font(AppTypography.body)
                     .foregroundColor(AppColor.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, AppSpacing.md)
+
+                if let retryMessage = store.connectionStage.retryMessage {
+                    DeviceOnboardingTipCard(
+                        iconName: "exclamationmark.triangle.fill",
+                        message: retryMessage,
+                        tintColor: AppColor.warning,
+                        backgroundColor: AppColor.warning.opacity(0.12)
+                    )
+                    .padding(.top, AppSpacing.lg)
+                }
 
                 Text("NETWORK NAME")
                     .font(.system(size: 12, weight: .bold))
@@ -169,7 +179,7 @@ private extension DeviceOnboardingView {
                         .foregroundColor(AppColor.brand.opacity(0.65))
                         .padding(.top, 2)
 
-                    Text("Only 2.4 GHz networks are supported for a stable connection.")
+                    Text("Use the hotspot name and password shown by the dashcam. Device control starts only after validation succeeds.")
                         .font(AppTypography.caption)
                         .foregroundColor(AppColor.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -203,14 +213,14 @@ private extension DeviceOnboardingView {
 
                 DeviceOnboardingSignalIllustration()
 
-                Text("Connecting to \(store.pendingDeviceName)...")
+                Text(store.connectionStage.title(deviceName: store.pendingDeviceName))
                     .font(AppTypography.pageTitle)
                     .foregroundColor(AppColor.textPrimary)
                     .multilineTextAlignment(.center)
                     .padding(.top, AppSpacing.xxxl)
                     .padding(.horizontal, AppSpacing.md)
 
-                Text("Establishing a secure connection. This may take a few moments.")
+                Text(store.connectionStage.message)
                     .font(AppTypography.body)
                     .foregroundColor(AppColor.textSecondary)
                     .multilineTextAlignment(.center)
@@ -219,7 +229,7 @@ private extension DeviceOnboardingView {
                     .padding(.horizontal, AppSpacing.xl)
 
                 AppProgressBar(
-                    progress: 0.64,
+                    progress: store.connectionStage.progress,
                     minimumFillWidth: 24
                 )
                     .padding(.top, AppSpacing.xxxl)
@@ -347,12 +357,14 @@ private struct DeviceOnboardingSignalIllustration: View {
 private struct DeviceOnboardingTipCard: View {
     let iconName: String
     let message: String
+    var tintColor: Color = AppColor.brand
+    var backgroundColor: Color = AppColor.accentSurface.opacity(0.72)
 
     var body: some View {
         HStack(alignment: .top, spacing: AppSpacing.md) {
             Image(systemName: iconName)
                 .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(AppColor.brand)
+                .foregroundColor(tintColor)
 
             Text(message)
                 .font(AppTypography.body)
@@ -361,7 +373,7 @@ private struct DeviceOnboardingTipCard: View {
         }
         .padding(AppSpacing.lg)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(AppColor.accentSurface.opacity(0.72))
+        .background(backgroundColor)
         .cornerRadius(AppRadius.medium)
     }
 }
