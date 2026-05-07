@@ -21,4 +21,7 @@ Cam360 采用文档优先的开发方式：当前状态、已实现能力、下�
 ## 自动化
 
 - `.github/workflows/ci.yml`：push / PR 时执行 Simulator build/test。
-- `.github/workflows/refactor-agent.yml`：手动或定时扫描 Swift 架构债；配置在 `.github/refactor-agent.json`，脚本为 `scripts/refactor_agent.py`，产物写入被忽略的 `build/refactor-agent/`。
+- `.github/workflows/build-fix-agent.yml`：CI push 失败后或手动运行语法/构建修复；配置在 `.github/build-fix-agent.json`，产物写入被忽略的 `build/build-fix-agent/`。
+- `.github/workflows/refactor-agent.yml`：手动或定时扫描 Swift 技术债；配置在 `.github/refactor-agent.json`，产物写入被忽略的 `build/refactor-agent/`。
+- `.github/workflows/docs-agent.yml`：push、手动或定时对齐文档与代码；配置在 `.github/docs-agent.json`，产物写入被忽略的 `build/docs-agent/`。
+- 三类 agent 复用 `scripts/refactor_agent.py`，默认读取 repository secret `OPENAI_API_KEY` 和 repository variables `OPENAI_MODEL`、`OPENAI_BASE_URL`；`OPENAI_BASE_URL` 留空时使用 OpenAI 官方地址，非官方地址默认按 `chat_completions` 调用，可用 `OPENAI_API_MODE=responses` 覆盖。

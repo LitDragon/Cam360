@@ -1,9 +1,13 @@
 {
+  "agent_name": "Technical Debt Agent",
+  "agent_kind": "refactor",
   "report_path": "build/refactor-agent/report.md",
   "prompt_path": "build/refactor-agent/prompt.txt",
   "patch_path": "build/refactor-agent/proposed.patch",
   "model_env": "OPENAI_MODEL",
   "api_key_env": "OPENAI_API_KEY",
+  "base_url_env": "OPENAI_BASE_URL",
+  "api_mode_env": "OPENAI_API_MODE",
   "max_files": 3,
   "max_changed_lines": 400,
   "max_file_chars": 18000,

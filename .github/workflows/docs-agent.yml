@@ -1,10 +1,10 @@
-name: Technical Debt Agent
+name: Docs Alignment Agent
 
 on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: "Scan and report only"
+        description: "Review docs and report only"
         required: true
         default: "false"
         type: choice
@@ -12,38 +12,36 @@ on:
           - "false"
           - "true"
       focus:
-        description: "Optional refactor focus"
+        description: "Optional docs focus"
         required: false
         default: ""
       max_files:
-        description: "Maximum files the agent may edit"
+        description: "Maximum docs files the agent may edit"
         required: true
-        default: "3"
+        default: "4"
+  push:
+    branches: [main, master]
+    paths:
+      - "Cam360/**"
+      - "Cam360Tests/**"
+      - "README.md"
+      - "docs/**"
   schedule:
-    - cron: "0 18 * * 1"
+    - cron: "30 18 * * 1"
 
 permissions:
   contents: write
   pull-requests: write
 
 jobs:
-  refactor:
+  docs-alignment:
     runs-on: macos-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Resolve simulator destination
-        run: |
-          SIMULATOR_ID=$(xcrun simctl list devices available | awk -F '[()]' '/iPhone/ { print $2; exit }')
-          if [ -z "$SIMULATOR_ID" ]; then
-            echo "No available iPhone simulator found"
-            exit 1
-          fi
-          echo "SIMULATOR_DESTINATION=platform=iOS Simulator,id=$SIMULATOR_ID" >> "$GITHUB_ENV"
-
-      - name: Run technical debt agent
+      - name: Run docs alignment agent
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
@@ -52,34 +50,34 @@ jobs:
         run: |
           DRY_RUN="${{ github.event.inputs.dry_run || 'false' }}"
           FOCUS="${{ github.event.inputs.focus || '' }}"
-          MAX_FILES="${{ github.event.inputs.max_files || '3' }}"
+          MAX_FILES="${{ github.event.inputs.max_files || '4' }}"
           python3 scripts/refactor_agent.py run \
-            --config .github/refactor-agent.json \
+            --config .github/docs-agent.json \
             --dry-run "$DRY_RUN" \
             --focus "$FOCUS" \
             --max-files "$MAX_FILES"
 
-      - name: Upload technical debt report
+      - name: Upload docs alignment report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: technical-debt-agent-report
+          name: docs-agent-report
           path: |
-            build/refactor-agent/report.md
-            build/refactor-agent/proposed.patch
-            build/refactor-agent/prompt.txt
+            build/docs-agent/report.md
+            build/docs-agent/proposed.patch
+            build/docs-agent/prompt.txt
           if-no-files-found: ignore
 
-      - name: Create technical debt PR
+      - name: Create docs alignment PR
         if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.dry_run != 'true' }}
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          branch: technical-debt-agent/cam360-architecture-debt
+          branch: docs-agent/cam360-docs-alignment
           delete-branch: true
-          commit-message: "refactor: apply technical debt agent patch"
-          title: "Refactor: technical debt agent patch"
-          body-path: build/refactor-agent/report.md
+          commit-message: "docs: align docs with code"
+          title: "Docs: align docs with code"
+          body-path: build/docs-agent/report.md
           labels: |
-            automated-technical-debt
+            automated-docs
             needs-review

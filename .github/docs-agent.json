@@ -1,0 +1,63 @@
+{
+  "agent_name": "Docs Alignment Agent",
+  "agent_kind": "docs",
+  "report_path": "build/docs-agent/report.md",
+  "prompt_path": "build/docs-agent/prompt.txt",
+  "patch_path": "build/docs-agent/proposed.patch",
+  "model_env": "OPENAI_MODEL",
+  "api_key_env": "OPENAI_API_KEY",
+  "base_url_env": "OPENAI_BASE_URL",
+  "api_mode_env": "OPENAI_API_MODE",
+  "max_files": 4,
+  "max_changed_lines": 220,
+  "max_file_chars": 18000,
+  "max_context_chars": 70000,
+  "max_reference_files": 240,
+  "max_symbol_rows": 180,
+  "scan_paths": [
+    "README.md",
+    "docs"
+  ],
+  "editable_paths": [
+    "README.md",
+    "docs/"
+  ],
+  "review_docs": [
+    "README.md",
+    "docs/PROJECT_CONTEXT.md",
+    "docs/TASKS.md",
+    "docs/specs/README.md",
+    "docs/specs/device-onboarding/README.md",
+    "docs/specs/device-protocol/README.md",
+    "docs/specs/device-session/README.md",
+    "docs/specs/live-preview/README.md",
+    "docs/specs/ui-flow/README.md",
+    "docs/specs/ui-components/README.md",
+    "docs/specs/settings-components/README.md"
+  ],
+  "context_docs": [
+    "README.md",
+    "AGENTS.md",
+    "docs/PROJECT_CONTEXT.md",
+    "docs/TASKS.md",
+    "docs/specs/README.md",
+    "docs/specs/device-onboarding/README.md",
+    "docs/specs/device-protocol/README.md",
+    "docs/specs/device-session/README.md",
+    "docs/specs/live-preview/README.md",
+    "docs/specs/ui-flow/README.md",
+    "docs/specs/ui-components/README.md",
+    "docs/specs/settings-components/README.md"
+  ],
+  "link_check_paths": [
+    "README.md",
+    "docs"
+  ],
+  "reference_paths": [
+    "Cam360",
+    "Cam360Tests",
+    "README.md",
+    "docs"
+  ],
+  "validation_command": "git diff --check && python3 scripts/refactor_agent.py check-doc-links --config .github/docs-agent.json"
+}

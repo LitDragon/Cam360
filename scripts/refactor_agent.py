@@ -19,6 +19,7 @@ import sys
 import textwrap
 import urllib.error
 import urllib.request
+import urllib.parse
 from typing import Iterable
 
 
@@ -81,6 +82,14 @@ def git_tracked_files() -> list[str]:
     return [line for line in result.stdout.splitlines() if line]
 
 
+def path_matches_prefixes(path_rel: str, prefixes: Iterable[str]) -> bool:
+    for prefix in prefixes:
+        normalized = prefix.rstrip("/")
+        if path_rel == normalized or path_rel.startswith(normalized + "/"):
+            return True
+    return False
+
+
 def swift_files(config: dict) -> list[pathlib.Path]:
     scan_paths = tuple(config.get("scan_paths", []))
     files = git_tracked_files()
@@ -98,7 +107,7 @@ def swift_files(config: dict) -> list[pathlib.Path]:
         path_rel = rel(path)
         if not path_rel.endswith(".swift"):
             continue
-        if scan_paths and not any(path_rel == prefix or path_rel.startswith(prefix.rstrip("/") + "/") for prefix in scan_paths):
+        if scan_paths and not path_matches_prefixes(path_rel, scan_paths):
             continue
         result.append(path)
     return sorted(result)
@@ -126,6 +135,15 @@ def add_finding(
 
 
 def scan(config: dict) -> list[Finding]:
+    kind = config.get("agent_kind", "refactor")
+    if kind == "build":
+        return scan_build(config)
+    if kind == "docs":
+        return scan_docs(config)
+    return scan_refactor(config)
+
+
+def scan_refactor(config: dict) -> list[Finding]:
     findings: list[Finding] = []
     for path in swift_files(config):
         path_rel = rel(path)
@@ -232,9 +250,106 @@ def scan(config: dict) -> list[Finding]:
     return sorted(findings, key=lambda item: (severity_order.get(item.severity, 9), item.path, item.line))
 
 
+def normalize_repo_path(raw_path: str) -> str | None:
+    raw = raw_path.strip()
+    path = pathlib.Path(raw)
+    if path.is_absolute():
+        try:
+            raw = path.relative_to(ROOT).as_posix()
+        except ValueError:
+            return None
+    raw = raw.replace("\\", "/")
+    if raw.startswith("./"):
+        raw = raw[2:]
+    if not raw.endswith(".swift"):
+        return None
+    if not (ROOT / raw).exists():
+        return None
+    return raw
+
+
+def first_failure_excerpt(output: str, limit: int = 1200) -> str:
+    lines = [line for line in output.splitlines() if "error:" in line.lower()]
+    if not lines:
+        lines = output.splitlines()[-30:]
+    return "\n".join(lines)[:limit]
+
+
+def scan_build(config: dict) -> list[Finding]:
+    command = config.get("diagnostic_command") or config.get("validation_command", "")
+    if not command.strip():
+        return []
+
+    result = run_command(command, check=False)
+    log_path = config.get("diagnostic_log_path", "build/build-fix-agent/diagnostic.log")
+    write_text(ROOT / log_path, result.stdout)
+    if result.returncode == 0:
+        return []
+
+    findings: list[Finding] = []
+    seen: set[tuple[str, int, str]] = set()
+    pattern = re.compile(r"(?P<path>(?:/|\./)?[^:\n]+\.swift):(?P<line>\d+):(?:(?P<column>\d+):)?\s*(?P<level>error|warning):\s*(?P<message>.+)")
+    for raw_line in result.stdout.splitlines():
+        match = pattern.search(raw_line)
+        if not match or match.group("level") != "error":
+            continue
+        path_rel = normalize_repo_path(match.group("path"))
+        if not path_rel:
+            continue
+        line_number = int(match.group("line"))
+        message = match.group("message").strip()
+        key = (path_rel, line_number, message)
+        if key in seen:
+            continue
+        seen.add(key)
+        add_finding(
+            findings,
+            "build_error",
+            "P1",
+            path_rel,
+            line_number,
+            "xcodebuild reported a compiler error.",
+            raw_line.strip(),
+        )
+
+    if findings:
+        return findings
+
+    fallback_paths = config.get("fallback_context_paths", [])
+    fallback = next((item for item in fallback_paths if (ROOT / item).exists()), None)
+    if fallback:
+        add_finding(
+            findings,
+            "build_failure",
+            "P1",
+            fallback,
+            1,
+            "Diagnostic build failed; no specific Swift compiler location was parsed.",
+            first_failure_excerpt(result.stdout),
+        )
+    return findings
+
+
+def scan_docs(config: dict) -> list[Finding]:
+    findings: list[Finding] = []
+    review_paths = config.get("review_docs") or config.get("context_docs", [])
+    for item in review_paths:
+        if (ROOT / item).exists():
+            add_finding(
+                findings,
+                "docs_code_alignment_review",
+                "P2",
+                item,
+                1,
+                "Review this document against the current repository structure and public code contracts.",
+                item,
+            )
+    return findings
+
+
 def summarize_findings(findings: list[Finding]) -> str:
     if not findings:
-        return "No architecture debt findings matched the current rule set."
+        return "No findings matched the current rule set."
     rows = []
     for item in findings[:80]:
         rows.append(
@@ -274,20 +389,100 @@ def candidate_paths(findings: list[Finding], focus: str, max_files: int) -> list
     return [path for path, _ in sorted(scores.items(), key=lambda kv: (-kv[1], kv[0]))[:max_files]]
 
 
+def code_fence(path: str) -> str:
+    if path.endswith(".swift"):
+        return "swift"
+    if path.endswith(".md"):
+        return "markdown"
+    if path.endswith(".json"):
+        return "json"
+    if path.endswith(".yml") or path.endswith(".yaml"):
+        return "yaml"
+    return ""
+
+
 def file_context(paths: Iterable[str], max_file_chars: int) -> str:
     chunks = []
     for item in paths:
         path = ROOT / item
         if path.exists():
-            chunks.append(f"## {item}\n\n```swift\n{read_text(path, max_file_chars)}\n```")
+            chunks.append(f"## {item}\n\n```{code_fence(item)}\n{read_text(path, max_file_chars)}\n```")
     return "\n\n".join(chunks)
 
 
-def build_prompt(config: dict, findings: list[Finding], focus: str, max_files: int) -> tuple[str, str]:
-    targets = candidate_paths(findings, focus, max_files)
-    system_prompt = textwrap.dedent(
+def filtered_tracked_files(prefixes: Iterable[str]) -> list[str]:
+    files = git_tracked_files()
+    if not prefixes:
+        return files
+    return [item for item in files if path_matches_prefixes(item, prefixes)]
+
+
+def repository_reference(config: dict) -> str:
+    kind = config.get("agent_kind", "refactor")
+    chunks: list[str] = []
+
+    if kind == "build":
+        log_path = config.get("diagnostic_log_path")
+        if log_path and (ROOT / log_path).exists():
+            chunks.append(f"## Diagnostic log excerpt\n\n```text\n{read_text(ROOT / log_path, int(config.get('max_log_chars', 20000)))}\n```")
+
+    if kind == "docs":
+        prefixes = config.get("reference_paths", ["Cam360", "Cam360Tests", "docs", "README.md"])
+        files = filtered_tracked_files(prefixes)
+        max_files = int(config.get("max_reference_files", 220))
+        chunks.append("## Repository file index\n\n```text\n" + "\n".join(files[:max_files]) + "\n```")
+
+        symbol_rows: list[str] = []
+        symbol_pattern = re.compile(r"^\s*(?:public|internal|private|fileprivate)?\s*(?:final\s+)?(?:class|struct|enum|protocol|actor|func)\s+\w+")
+        for item in files:
+            if not item.endswith(".swift"):
+                continue
+            path = ROOT / item
+            if not path.exists():
+                continue
+            for index, line in enumerate(read_text(path, int(config.get("max_file_chars", 18000))).splitlines(), start=1):
+                if symbol_pattern.search(line):
+                    symbol_rows.append(f"{item}:{index}: {line.strip()}")
+                if len(symbol_rows) >= int(config.get("max_symbol_rows", 180)):
+                    break
+            if len(symbol_rows) >= int(config.get("max_symbol_rows", 180)):
+                break
+        if symbol_rows:
+            chunks.append("## Swift symbol index\n\n```text\n" + "\n".join(symbol_rows) + "\n```")
+
+    return "\n\n".join(chunks)
+
+
+def system_prompt(config: dict) -> str:
+    kind = config.get("agent_kind", "refactor")
+    if kind == "build":
+        return textwrap.dedent(
+            """
+            You are an automated build-fix agent for the Cam360 iOS Swift repository.
+            Return exactly one unified diff, or the exact text NO_CHANGE.
+            Fix only the compiler, syntax, or test failure shown in the diagnostic log.
+            Keep the change surgical and preserve behavior unless the failure proves a bug.
+            Only edit files that are included in the provided file context.
+            Do not edit project files, workflows, generated files, docs, assets, or package manifests.
+            Do not introduce new dependencies.
+            Keep iOS 13 main-path compatibility and the existing SwiftUI/UIKit lifecycle.
+            """
+        ).strip()
+    if kind == "docs":
+        return textwrap.dedent(
+            """
+            You are an automated docs-alignment agent for the Cam360 iOS Swift repository.
+            Return exactly one unified diff, or the exact text NO_CHANGE.
+            Only align existing documentation with inspected repository files and code contracts.
+            Do not speculate about unverified hardware behavior or future implementation.
+            Only edit files that are included in the provided file context.
+            Do not edit source code, project files, workflows, generated files, assets, or package manifests.
+            Keep documentation concise and avoid duplicating the same fact across multiple files.
+            """
+        ).strip()
+    return textwrap.dedent(
         """
-        You are an automated refactor agent for the Cam360 iOS Swift repository.
+        You are an automated technical-debt agent for the Cam360 iOS Swift repository.
         Return exactly one unified diff, or the exact text NO_CHANGE.
         Keep the change surgical and preserve existing behavior unless the finding proves a bug.
         Only edit files that are included in the provided file context.
@@ -297,6 +492,10 @@ def build_prompt(config: dict, findings: list[Finding], focus: str, max_files: i
         For non-UI behavior changes, update the smallest existing test that proves the change.
         """
     ).strip()
+
+
+def build_prompt(config: dict, findings: list[Finding], focus: str, max_files: int) -> tuple[str, str]:
+    targets = candidate_paths(findings, focus, max_files)
     user_prompt = textwrap.dedent(
         f"""
         Current optional focus:
@@ -314,11 +513,14 @@ def build_prompt(config: dict, findings: list[Finding], focus: str, max_files: i
         Current scan findings:
         {summarize_findings(findings)}
 
+        Additional repository reference:
+        {repository_reference(config) or "(none)"}
+
         Candidate file contents:
         {file_context(targets, int(config.get("max_file_chars", 18000)))}
         """
     ).strip()
-    return system_prompt, user_prompt
+    return system_prompt(config), user_prompt
 
 
 def extract_response_text(payload: dict) -> str:
@@ -326,6 +528,20 @@ def extract_response_text(payload: dict) -> str:
         return payload["output_text"]
 
     pieces: list[str] = []
+
+    for choice in payload.get("choices", []):
+        if not isinstance(choice, dict):
+            continue
+        message = choice.get("message", {})
+        if not isinstance(message, dict):
+            continue
+        content = message.get("content")
+        if isinstance(content, str):
+            pieces.append(content)
+        elif isinstance(content, list):
+            for item in content:
+                if isinstance(item, dict) and isinstance(item.get("text"), str):
+                    pieces.append(item["text"])
 
     def walk(value: object) -> None:
         if isinstance(value, dict):
@@ -341,6 +557,51 @@ def extract_response_text(payload: dict) -> str:
     return "\n".join(pieces).strip()
 
 
+def openai_base_url(config: dict) -> str:
+    env_name = config.get("base_url_env", "OPENAI_BASE_URL")
+    value = os.environ.get(env_name, "").strip() or config.get("base_url", "https://api.openai.com/v1")
+    return value.rstrip("/")
+
+
+def openai_api_mode(config: dict, base_url: str) -> str:
+    env_name = config.get("api_mode_env", "OPENAI_API_MODE")
+    value = os.environ.get(env_name, "").strip() or config.get("api_mode", "").strip()
+    if value:
+        return value
+    host = urllib.parse.urlparse(base_url).netloc
+    if host and host != "api.openai.com":
+        return "chat_completions"
+    return "responses"
+
+
+def request_body(mode: str, model: str, system_prompt: str, user_prompt: str) -> dict:
+    if mode == "responses":
+        return {
+            "model": model,
+            "instructions": system_prompt,
+            "input": user_prompt,
+            "max_output_tokens": 6000,
+        }
+    if mode == "chat_completions":
+        return {
+            "model": model,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            "max_tokens": 6000,
+        }
+    raise RuntimeError(f"Unsupported OPENAI_API_MODE: {mode}")
+
+
+def request_url(base_url: str, mode: str) -> str:
+    if mode == "responses":
+        return base_url + "/responses"
+    if mode == "chat_completions":
+        return base_url + "/chat/completions"
+    raise RuntimeError(f"Unsupported OPENAI_API_MODE: {mode}")
+
+
 def request_patch(config: dict, system_prompt: str, user_prompt: str) -> str:
     key_name = config.get("api_key_env", "OPENAI_API_KEY")
     model_name = config.get("model_env", "OPENAI_MODEL")
@@ -351,16 +612,11 @@ def request_patch(config: dict, system_prompt: str, user_prompt: str) -> str:
     if not model:
         raise RuntimeError(f"{model_name} is not set")
 
-    body = json.dumps(
-        {
-            "model": model,
-            "instructions": system_prompt,
-            "input": user_prompt,
-            "max_output_tokens": 6000,
-        }
-    ).encode("utf-8")
+    base_url = openai_base_url(config)
+    mode = openai_api_mode(config, base_url)
+    body = json.dumps(request_body(mode, model, system_prompt, user_prompt)).encode("utf-8")
     request = urllib.request.Request(
-        "https://api.openai.com/v1/responses",
+        request_url(base_url, mode),
         data=body,
         headers={
             "Authorization": f"Bearer {api_key}",
@@ -385,7 +641,9 @@ def missing_ai_config(config: dict) -> list[str]:
     return [name for name in names if not os.environ.get(name, "").strip()]
 
 
-def actionable_findings(findings: list[Finding], focus: str) -> list[Finding]:
+def actionable_findings(config: dict, findings: list[Finding], focus: str) -> list[Finding]:
+    if config.get("agent_kind") in {"build", "docs"}:
+        return findings
     if focus.strip():
         return findings
     return [item for item in findings if item.severity in {"P1", "P2"}]
@@ -441,7 +699,7 @@ def validate_diff(config: dict, diff_text: str, max_files: int) -> None:
             raise RuntimeError(f"Unsafe patch path: {item}")
         if not (ROOT / item).exists():
             raise RuntimeError(f"Patch creates or references a missing file: {item}")
-        if not any(item.startswith(prefix) for prefix in editable):
+        if not path_matches_prefixes(item, editable):
             raise RuntimeError(f"Patch touches a non-editable path: {item}")
         if item.endswith((".xcodeproj", ".pbxproj")) or item.startswith(".github/"):
             raise RuntimeError(f"Patch touches a protected path: {item}")
@@ -466,8 +724,9 @@ def git_has_changes() -> bool:
 
 def build_report(config: dict, findings: list[Finding], status: str, details: list[str]) -> str:
     now = dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    title = config.get("agent_name", "Refactor Agent")
     report = [
-        "# Refactor Agent Report",
+        f"# {title} Report",
         "",
         f"- Time: `{now}`",
         f"- Status: `{status}`",
@@ -484,6 +743,52 @@ def build_report(config: dict, findings: list[Finding], status: str, details: li
     return "\n".join(report)
 
 
+def markdown_files(config: dict) -> list[pathlib.Path]:
+    configured = config.get("link_check_paths") or config.get("context_docs", [])
+    paths: list[pathlib.Path] = []
+    for item in configured:
+        path = ROOT / item
+        if path.is_dir():
+            paths.extend(sorted(path.rglob("*.md")))
+        elif path.exists() and path.suffix == ".md":
+            paths.append(path)
+    return sorted(set(paths))
+
+
+def local_markdown_links(text: str) -> Iterable[str]:
+    for match in re.finditer(r"!?\[[^\]]*\]\(([^)]+)\)", text):
+        raw = match.group(1).strip()
+        if not raw or raw.startswith("#"):
+            continue
+        if re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*:", raw):
+            continue
+        yield raw
+
+
+def check_doc_links(config: dict) -> int:
+    errors: list[str] = []
+    root_resolved = ROOT.resolve()
+    for path in markdown_files(config):
+        path_rel = rel(path)
+        for raw in local_markdown_links(read_text(path)):
+            target = raw.split()[0].strip("<>")
+            target_path = target.split("#", 1)[0]
+            if not target_path:
+                continue
+            resolved = (path.parent / target_path).resolve()
+            try:
+                resolved.relative_to(root_resolved)
+            except ValueError:
+                errors.append(f"{path_rel}: link escapes repository: {raw}")
+                continue
+            if not resolved.exists():
+                errors.append(f"{path_rel}: missing link target: {raw}")
+    if errors:
+        print("\n".join(errors))
+        return 1
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run the Cam360 refactor agent.")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -492,9 +797,14 @@ def main() -> int:
     run_parser.add_argument("--dry-run", default="false")
     run_parser.add_argument("--focus", default="")
     run_parser.add_argument("--max-files", type=int, default=None)
+    check_parser = subparsers.add_parser("check-doc-links")
+    check_parser.add_argument("--config", default=".github/docs-agent.json")
     args = parser.parse_args()
 
     config = load_config(ROOT / args.config)
+    if args.command == "check-doc-links":
+        return check_doc_links(config)
+
     max_files = args.max_files or int(config.get("max_files", 3))
     dry_run = bool_arg(args.dry_run)
     details: list[str] = []
@@ -503,11 +813,11 @@ def main() -> int:
     status = "scanned"
 
     try:
-        patch_findings = actionable_findings(findings, args.focus)
+        patch_findings = actionable_findings(config, findings, args.focus)
         system_prompt, user_prompt = build_prompt(config, patch_findings, args.focus, max_files)
         write_text(ROOT / config.get("prompt_path", "build/refactor-agent/prompt.txt"), system_prompt + "\n\n" + user_prompt)
         if not findings:
-            details.append("No matching architecture debt findings; no patch requested.")
+            details.append(config.get("no_findings_message", "No matching findings; no patch requested."))
             return_code = 0
         elif dry_run:
             details.append("Dry run enabled; no patch requested.")

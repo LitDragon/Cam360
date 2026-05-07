@@ -2,6 +2,11 @@
 
 本文件记录仓库中已经实际发生的改动历史。按日期保留结果和边界，不展开过程细节或验证信息。
 
+## 2026-05-07
+
+- GitHub agent 模型调用支持 repository variable `OPENAI_BASE_URL`，非官方 OpenAI-compatible 网关默认走 `chat_completions`，保留 `OPENAI_API_MODE` 覆盖。
+- 将 GitHub 自动修复拆为 Build Fix、Technical Debt、Docs Alignment 三类 agent，分别使用独立 workflow/config，并复用受限 Python CLI 生成补丁、校验和创建 PR。
+
 ## 2026-05-06
 
 - UI 页面缺口清单补充证据来源列；Help Center 新增 FAQ 和 Contact Support 本地子页面，保持 Privacy Policy、Terms of Service 为占位入口。

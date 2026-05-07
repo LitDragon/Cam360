@@ -1,0 +1,40 @@
+{
+  "agent_name": "Build Fix Agent",
+  "agent_kind": "build",
+  "report_path": "build/build-fix-agent/report.md",
+  "prompt_path": "build/build-fix-agent/prompt.txt",
+  "patch_path": "build/build-fix-agent/proposed.patch",
+  "diagnostic_log_path": "build/build-fix-agent/diagnostic.log",
+  "model_env": "OPENAI_MODEL",
+  "api_key_env": "OPENAI_API_KEY",
+  "base_url_env": "OPENAI_BASE_URL",
+  "api_mode_env": "OPENAI_API_MODE",
+  "max_files": 3,
+  "max_changed_lines": 260,
+  "max_file_chars": 18000,
+  "max_context_chars": 45000,
+  "max_log_chars": 22000,
+  "scan_paths": [
+    "Cam360",
+    "Cam360Tests"
+  ],
+  "editable_paths": [
+    "Cam360/",
+    "Cam360Tests/"
+  ],
+  "fallback_context_paths": [
+    "Cam360/App/AppRootView.swift",
+    "Cam360/App/AppContainer.swift",
+    "Cam360Tests/Cam360Tests.swift"
+  ],
+  "context_docs": [
+    "README.md",
+    "AGENTS.md",
+    "docs/PROJECT_CONTEXT.md",
+    "docs/TASKS.md",
+    "docs/specs/README.md"
+  ],
+  "diagnostic_command": "xcodebuild -project Cam360.xcodeproj -scheme Cam360 -configuration Debug -destination \"$SIMULATOR_DESTINATION\" CODE_SIGNING_ALLOWED=NO test",
+  "validation_command": "xcodebuild -project Cam360.xcodeproj -scheme Cam360 -configuration Debug -destination \"$SIMULATOR_DESTINATION\" CODE_SIGNING_ALLOWED=NO test",
+  "no_findings_message": "Diagnostic build/test command passed; no build-fix patch requested."
+}

@@ -1,10 +1,10 @@
-name: Technical Debt Agent
+name: Build Fix Agent
 
 on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: "Scan and report only"
+        description: "Run diagnostic build/test and report only"
         required: true
         default: "false"
         type: choice
@@ -12,27 +12,43 @@ on:
           - "false"
           - "true"
       focus:
-        description: "Optional refactor focus"
+        description: "Optional build-fix focus"
         required: false
         default: ""
       max_files:
         description: "Maximum files the agent may edit"
         required: true
         default: "3"
-  schedule:
-    - cron: "0 18 * * 1"
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
 
 permissions:
   contents: write
   pull-requests: write
 
 jobs:
-  refactor:
+  build-fix:
+    if: >-
+      ${{
+        github.event_name == 'workflow_dispatch' ||
+        (
+          github.event.workflow_run.conclusion == 'failure' &&
+          github.event.workflow_run.event == 'push' &&
+          (
+            github.event.workflow_run.head_branch == 'main' ||
+            github.event.workflow_run.head_branch == 'master'
+          )
+        )
+      }}
     runs-on: macos-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Resolve simulator destination
         run: |
@@ -43,7 +59,7 @@ jobs:
           fi
           echo "SIMULATOR_DESTINATION=platform=iOS Simulator,id=$SIMULATOR_ID" >> "$GITHUB_ENV"
 
-      - name: Run technical debt agent
+      - name: Run build fix agent
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
@@ -54,32 +70,33 @@ jobs:
           FOCUS="${{ github.event.inputs.focus || '' }}"
           MAX_FILES="${{ github.event.inputs.max_files || '3' }}"
           python3 scripts/refactor_agent.py run \
-            --config .github/refactor-agent.json \
+            --config .github/build-fix-agent.json \
             --dry-run "$DRY_RUN" \
             --focus "$FOCUS" \
             --max-files "$MAX_FILES"
 
-      - name: Upload technical debt report
+      - name: Upload build fix report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: technical-debt-agent-report
+          name: build-fix-agent-report
           path: |
-            build/refactor-agent/report.md
-            build/refactor-agent/proposed.patch
-            build/refactor-agent/prompt.txt
+            build/build-fix-agent/report.md
+            build/build-fix-agent/proposed.patch
+            build/build-fix-agent/prompt.txt
+            build/build-fix-agent/diagnostic.log
           if-no-files-found: ignore
 
-      - name: Create technical debt PR
+      - name: Create build fix PR
         if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.dry_run != 'true' }}
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          branch: technical-debt-agent/cam360-architecture-debt
+          branch: build-fix-agent/cam360-build-failure
           delete-branch: true
-          commit-message: "refactor: apply technical debt agent patch"
-          title: "Refactor: technical debt agent patch"
-          body-path: build/refactor-agent/report.md
+          commit-message: "fix: apply build fix agent patch"
+          title: "Fix: build fix agent patch"
+          body-path: build/build-fix-agent/report.md
           labels: |
-            automated-technical-debt
+            automated-build-fix
             needs-review
