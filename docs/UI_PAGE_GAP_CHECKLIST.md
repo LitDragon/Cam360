@@ -1,13 +1,13 @@
 # UI 页面缺口清单
 
-更新时间：2026-05-06
+更新时间：2026-05-07
 
 依据：仓库 `UI/` 截图、`docs/specs/ui-flow/README.md`、`docs/specs/ui-components/README.md`、`/Users/naxclow/camera-360-secives/行车记录仪APP_UI页面清单.md`、`/Users/naxclow/camera-360-secives/行车记录仪APP产品需求文档(PRD).md`。本清单只记录离线可确认的 UI 缺口，不把外部资料当作已验证设备行为。
 
 | 页面 | 证据来源 | 可达性 | 状态核对 | 处理 |
 | --- | --- | --- | --- | --- |
 | 启动页 | 外部 UI 清单 1.1；`LaunchScreen.storyboard` | 系统启动资源 | 仅 LaunchScreen | 暂不改 |
-| 设备发现 / 连接 / 结果 | `UI/添加设备.png`；外部 UI 清单 1.2-1.4 | Dashboard Add Device 可达 | 搜索、连接、成功、失败由 onboarding 承载 | 暂不改 |
+| 设备发现 / 连接 / 结果 | `UI/添加设备.png`；外部 UI 清单 1.2-1.4 | Dashboard Add Device 可达 | 搜索、连接、成功、失败由 onboarding 承载；已区分 AP 热点、控制通道校验和失败恢复动作 | 暂不接真实热点 |
 | Dashboard | `UI/首页.png`、`UI/录制/Main.png`；外部 UI 清单 2.1 | 主 tab 可达 | 已有空态、连接态、抽屉、首次引导 | 已拆出首启功能引导 View |
 | Gallery / 视频列表 | `UI/相册.png`；外部 UI 清单 4.1 | 主 tab 可达 | 已有空态、筛选、搜索、选择态、操作面板 | 暂不改 |
 | Events | `UI/录制/Main.png` Recent Events；外部 UI 清单 4.1 事件筛选 | 未接主路由 | 原页面只有标题，缺空态和占位说明 | 已补事件类型、占位说明、空态 |
