@@ -58,7 +58,7 @@
 
 | 页面 | 主要公共组件 | 主要 Feature 私有组件 |
 | --- | --- | --- |
-| `DashboardView` | `PrimaryButton`, `StatusTag`, `AppProgressBar`, `appSurface` | `DashboardHeaderView`, `DashboardPreviewCard`, `DashboardCaptureControls`, `DashboardStorageCard`, `DashboardGalleryRow`, `DashboardEventRow`, `DashboardDrawerOverlay`, `DashboardFeatureSheet` |
+| `DashboardView` | `PrimaryButton`, `StatusTag`, `AppProgressBar`, `appSurface` | `DashboardHeaderView`, `DashboardPreviewCard`, `DashboardCaptureControls`, `DashboardStorageCard`, `DashboardGalleryRow`, `DashboardFeatureLinkRows`, `DashboardEventRow`, `DashboardDrawerOverlay`, `DashboardFeatureSheet` |
 | `GalleryView` | `EmptyStateView`, `StatusTag` | `GalleryHeaderView`, `GalleryFilterBar`, `GallerySearchBar`, `GallerySectionsList`, `GalleryMediaCard`, `GalleryThumbnail`, `GalleryBatchActionBar`, `GalleryActionSheet` |
 | `DeviceOnboardingView` | `PrimaryButton`, `AppProgressBar`, `appSurface` | `DeviceOnboardingNavigationBar`, `DeviceOnboardingSignalIllustration`, `DeviceOnboardingTipCard`, `DeviceOnboardingReadonlyField`, `DeviceOnboardingPasswordField` |
 | `SettingsView` / `SettingsOverviewView` | `AppTopBar`, `StatusTag`, Settings 组件族 | 无独立私有组件 |
