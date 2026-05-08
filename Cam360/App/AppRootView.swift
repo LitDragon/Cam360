@@ -57,7 +57,10 @@ struct AppRootView: View {
                 onClose: router.closeFeature
             )
         case .events:
-            EventsView(onClose: router.closeFeature)
+            EventsView(
+                store: bootstrap.container.eventsStore,
+                onClose: router.closeFeature
+            )
         }
     }
 }

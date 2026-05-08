@@ -79,6 +79,52 @@ struct Cam360Tests {
     }
 
     @Test
+    func livePreviewStoreRefreshShowsCheckingThenOfflineUnavailable() async {
+        let store = LivePreviewStore()
+
+        #expect(store.previewState == .unavailable(reason: "当前没有可显示的视频流。"))
+        #expect(store.canRefreshPreview)
+        #expect(store.canCaptureSnapshot == false)
+        #expect(store.canToggleRecording == false)
+        #expect(store.canEnterFullscreen == false)
+
+        store.refreshPreviewStatus()
+
+        #expect(store.previewState == .checking)
+        #expect(store.canRefreshPreview == false)
+        #expect(store.title == "正在检查预览状态")
+
+        #expect(await waitForOnboardingState {
+            store.previewState == .unavailable(reason: "真实视频流和播放器尚未接入，当前只能展示离线预览占位。")
+        })
+        #expect(store.canRefreshPreview)
+        #expect(store.title == "实时预览暂不可用")
+    }
+
+    @Test
+    func eventsStoreFiltersCategoriesAndRefreshesToOfflineUnavailable() async {
+        let store = EventsStore()
+
+        #expect(store.feedState == .empty)
+        #expect(store.visibleCategories.count == 3)
+
+        store.selectedFilter = .parking
+        #expect(store.visibleCategories.map(\.id) == [.parking])
+
+        store.refreshEvents()
+
+        #expect(store.feedState == .refreshing)
+        #expect(store.canRefreshEvents == false)
+        #expect(store.statusTitle == "刷新中")
+
+        #expect(await waitForOnboardingState {
+            store.feedState == .unavailable(message: "事件推送和历史事件读取尚未接入，无法读取真实事件列表。")
+        })
+        #expect(store.canRefreshEvents)
+        #expect(store.emptyTitle == "事件列表未接入")
+    }
+
+    @Test
     func appContainerSharesDeviceSessionWithOnboarding() {
         let testDefaults = makeUserDefaults()
         defer { clear(testDefaults) }

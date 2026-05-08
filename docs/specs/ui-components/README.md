@@ -67,10 +67,10 @@
 | `DeviceSettingsDetailView` | `AppTopBar`, `PrimaryButton`, `DestructiveButton`, `AppProgressBar`, Settings 组件族 | `NetworkIdentityView`, `FirmwareUpdateView`, 本地 `DeviceSettingsDetailRoute` |
 | 设置二级页 | `AppTopBar`, `PrimaryButton`, `DestructiveButton`, Settings 组件族 | 页面内 binding 和局部状态 |
 | `DeviceListView` | `AppTopBar`, `SectionCard`, `StatusTag`, `EmptyStateView` | `DeviceCell` |
-| `LivePreviewView` | `AppTopBar`, `SectionCard`, `StatusTag`, `ErrorStateView` | `LivePreviewPlaceholderCard`, `LivePreviewDisabledAction` |
+| `LivePreviewView` | `AppTopBar`, `SectionCard`, `PrimaryButton`, `StatusTag`, `ErrorStateView` | `LivePreviewPlaceholderCard`, `LivePreviewDisabledAction` |
 | `PlaybackView` | `AppTopBar`, `SectionCard`, `InlineLoadingView`, `ErrorStateView`, `EmptyStateView`, `AppProgressBar`, `StatusTag` | `PlaybackPlaceholderCard`, `PlaybackResourceSummaryView` |
 | `DownloadsView` | `AppTopBar`, `SectionCard`, `PrimaryButton`, `StatusTag`, `EmptyStateView` | `DownloadsActionButton` |
-| `EventsView` | `AppTopBar`, `SectionCard`, `StatusTag`, `EmptyStateView` | `EventsStatusRow` |
+| `EventsView` | `AppTopBar`, `SectionCard`, `PrimaryButton`, `StatusTag`, `EmptyStateView` | `EventsFilterButton`, `EventsStatusRow` |
 
 ## 当前抽取边界
 

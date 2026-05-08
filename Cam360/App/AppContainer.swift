@@ -24,6 +24,7 @@ final class AppContainer {
     let livePreviewStore: LivePreviewStore
     let playbackStore: PlaybackStore
     let downloadsStore: DownloadsStore
+    let eventsStore: EventsStore
     let settingsStore: SettingsStore
 
     init(
@@ -52,6 +53,7 @@ final class AppContainer {
         livePreviewStore = LivePreviewStore()
         playbackStore = PlaybackStore(deviceSession: deviceSession)
         downloadsStore = DownloadsStore()
+        eventsStore = EventsStore()
         settingsStore = SettingsStore(
             router: router,
             knownDeviceRepository: knownDeviceRepository,
