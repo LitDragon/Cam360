@@ -49,6 +49,36 @@ struct Cam360Tests {
     }
 
     @Test
+    func downloadsStoreStartsWithOfflineEmptyState() {
+        let store = DownloadsStore()
+
+        #expect(store.queueState == .empty)
+        #expect(store.canRefreshQueue)
+        #expect(store.canStartDownload == false)
+        #expect(store.canPauseQueue == false)
+        #expect(store.title == "没有下载任务")
+        #expect(store.message == "当前没有进行中或已完成的下载。")
+    }
+
+    @Test
+    func downloadsStoreRefreshShowsLoadingThenOfflineError() async {
+        let store = DownloadsStore()
+
+        store.refreshQueue()
+
+        #expect(store.queueState == .loading)
+        #expect(store.canRefreshQueue == false)
+        #expect(store.title == "正在读取下载队列")
+
+        #expect(await waitForOnboardingState {
+            store.queueState == .unavailable(message: "下载服务尚未接入，无法读取真实下载队列。")
+        })
+        #expect(store.canRefreshQueue)
+        #expect(store.title == "下载链路未接入")
+        #expect(store.message == "请先从设备文件选择下载项；真实下载任务会在设备和本地保存链路恢复后接入。")
+    }
+
+    @Test
     func appContainerSharesDeviceSessionWithOnboarding() {
         let testDefaults = makeUserDefaults()
         defer { clear(testDefaults) }

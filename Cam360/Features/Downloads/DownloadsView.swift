@@ -17,11 +17,36 @@ struct DownloadsView: View {
                 VStack(alignment: .leading, spacing: AppSpacing.lg) {
                     SectionCard(title: "队列状态") {
                         VStack(alignment: .leading, spacing: AppSpacing.md) {
-                            StatusTag(title: "占位", tone: .warning)
+                            StatusTag(title: store.statusTitle, tone: queueStatusTone)
 
-                            Text("下载队列、暂停/继续和完成列表仍等待真实下载链路接入。")
+                            Text(store.queueMessage)
                                 .font(AppTypography.body)
                                 .foregroundColor(AppColor.textSecondary)
+
+                            PrimaryButton(
+                                title: store.refreshButtonTitle,
+                                isEnabled: store.canRefreshQueue,
+                                leadingSystemImageName: "arrow.clockwise",
+                                action: store.refreshQueue
+                            )
+                        }
+                    }
+
+                    SectionCard(title: "下载操作") {
+                        HStack(spacing: AppSpacing.md) {
+                            DownloadsActionButton(
+                                title: "选择文件",
+                                iconName: "doc.badge.plus",
+                                isEnabled: store.canStartDownload,
+                                action: {}
+                            )
+
+                            DownloadsActionButton(
+                                title: "暂停队列",
+                                iconName: "pause.fill",
+                                isEnabled: store.canPauseQueue,
+                                action: {}
+                            )
                         }
                     }
 
@@ -54,5 +79,46 @@ struct DownloadsView: View {
         }
         .background(AppColor.background.edgesIgnoringSafeArea(.all))
         .accessibility(identifier: "screen-downloads")
+    }
+
+    private var queueStatusTone: StatusTagTone {
+        switch store.queueState {
+        case .empty:
+            return .neutral
+        case .loading:
+            return .accent
+        case .unavailable:
+            return .warning
+        }
+    }
+}
+
+private struct DownloadsActionButton: View {
+    let title: String
+    let iconName: String
+    let isEnabled: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: AppSpacing.sm) {
+                Image(systemName: iconName)
+                    .font(.system(size: 18, weight: .semibold))
+                    .frame(width: 40, height: 40)
+                    .background(isEnabled ? AppColor.accentSurface : AppColor.surfaceMuted)
+                    .cornerRadius(AppRadius.small)
+
+                Text(title)
+                    .font(AppTypography.caption)
+                    .lineLimit(1)
+            }
+            .foregroundColor(isEnabled ? AppColor.brand : AppColor.textSecondary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, AppSpacing.md)
+            .background(AppColor.surface)
+            .cornerRadius(AppRadius.medium)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .disabled(isEnabled == false)
     }
 }

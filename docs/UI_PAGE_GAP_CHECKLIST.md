@@ -1,6 +1,6 @@
 # UI 页面缺口清单
 
-更新时间：2026-05-07
+更新时间：2026-05-08
 
 依据：仓库 `UI/` 截图、`docs/specs/ui-flow/README.md`、`docs/specs/ui-components/README.md`、`/Users/naxclow/camera-360-secives/行车记录仪APP_UI页面清单.md`、`/Users/naxclow/camera-360-secives/行车记录仪APP产品需求文档(PRD).md`。本清单只记录离线可确认的 UI 缺口，不把外部资料当作已验证设备行为。
 
@@ -14,7 +14,7 @@
 | DeviceList | `UI/首页.png` 设备抽屉；外部 UI 清单 1.2 | Dashboard 设备抽屉可达 | 只展示本地 known devices，缺独立页面 chrome 和入口说明 | 已补 TopBar、入口说明、空态文案 |
 | LivePreview | `UI/录制/Main.png`；外部 UI 清单 3.1 | Dashboard 离线 route 可达 | 无真实流，原页面只有错误态 | 已补预览占位、禁用控制区、错误态 |
 | Playback | 外部 UI 清单 4.2；当前 `PlaybackStore` 状态 | Dashboard / Gallery 离线 route 可达 | Store 有加载/错误/资源态，原 View 未区分渲染 | 已补加载、错误、空态和资源摘要 |
-| Downloads | 外部 UI 清单 4.3-4.4；PRD 离线功能 | Dashboard / Gallery 离线 route 可达 | 原空队列误用加载态 | 已改为空态，补队列和保存位置占位 |
+| Downloads | 外部 UI 清单 4.3-4.4；PRD 离线功能 | Dashboard / Gallery 离线 route 可达 | 原空队列误用加载态 | 已补空队列、刷新 loading、离线错误、禁用操作和保存位置占位 |
 | Settings | `UI/设置/设置页.png`；外部 UI 清单 5.x、8.x；PRD 3.1.4、3.2.3 | 主 tab 可达 | 已有设置二级页；FAQ/Contact 有入口证据；Privacy/Terms 只有截图入口，没有正文来源 | 本轮补 FAQ/Contact 子页面；Privacy/Terms 继续标记占位 |
 
 ## 入口结论

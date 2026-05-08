@@ -4,6 +4,7 @@
 
 ## 2026-05-08
 
+- `DownloadsStore` 新增离线队列状态、刷新 loading 和未接下载服务反馈；`DownloadsView` 增加刷新入口和禁用的选择文件/暂停队列操作展示，仍不接真实下载服务或本地保存链路。
 - `DeviceListView`、`LivePreviewView`、`PlaybackView`、`DownloadsView`、`EventsView` 接入离线 feature route；Dashboard 和 Gallery 增加对应入口，仍不接播放器、下载服务或真实设备链路。
 - `DeviceSession` 新增文件删除、文件加锁、热点信息读取/修改、格式化和恢复出厂命令模型，并补充协议命令与会话发送测试。
 - 按当前代码实际接入状态校准任务和规格文档，区分已落地的命令级协议/会话入口与仍需硬件联调的预览、播放器、下载、本地保存和设置写操作。

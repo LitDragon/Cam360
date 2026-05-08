@@ -69,7 +69,7 @@
 | `DeviceListView` | `AppTopBar`, `SectionCard`, `StatusTag`, `EmptyStateView` | `DeviceCell` |
 | `LivePreviewView` | `AppTopBar`, `SectionCard`, `StatusTag`, `ErrorStateView` | `LivePreviewPlaceholderCard`, `LivePreviewDisabledAction` |
 | `PlaybackView` | `AppTopBar`, `SectionCard`, `InlineLoadingView`, `ErrorStateView`, `EmptyStateView`, `AppProgressBar`, `StatusTag` | `PlaybackPlaceholderCard`, `PlaybackResourceSummaryView` |
-| `DownloadsView` | `AppTopBar`, `SectionCard`, `StatusTag`, `EmptyStateView` | 无 |
+| `DownloadsView` | `AppTopBar`, `SectionCard`, `PrimaryButton`, `StatusTag`, `EmptyStateView` | `DownloadsActionButton` |
 | `EventsView` | `AppTopBar`, `SectionCard`, `StatusTag`, `EmptyStateView` | `EventsStatusRow` |
 
 ## 当前抽取边界
