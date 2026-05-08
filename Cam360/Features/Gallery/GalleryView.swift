@@ -2,6 +2,8 @@ import SwiftUI
 
 struct GalleryView: View {
     @ObservedObject var store: GalleryStore
+    var onOpenPlayback: () -> Void = {}
+    var onOpenDownloads: () -> Void = {}
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -34,7 +36,7 @@ struct GalleryView: View {
                         isSelectionMode: store.isSelectionMode,
                         selectedIDs: store.selectedIDs,
                         bottomPadding: store.isSelectionMode ? 132 : 28,
-                        onTapItem: store.handleItemTap(_:),
+                        onTapItem: handleItemTap(_:),
                         onLongPressItem: store.handleItemLongPress(_:),
                         onMore: store.showItemMenu(_:)
                     )
@@ -44,7 +46,7 @@ struct GalleryView: View {
             if store.isSelectionMode {
                 GalleryBatchActionBar(
                     hasSelection: store.selectedIDs.isEmpty == false,
-                    onDownload: store.handleBatchDownload,
+                    onDownload: handleBatchDownload,
                     onDelete: store.handleBatchDelete
                 )
             }
@@ -53,7 +55,7 @@ struct GalleryView: View {
                 GalleryActionSheet(
                     item: menuItem,
                     onDismiss: store.dismissItemMenu,
-                    onDownload: store.handleMenuDownload,
+                    onDownload: handleMenuDownload,
                     onShare: store.handleMenuShare,
                     onDelete: store.handleMenuDelete
                 )
@@ -67,5 +69,23 @@ struct GalleryView: View {
         .animation(.easeInOut(duration: 0.2), value: store.activeMenuItemID)
         .animation(.easeInOut(duration: 0.2), value: store.selectedFilter)
         .animation(.easeInOut(duration: 0.2), value: store.isSearchExpanded)
+    }
+
+    private func handleItemTap(_ item: GalleryItem) {
+        store.handleItemTap(item)
+
+        if store.isSelectionMode == false {
+            onOpenPlayback()
+        }
+    }
+
+    private func handleMenuDownload() {
+        store.handleMenuDownload()
+        onOpenDownloads()
+    }
+
+    private func handleBatchDownload() {
+        store.handleBatchDownload()
+        onOpenDownloads()
     }
 }

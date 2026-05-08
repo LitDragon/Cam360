@@ -7,6 +7,7 @@
 - App 根路由由 `AppRouter` 维护：
   - `onboarding`：显示 `DeviceOnboardingView`
   - `main(MainTab)`：显示主 tab 容器
+  - `feature(AppFeatureRoute, returnTab)`：显示离线 feature 页面，关闭后回到来源 tab
 - 主 tab 由 `MainTabView` 维护当前展示页：
   - `dashboard` -> `DashboardView`
   - `gallery` -> `GalleryView`
@@ -25,8 +26,15 @@ flowchart TD
     Main --> Gallery["GalleryView"]
     Main --> Settings["SettingsView"]
     Dashboard -->|Add Device| Onboarding
+    Dashboard -->|Manage Devices| DeviceList["DeviceListView"]
+    Dashboard -->|Preview card / Photo| LivePreview["LivePreviewView"]
+    Dashboard -->|Playback| Playback["PlaybackView"]
+    Dashboard -->|Downloads| Downloads["DownloadsView"]
+    Dashboard -->|View all events| Events["EventsView"]
     Dashboard -->|Open Full Gallery / View all| Gallery
     Dashboard -->|Settings icon| Settings
+    Gallery -->|Media item| Playback
+    Gallery -->|Download action| Downloads
 ```
 
 ## Onboarding 流程
@@ -51,16 +59,17 @@ flowchart TD
 
 - `DashboardView` 是首页 tab。
 - `Add Device` 通过 `AppRouter.showOnboarding()` 进入 onboarding。
-- `Open Full Gallery` 和最近事件 `View all` 切到 `main(.gallery)`。
+- `Open Full Gallery` 切到 `main(.gallery)`。
+- 预览卡、拍照按钮、回放、下载管理、最近事件 `View all` 进入对应离线 feature route。
 - 设置图标切到 `main(.settings)`。
-- 设备抽屉 `DashboardDrawerOverlay` 是首页本地展示状态，不是 App 路由。
+- 设备抽屉 `DashboardDrawerOverlay` 是首页本地展示状态；`Manage Devices` 进入 `DeviceListView`。
 - 首次功能引导 `DashboardFeatureSheet` 是 Dashboard Store 状态；展示时隐藏底部 tab。
 
 ## Gallery 流程
 
 - `GalleryView` 当前没有 App 级子路由。
 - 搜索、筛选、选择模式、批量操作栏和媒体操作面板都由 `GalleryStore` 状态驱动。
-- 媒体项点击目前仍停留在相册内部处理，不进入 `PlaybackView` 路由。
+- 媒体项点击进入 `PlaybackView` 离线 route；下载到本机进入 `DownloadsView` 离线 route。
 
 ## Settings 流程
 
@@ -89,7 +98,7 @@ flowchart TD
   - `renameDevice`
 - 设置二级页展示时隐藏底部 tab；返回通过 `SettingsStore.dismissRoute()` 或本地 nested route 置空。
 
-## 已存在但未接入主路由的页面
+## 离线 feature route
 
 - `DeviceListView`
 - `LivePreviewView`
@@ -97,7 +106,7 @@ flowchart TD
 - `DownloadsView`
 - `EventsView`
 
-这些页面和对应 Route 文件只表示已有页面骨架或后续入口，不应在文档中标记为主流程已可达。
+这些页面已可从 Dashboard 或 Gallery 进入，但仍保持离线状态；不得在其中创建播放器、下载服务或底层设备连接。
 
 ## 维护规则
 

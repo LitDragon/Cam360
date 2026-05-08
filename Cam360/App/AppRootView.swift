@@ -23,10 +23,41 @@ struct AppRootView: View {
                     router: router,
                     dashboardStore: bootstrap.container.dashboardStore,
                     galleryStore: bootstrap.container.galleryStore,
-                    settingsStore: bootstrap.container.settingsStore
+                    settingsStore: bootstrap.container.settingsStore,
+                    onOpenFeature: router.showFeature(_:)
                 )
+            case .feature(let featureRoute, _):
+                featureScreen(featureRoute)
             }
         }
         .accentColor(AppColor.brand)
+    }
+
+    @ViewBuilder
+    private func featureScreen(_ route: AppFeatureRoute) -> some View {
+        switch route {
+        case .deviceList:
+            DeviceListView(
+                store: bootstrap.container.deviceListStore,
+                onClose: router.closeFeature
+            )
+        case .livePreview:
+            LivePreviewView(
+                store: bootstrap.container.livePreviewStore,
+                onClose: router.closeFeature
+            )
+        case .playback:
+            PlaybackView(
+                store: bootstrap.container.playbackStore,
+                onClose: router.closeFeature
+            )
+        case .downloads:
+            DownloadsView(
+                store: bootstrap.container.downloadsStore,
+                onClose: router.closeFeature
+            )
+        case .events:
+            EventsView(onClose: router.closeFeature)
+        }
     }
 }

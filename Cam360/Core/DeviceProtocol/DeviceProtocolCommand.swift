@@ -87,6 +87,25 @@ extension DeviceProtocolCommand {
         )
     }
 
+    static func deleteFile(path: String) -> DeviceProtocolCommand {
+        DeviceProtocolCommand(
+            topic: "FILE_DELETE",
+            operation: .post,
+            parameters: ["path": .string(path)]
+        )
+    }
+
+    static func setFileLocked(path: String, locked: Bool = true) -> DeviceProtocolCommand {
+        DeviceProtocolCommand(
+            topic: "FILE_LOCK",
+            operation: .post,
+            parameters: [
+                "file": .string(path),
+                "status": .int(locked ? 1 : 0)
+            ]
+        )
+    }
+
     static func filePlaybackResource(path: String) -> DeviceProtocolCommand {
         DeviceProtocolCommand(
             topic: "FILE_DOWNLOAD_URL",
@@ -113,6 +132,20 @@ extension DeviceProtocolCommand {
 
     static let recordingState = DeviceProtocolCommand(topic: "VIDEO_CTRL", operation: .get)
 
+    static let accessPointIdentity = DeviceProtocolCommand(topic: "AP_SSID_INFO", operation: .get)
+
+    static func updateAccessPointIdentity(ssid: String, password: String) -> DeviceProtocolCommand {
+        DeviceProtocolCommand(
+            topic: "AP_SSID_INFO",
+            operation: .post,
+            parameters: [
+                "ssid": .string(ssid),
+                "pwd": .string(password),
+                "status": .int(1)
+            ]
+        )
+    }
+
     static func setRecording(enabled: Bool) -> DeviceProtocolCommand {
         DeviceProtocolCommand(
             topic: "VIDEO_CTRL",
@@ -136,6 +169,14 @@ extension DeviceProtocolCommand {
             parameters: ["snapshot_id": .string(snapshotID)]
         )
     }
+
+    static let formatStorage = DeviceProtocolCommand(topic: "FORMAT", operation: .post)
+
+    static let restoreDefaultConfiguration = DeviceProtocolCommand(
+        topic: "SYSTEM_DEFAULT",
+        operation: .post,
+        parameters: ["def": .int(1)]
+    )
 }
 
 struct DeviceProtocolHandshakePlan {

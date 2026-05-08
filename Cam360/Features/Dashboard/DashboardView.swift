@@ -3,7 +3,12 @@ import SwiftUI
 struct DashboardView: View {
     @ObservedObject var store: DashboardStore
     let onAddDevice: () -> Void
+    let onOpenDeviceList: () -> Void
+    let onOpenLivePreview: () -> Void
     let onOpenGallery: () -> Void
+    let onOpenPlayback: () -> Void
+    let onOpenDownloads: () -> Void
+    let onOpenEvents: () -> Void
     let onOpenSettings: () -> Void
 
     @State private var isDrawerPresented = false
@@ -27,8 +32,12 @@ struct DashboardView: View {
                                 recentEvents: store.recentEvents,
                                 isRecording: store.isRecording,
                                 storageState: store.storageState,
+                                onOpenLivePreview: onOpenLivePreview,
                                 onToggleRecording: store.toggleRecording,
-                                onOpenGallery: onOpenGallery
+                                onOpenGallery: onOpenGallery,
+                                onOpenPlayback: onOpenPlayback,
+                                onOpenDownloads: onOpenDownloads,
+                                onOpenEvents: onOpenEvents
                             )
                         } else {
                             DashboardEmptyStateView(
@@ -48,6 +57,7 @@ struct DashboardView: View {
                     selectedDeviceID: store.selectedDeviceID,
                     onClose: closeDrawer,
                     onSelectDevice: selectDevice(_:),
+                    onOpenDeviceList: openDeviceList,
                     onAddDevice: addDevice
                 )
             }
@@ -91,6 +101,11 @@ private extension DashboardView {
     func addDevice() {
         closeDrawer()
         onAddDevice()
+    }
+
+    func openDeviceList() {
+        closeDrawer()
+        onOpenDeviceList()
     }
 
     func dismissFeatureSheet() {
@@ -174,15 +189,23 @@ private struct DashboardConnectedStateView: View {
     let recentEvents: [DashboardRecentEvent]
     let isRecording: Bool
     let storageState: DashboardStorageState
+    let onOpenLivePreview: () -> Void
     let onToggleRecording: () -> Void
     let onOpenGallery: () -> Void
+    let onOpenPlayback: () -> Void
+    let onOpenDownloads: () -> Void
+    let onOpenEvents: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.xl) {
-            DashboardPreviewCard(state: previewState)
+            Button(action: onOpenLivePreview) {
+                DashboardPreviewCard(state: previewState)
+            }
+            .buttonStyle(PlainButtonStyle())
 
             DashboardCaptureControls(
                 isRecording: isRecording,
+                onCapturePhoto: onOpenLivePreview,
                 onToggleRecording: onToggleRecording
             )
 
@@ -197,6 +220,10 @@ private struct DashboardConnectedStateView: View {
             }
 
             DashboardGalleryRow(action: onOpenGallery)
+            DashboardFeatureLinkRows(
+                onOpenPlayback: onOpenPlayback,
+                onOpenDownloads: onOpenDownloads
+            )
 
             VStack(alignment: .leading, spacing: AppSpacing.md) {
                 HStack {
@@ -207,7 +234,7 @@ private struct DashboardConnectedStateView: View {
                     Spacer(minLength: 0)
 
                     if recentEvents.isEmpty == false {
-                        Button(action: onOpenGallery) {
+                        Button(action: onOpenEvents) {
                             Text("View all")
                                 .font(AppTypography.caption)
                                 .foregroundColor(AppColor.brand)
@@ -409,11 +436,12 @@ private struct DashboardPreviewPill: View {
 
 private struct DashboardCaptureControls: View {
     let isRecording: Bool
+    let onCapturePhoto: () -> Void
     let onToggleRecording: () -> Void
 
     var body: some View {
         HStack(spacing: AppSpacing.md) {
-            Button(action: {}) {
+            Button(action: onCapturePhoto) {
                 HStack(spacing: AppSpacing.sm) {
                     Image(systemName: "camera")
                         .font(.system(size: 15, weight: .medium))
@@ -542,6 +570,66 @@ private struct DashboardGalleryRow: View {
             }
             .padding(.horizontal, AppSpacing.lg)
             .padding(.vertical, AppSpacing.lg)
+            .appSurface()
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+private struct DashboardFeatureLinkRows: View {
+    let onOpenPlayback: () -> Void
+    let onOpenDownloads: () -> Void
+
+    var body: some View {
+        HStack(spacing: AppSpacing.md) {
+            DashboardFeatureLinkButton(
+                title: "Playback",
+                subtitle: "查看可回放资源",
+                systemImage: "play.rectangle",
+                action: onOpenPlayback
+            )
+            DashboardFeatureLinkButton(
+                title: "Downloads",
+                subtitle: "管理离线队列",
+                systemImage: "arrow.down.circle",
+                action: onOpenDownloads
+            )
+        }
+    }
+}
+
+private struct DashboardFeatureLinkButton: View {
+    let title: String
+    let subtitle: String
+    let systemImage: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: AppSpacing.md) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(AppColor.brand)
+                    .frame(width: 34, height: 34)
+                    .background(AppColor.accentSurface)
+                    .cornerRadius(AppRadius.small)
+
+                VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                    Text(title)
+                        .font(AppTypography.bodyStrong)
+                        .foregroundColor(AppColor.textPrimary)
+
+                    Text(subtitle)
+                        .font(AppTypography.caption)
+                        .foregroundColor(AppColor.textSecondary)
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, AppSpacing.md)
+            .padding(.vertical, AppSpacing.md)
+            .frame(maxWidth: .infinity)
             .appSurface()
         }
         .buttonStyle(PlainButtonStyle())
@@ -825,6 +913,7 @@ private struct DashboardDrawerOverlay: View {
     let selectedDeviceID: DashboardDeviceItem.ID?
     let onClose: () -> Void
     let onSelectDevice: (DashboardDeviceItem.ID) -> Void
+    let onOpenDeviceList: () -> Void
     let onAddDevice: () -> Void
 
     var body: some View {
@@ -857,6 +946,22 @@ private struct DashboardDrawerOverlay: View {
                 }
 
                 Spacer(minLength: 0)
+
+                Button(action: onOpenDeviceList) {
+                    HStack(spacing: AppSpacing.sm) {
+                        Image(systemName: "externaldrive")
+                            .font(.system(size: 16, weight: .semibold))
+
+                        Text("Manage Devices")
+                            .font(AppTypography.bodyStrong)
+                    }
+                    .foregroundColor(AppColor.textPrimary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, AppSpacing.md)
+                    .background(AppColor.background)
+                    .cornerRadius(AppRadius.medium)
+                }
+                .buttonStyle(PlainButtonStyle())
 
                 Button(action: onAddDevice) {
                     HStack(spacing: AppSpacing.sm) {

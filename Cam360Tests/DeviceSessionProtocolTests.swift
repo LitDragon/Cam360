@@ -291,6 +291,64 @@ struct DeviceSessionProtocolTests {
     }
 
     @Test
+    func dangerousCommandsSendConfirmedTopicsThroughSession() async {
+        let transport = SessionFakeDeviceProtocolTransport()
+        let session = makeSession(transport: transport)
+        transport.responseProvider = { request in
+            makeControlTopicResponse(request) ?? makeHandshakeResponse(request)
+        }
+        var completedTopics: [String] = []
+
+        startHandshake(session)
+        #expect(await waitForSessionState { session.state.isConnected })
+
+        session.deleteFile(path: "/DCIMA/REC00001.AVI") { result in
+            if case .success(let deletion) = result, deletion.deleted {
+                completedTopics.append("FILE_DELETE")
+            }
+        }
+        session.setFileLocked(path: "/DCIMA/REC00001.AVI") { result in
+            if case .success(let lock) = result, lock.locked {
+                completedTopics.append("FILE_LOCK")
+            }
+        }
+        session.fetchAccessPointIdentity { result in
+            if case .success(let identity) = result, identity.ssid == "Cam360_AP" {
+                completedTopics.append("AP_SSID_INFO_GET")
+            }
+        }
+        session.updateAccessPointIdentity(ssid: "Cam360_New", password: "12345678") { result in
+            if case .success(let identity) = result, identity.ssid == "Cam360_New" {
+                completedTopics.append("AP_SSID_INFO_POST")
+            }
+        }
+        session.formatStorage { result in
+            if case .success(let format) = result, format.formatted {
+                completedTopics.append("FORMAT")
+            }
+        }
+        session.restoreDefaultConfiguration { result in
+            if case .success(let restore) = result, restore.restored {
+                completedTopics.append("SYSTEM_DEFAULT")
+            }
+        }
+
+        #expect(await waitForSessionState { completedTopics.count == 6 })
+        let commandMessages = Array(transport.sentMessages.suffix(6))
+        #expect(commandMessages.map(\.topic) == [
+            "FILE_DELETE",
+            "FILE_LOCK",
+            "AP_SSID_INFO",
+            "AP_SSID_INFO",
+            "FORMAT",
+            "SYSTEM_DEFAULT"
+        ])
+        #expect(commandMessages[2].operation == .get)
+        #expect(commandMessages[3].operation == .post)
+        #expect(commandMessages[3].parameters["ssid"]?.stringValue == "Cam360_New")
+    }
+
+    @Test
     func playbackStoreLoadsFirstPlaybackResourceWhenSessionBecomesReady() async {
         let transport = SessionFakeDeviceProtocolTransport()
         let session = makeSession(transport: transport)
@@ -468,6 +526,30 @@ private func makeControlTopicResponse(_ request: DeviceProtocolMessage) -> Devic
             "size": 24_000,
             "create_time": "20260429103000",
             "image_base64": "base64-snapshot"
+        ]
+    case "FILE_DELETE":
+        parameters = [
+            "path": request.parameters["path"] ?? "",
+            "deleted": 1
+        ]
+    case "FILE_LOCK":
+        parameters = [
+            "file": request.parameters["file"] ?? "",
+            "status": request.parameters["status"] ?? 1
+        ]
+    case "AP_SSID_INFO":
+        parameters = [
+            "ssid": request.operation == .post ? (request.parameters["ssid"] ?? "Cam360_New") : "Cam360_AP",
+            "pwd": request.operation == .post ? (request.parameters["pwd"] ?? "12345678") : "********",
+            "status": 1
+        ]
+    case "FORMAT":
+        parameters = [
+            "frm": 1
+        ]
+    case "SYSTEM_DEFAULT":
+        parameters = [
+            "def": request.parameters["def"] ?? 1
         ]
     default:
         return nil

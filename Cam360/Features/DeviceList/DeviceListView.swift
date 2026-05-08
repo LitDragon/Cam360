@@ -2,19 +2,22 @@ import SwiftUI
 
 struct DeviceListView: View {
     @ObservedObject var store: DeviceListStore
+    var onClose: (() -> Void)? = nil
 
     var body: some View {
         VStack(spacing: 0) {
             AppTopBar(
                 title: "设备",
-                subtitle: "已知设备和发现入口状态"
+                subtitle: "已知设备和发现入口状态",
+                leadingSystemImage: onClose == nil ? nil : "chevron.left",
+                leadingAction: onClose
             )
 
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: AppSpacing.lg) {
                     SectionCard(title: "发现状态") {
                         VStack(alignment: .leading, spacing: AppSpacing.md) {
-                            StatusTag(title: "主流程未接入", tone: .warning)
+                            StatusTag(title: "离线入口", tone: .warning)
 
                             Text("当前只展示本地已保存的设备。扫描、Wi-Fi 详情和连接结果仍由添加设备流程承载。")
                                 .font(AppTypography.body)

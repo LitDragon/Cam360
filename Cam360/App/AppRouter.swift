@@ -35,6 +35,15 @@ enum MainTab: String, CaseIterable, Codable {
 enum AppRoute: Equatable {
     case onboarding
     case main(MainTab)
+    case feature(AppFeatureRoute, returnTab: MainTab)
+}
+
+enum AppFeatureRoute: Equatable {
+    case deviceList
+    case livePreview
+    case playback
+    case downloads
+    case events
 }
 
 final class AppRouter: ObservableObject {
@@ -49,6 +58,9 @@ final class AppRouter: ObservableObject {
             if case let .main(tab) = route {
                 return tab
             }
+            if case let .feature(_, returnTab) = route {
+                return returnTab
+            }
             return .dashboard
         }
         set {
@@ -62,5 +74,13 @@ final class AppRouter: ObservableObject {
 
     func showMain(tab: MainTab = .dashboard) {
         route = .main(tab)
+    }
+
+    func showFeature(_ featureRoute: AppFeatureRoute) {
+        route = .feature(featureRoute, returnTab: selectedMainTab)
+    }
+
+    func closeFeature() {
+        showMain(tab: selectedMainTab)
     }
 }

@@ -5,6 +5,7 @@ struct MainTabView: View {
     @ObservedObject var dashboardStore: DashboardStore
     @ObservedObject var galleryStore: GalleryStore
     @ObservedObject var settingsStore: SettingsStore
+    let onOpenFeature: (AppFeatureRoute) -> Void
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -31,15 +32,38 @@ struct MainTabView: View {
             DashboardView(
                 store: dashboardStore,
                 onAddDevice: router.showOnboarding,
+                onOpenDeviceList: {
+                    onOpenFeature(.deviceList)
+                },
+                onOpenLivePreview: {
+                    onOpenFeature(.livePreview)
+                },
                 onOpenGallery: {
                     router.showMain(tab: .gallery)
+                },
+                onOpenPlayback: {
+                    onOpenFeature(.playback)
+                },
+                onOpenDownloads: {
+                    onOpenFeature(.downloads)
+                },
+                onOpenEvents: {
+                    onOpenFeature(.events)
                 },
                 onOpenSettings: {
                     router.showMain(tab: .settings)
                 }
             )
         case .gallery:
-            GalleryView(store: galleryStore)
+            GalleryView(
+                store: galleryStore,
+                onOpenPlayback: {
+                    onOpenFeature(.playback)
+                },
+                onOpenDownloads: {
+                    onOpenFeature(.downloads)
+                }
+            )
         case .settings:
             SettingsView(store: settingsStore)
         }

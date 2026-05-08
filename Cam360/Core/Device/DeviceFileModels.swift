@@ -145,6 +145,30 @@ struct DeviceRecordingState: Equatable {
     let path: String?
 }
 
+struct DeviceFileDeletionResult: Equatable {
+    let path: String
+    let deleted: Bool
+}
+
+struct DeviceFileLockResult: Equatable {
+    let path: String
+    let locked: Bool
+}
+
+struct DeviceAccessPointIdentity: Equatable {
+    let ssid: String
+    let password: String?
+    let isEnabled: Bool
+}
+
+struct DeviceStorageFormatResult: Equatable {
+    let formatted: Bool
+}
+
+struct DeviceSystemDefaultResult: Equatable {
+    let restored: Bool
+}
+
 enum DeviceFileResponseParser {
     static func fileListPage(from parameters: [String: DeviceProtocolValue]) throws -> DeviceFileListPage {
         guard let fileValues = parameters["files"]?.arrayValue else {
@@ -260,6 +284,58 @@ enum DeviceFileResponseParser {
             isRecording: isRecording,
             path: path?.isEmpty == true ? nil : path
         )
+    }
+
+    static func fileDeletionResult(from parameters: [String: DeviceProtocolValue]) throws -> DeviceFileDeletionResult {
+        guard let path = parameters.string("path") else {
+            throw DeviceSessionCommandError.invalidResponse("FILE_DELETE.path 缺失")
+        }
+
+        guard let deleted = parameters.bool("deleted") else {
+            throw DeviceSessionCommandError.invalidResponse("FILE_DELETE.deleted 缺失")
+        }
+
+        return DeviceFileDeletionResult(path: path, deleted: deleted)
+    }
+
+    static func fileLockResult(from parameters: [String: DeviceProtocolValue]) throws -> DeviceFileLockResult {
+        guard let path = parameters.string("file") ?? parameters.string("path") else {
+            throw DeviceSessionCommandError.invalidResponse("FILE_LOCK.file 缺失")
+        }
+
+        guard let locked = parameters.bool("status") else {
+            throw DeviceSessionCommandError.invalidResponse("FILE_LOCK.status 缺失")
+        }
+
+        return DeviceFileLockResult(path: path, locked: locked)
+    }
+
+    static func accessPointIdentity(from parameters: [String: DeviceProtocolValue]) throws -> DeviceAccessPointIdentity {
+        guard let ssid = parameters.string("ssid") else {
+            throw DeviceSessionCommandError.invalidResponse("AP_SSID_INFO.ssid 缺失")
+        }
+
+        return DeviceAccessPointIdentity(
+            ssid: ssid,
+            password: parameters.string("pwd"),
+            isEnabled: parameters.bool("status") ?? true
+        )
+    }
+
+    static func storageFormatResult(from parameters: [String: DeviceProtocolValue]) throws -> DeviceStorageFormatResult {
+        guard let formatted = parameters.bool("frm") else {
+            throw DeviceSessionCommandError.invalidResponse("FORMAT.frm 缺失")
+        }
+
+        return DeviceStorageFormatResult(formatted: formatted)
+    }
+
+    static func systemDefaultResult(from parameters: [String: DeviceProtocolValue]) throws -> DeviceSystemDefaultResult {
+        guard let restored = parameters.bool("def") else {
+            throw DeviceSessionCommandError.invalidResponse("SYSTEM_DEFAULT.def 缺失")
+        }
+
+        return DeviceSystemDefaultResult(restored: restored)
     }
 
     private static func fileItem(from parameters: [String: DeviceProtocolValue]) throws -> DeviceFileItem {

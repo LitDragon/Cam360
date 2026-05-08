@@ -1,11 +1,15 @@
 import SwiftUI
 
 struct EventsView: View {
+    var onClose: (() -> Void)? = nil
+
     var body: some View {
         VStack(spacing: 0) {
             AppTopBar(
                 title: "事件",
-                subtitle: "安全告警、停车守护和手动保存记录"
+                subtitle: "安全告警、停车守护和手动保存记录",
+                leadingSystemImage: onClose == nil ? nil : "chevron.left",
+                leadingAction: onClose
             )
 
             ScrollView(showsIndicators: false) {
@@ -14,7 +18,7 @@ struct EventsView: View {
                         VStack(alignment: .leading, spacing: AppSpacing.md) {
                             StatusTag(title: "占位", tone: .warning)
 
-                            Text("当前页面尚未接入主路由；首页最近事件和相册筛选仍是已落地入口。")
+                            Text("当前通过首页最近事件入口进入；真实事件流确认前只展示离线分类和空态。")
                                 .font(AppTypography.body)
                                 .foregroundColor(AppColor.textSecondary)
                         }

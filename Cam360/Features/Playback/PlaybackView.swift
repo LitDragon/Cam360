@@ -2,12 +2,15 @@ import SwiftUI
 
 struct PlaybackView: View {
     @ObservedObject var store: PlaybackStore
+    var onClose: (() -> Void)? = nil
 
     var body: some View {
         VStack(spacing: 0) {
             AppTopBar(
                 title: "回放",
-                subtitle: "设备录像资源读取状态"
+                subtitle: "设备录像资源读取状态",
+                leadingSystemImage: onClose == nil ? nil : "chevron.left",
+                leadingAction: onClose
             )
 
             ScrollView(showsIndicators: false) {

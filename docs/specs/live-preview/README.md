@@ -5,6 +5,7 @@
 ## 当前已接入
 
 - `LivePreviewView` 和 `LivePreviewStore` 仅提供不可用占位、禁用控制区和错误态。
+- `LivePreviewView` 可从 Dashboard 预览卡或拍照按钮进入，关闭后回到来源 tab。
 - `DeviceSession` 已有 `VIDEO_CTRL` 录像状态/开关和 `SNAPSHOT_CTRL -> SNAPSHOT_DATA` 截图命令入口。
 
 ## 当前范围外

@@ -2,12 +2,15 @@ import SwiftUI
 
 struct LivePreviewView: View {
     @ObservedObject var store: LivePreviewStore
+    var onClose: (() -> Void)? = nil
 
     var body: some View {
         VStack(spacing: 0) {
             AppTopBar(
                 title: "实时预览",
-                subtitle: "视频流接入前的离线占位"
+                subtitle: "视频流接入前的离线占位",
+                leadingSystemImage: onClose == nil ? nil : "chevron.left",
+                leadingAction: onClose
             )
 
             ScrollView(showsIndicators: false) {

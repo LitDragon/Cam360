@@ -208,6 +208,39 @@ struct DeviceProtocolTests {
         #expect(snapshotData.operation == .get)
         #expect(snapshotData.parameters["snapshot_id"]?.stringValue == "snap-1")
     }
+
+    @Test
+    func dangerousCommandsUseConfirmedTopicsAndParameters() {
+        let deleteFile = DeviceProtocolCommand.deleteFile(path: "/DCIMA/REC00001.AVI")
+        let lockFile = DeviceProtocolCommand.setFileLocked(path: "/DCIMA/REC00001.AVI")
+        let updateAccessPoint = DeviceProtocolCommand.updateAccessPointIdentity(
+            ssid: "Cam360_New",
+            password: "12345678"
+        )
+
+        #expect(deleteFile.topic == "FILE_DELETE")
+        #expect(deleteFile.operation == .post)
+        #expect(deleteFile.parameters["path"]?.stringValue == "/DCIMA/REC00001.AVI")
+
+        #expect(lockFile.topic == "FILE_LOCK")
+        #expect(lockFile.operation == .post)
+        #expect(lockFile.parameters["file"]?.stringValue == "/DCIMA/REC00001.AVI")
+        #expect(lockFile.parameters["status"]?.intValue == 1)
+
+        #expect(DeviceProtocolCommand.accessPointIdentity.topic == "AP_SSID_INFO")
+        #expect(DeviceProtocolCommand.accessPointIdentity.operation == .get)
+        #expect(updateAccessPoint.topic == "AP_SSID_INFO")
+        #expect(updateAccessPoint.operation == .post)
+        #expect(updateAccessPoint.parameters["ssid"]?.stringValue == "Cam360_New")
+        #expect(updateAccessPoint.parameters["pwd"]?.stringValue == "12345678")
+        #expect(updateAccessPoint.parameters["status"]?.intValue == 1)
+
+        #expect(DeviceProtocolCommand.formatStorage.topic == "FORMAT")
+        #expect(DeviceProtocolCommand.formatStorage.operation == .post)
+        #expect(DeviceProtocolCommand.restoreDefaultConfiguration.topic == "SYSTEM_DEFAULT")
+        #expect(DeviceProtocolCommand.restoreDefaultConfiguration.operation == .post)
+        #expect(DeviceProtocolCommand.restoreDefaultConfiguration.parameters["def"]?.intValue == 1)
+    }
 }
 
 private final class FakeDeviceProtocolTransport: DeviceProtocolTransport {

@@ -37,6 +37,13 @@ struct Cam360Tests {
         router.selectedMainTab = .settings
         #expect(router.route == .main(.settings))
 
+        router.showFeature(.downloads)
+        #expect(router.route == .feature(.downloads, returnTab: .settings))
+        #expect(router.selectedMainTab == .settings)
+
+        router.closeFeature()
+        #expect(router.route == .main(.settings))
+
         router.showOnboarding()
         #expect(router.route == .onboarding)
     }

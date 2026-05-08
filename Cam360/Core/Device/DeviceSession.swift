@@ -84,6 +84,62 @@ final class DeviceSession: ObservableObject {
         }
     }
 
+    func deleteFile(
+        path: String,
+        completion: @escaping (Result<DeviceFileDeletionResult, DeviceSessionCommandError>) -> Void
+    ) {
+        performControlCommand(.deleteFile(path: path), completion: completion) { message in
+            try DeviceFileResponseParser.fileDeletionResult(from: message.parameters)
+        }
+    }
+
+    func setFileLocked(
+        path: String,
+        locked: Bool = true,
+        completion: @escaping (Result<DeviceFileLockResult, DeviceSessionCommandError>) -> Void
+    ) {
+        performControlCommand(.setFileLocked(path: path, locked: locked), completion: completion) { message in
+            try DeviceFileResponseParser.fileLockResult(from: message.parameters)
+        }
+    }
+
+    func fetchAccessPointIdentity(
+        completion: @escaping (Result<DeviceAccessPointIdentity, DeviceSessionCommandError>) -> Void
+    ) {
+        performControlCommand(.accessPointIdentity, completion: completion) { message in
+            try DeviceFileResponseParser.accessPointIdentity(from: message.parameters)
+        }
+    }
+
+    func updateAccessPointIdentity(
+        ssid: String,
+        password: String,
+        completion: @escaping (Result<DeviceAccessPointIdentity, DeviceSessionCommandError>) -> Void
+    ) {
+        performControlCommand(
+            .updateAccessPointIdentity(ssid: ssid, password: password),
+            completion: completion
+        ) { message in
+            try DeviceFileResponseParser.accessPointIdentity(from: message.parameters)
+        }
+    }
+
+    func formatStorage(
+        completion: @escaping (Result<DeviceStorageFormatResult, DeviceSessionCommandError>) -> Void
+    ) {
+        performControlCommand(.formatStorage, completion: completion) { message in
+            try DeviceFileResponseParser.storageFormatResult(from: message.parameters)
+        }
+    }
+
+    func restoreDefaultConfiguration(
+        completion: @escaping (Result<DeviceSystemDefaultResult, DeviceSessionCommandError>) -> Void
+    ) {
+        performControlCommand(.restoreDefaultConfiguration, completion: completion) { message in
+            try DeviceFileResponseParser.systemDefaultResult(from: message.parameters)
+        }
+    }
+
     func fetchPlaybackResource(
         path: String,
         completion: @escaping (Result<DeviceFilePlaybackResource, DeviceSessionReadOnlyError>) -> Void

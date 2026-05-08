@@ -2,12 +2,15 @@ import SwiftUI
 
 struct DownloadsView: View {
     @ObservedObject var store: DownloadsStore
+    var onClose: (() -> Void)? = nil
 
     var body: some View {
         VStack(spacing: 0) {
             AppTopBar(
                 title: "下载",
-                subtitle: "设备视频下载和本地保存状态"
+                subtitle: "设备视频下载和本地保存状态",
+                leadingSystemImage: onClose == nil ? nil : "chevron.left",
+                leadingAction: onClose
             )
 
             ScrollView(showsIndicators: false) {

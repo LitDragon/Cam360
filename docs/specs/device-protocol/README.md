@@ -124,9 +124,9 @@
 当前 iOS 接入状态：
 
 - 已接入控制通道基础层：JSON 编解码、`\n` 分帧、`reply_to` 响应匹配、主动事件分流、请求超时和 Network.framework TCP transport。
-- 已接入会话与只读/控制命令模型：握手基础 Topic、`FILE_LIST`、`FILE_INFO`、`FILE_DOWNLOAD_URL`、`THUMB_LIST`、`THUMB_GET`、`VIDEO_CTRL`、`SNAPSHOT_CTRL`、`SNAPSHOT_DATA`。
+- 已接入会话与只读/控制命令模型：握手基础 Topic、`FILE_LIST`、`FILE_INFO`、`FILE_DOWNLOAD_URL`、`THUMB_LIST`、`THUMB_GET`、`VIDEO_CTRL`、`SNAPSHOT_CTRL`、`SNAPSHOT_DATA`、`FILE_DELETE`、`FILE_LOCK`、`AP_SSID_INFO`、`FORMAT`、`SYSTEM_DEFAULT`。
 - 握手返回目前只派生设备 ID、固件版本和能力集；SD、电量、容量、录像状态等主动推送尚未形成完整业务状态源。
-- 尚未接入设置写操作、文件删除/加锁、格式化、恢复出厂设置、进度推送消费、真实下载任务和本地资源保存。
+- 尚未接入普通设置写操作、进度推送消费、真实下载任务和本地资源保存；危险命令仅有模型和离线测试，不从 UI 直接触发。
 
 ## 文件、缩略图与截图
 
