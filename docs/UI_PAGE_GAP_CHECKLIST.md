@@ -21,4 +21,4 @@
 
 - `DeviceListView`、`LivePreviewView`、`PlaybackView`、`DownloadsView`、`EventsView` 本轮继续标记为未接主路由。
 - 首页最近事件的 `View all` 继续进入 `GalleryView`，不新增 `EventsView` 路由。
-- 实时预览、回放播放器和下载管理只补 UI 占位，不接真实设备、播放器或下载任务控制权。
+- 实时预览和下载管理只补 UI 占位；Gallery/Playback 已有命令级文件与回放资源读取，但播放器、下载任务和本地保存未接。

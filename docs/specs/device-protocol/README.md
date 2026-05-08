@@ -121,6 +121,13 @@
 - 文件与截图：`FILE_LIST`、`FILE_INFO`、`FILE_DELETE`、`FILE_DOWNLOAD_URL`、`THUMB_LIST`、`THUMB_GET`、`FILE_LOCK`、`SNAPSHOT_CTRL`、`SNAPSHOT_DATA`、`FORMAT`
 - 主动推送：`SD_STATUS`、`BAT_STATUS`、`VIDEO_CTRL`、`FORMAT_PROGRESS`、`UPGRADE_PROGRESS`、`DOWNLOAD_PROGRESS`
 
+当前 iOS 接入状态：
+
+- 已接入控制通道基础层：JSON 编解码、`\n` 分帧、`reply_to` 响应匹配、主动事件分流、请求超时和 Network.framework TCP transport。
+- 已接入会话与只读/控制命令模型：握手基础 Topic、`FILE_LIST`、`FILE_INFO`、`FILE_DOWNLOAD_URL`、`THUMB_LIST`、`THUMB_GET`、`VIDEO_CTRL`、`SNAPSHOT_CTRL`、`SNAPSHOT_DATA`。
+- 握手返回目前只派生设备 ID、固件版本和能力集；SD、电量、容量、录像状态等主动推送尚未形成完整业务状态源。
+- 尚未接入设置写操作、文件删除/加锁、格式化、恢复出厂设置、进度推送消费、真实下载任务和本地资源保存。
+
 ## 文件、缩略图与截图
 
 - `THUMB_LIST` 使用 `paths[]` 请求，联调模拟器限制单次不超过 20 个路径、总原始缩略图大小不超过 `512KB`。
@@ -132,7 +139,7 @@
 - 协议 JSON、分帧、请求队列和 Topic 解析必须封装在 Core 侧，Feature 不直接拼接原始 JSON。
 - `DeviceSession` 负责连接生命周期和状态流，Feature 只消费状态和能力。
 - 设置类操作优先采用提交成功后再更新最终状态的悲观更新策略。
-- HTTP 资源、预览流和下载任务应作为独立能力接入，不混入 TCP 控制通道。
+- HTTP 资源、预览流、播放器、本地保存和下载任务应作为独立能力接入，不混入 TCP 控制通道。
 - 真实预览协议仍需硬件确认；在确认前只保留抽象入口和占位链路。
 
 ## 原始资料来源

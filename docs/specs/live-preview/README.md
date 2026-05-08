@@ -2,6 +2,11 @@
 
 本文件只记录实时预览最小可用链路的边界。
 
+## 当前已接入
+
+- `LivePreviewView` 和 `LivePreviewStore` 仅提供不可用占位、禁用控制区和错误态。
+- `DeviceSession` 已有 `VIDEO_CTRL` 录像状态/开关和 `SNAPSHOT_CTRL -> SNAPSHOT_DATA` 截图命令入口。
+
 ## 当前范围外
 
 - 真实视频流订阅
