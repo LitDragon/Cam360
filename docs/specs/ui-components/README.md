@@ -68,7 +68,7 @@
 | 设置二级页 | `AppTopBar`, `PrimaryButton`, `DestructiveButton`, Settings 组件族 | 页面内 binding 和局部状态 |
 | `DeviceListView` | `AppTopBar`, `SectionCard`, `StatusTag`, `EmptyStateView` | `DeviceCell` |
 | `LivePreviewView` | `AppTopBar`, `SectionCard`, `PrimaryButton`, `StatusTag`, `ErrorStateView` | `LivePreviewPlaceholderCard`, `LivePreviewDisabledAction` |
-| `PlaybackView` | `AppTopBar`, `SectionCard`, `InlineLoadingView`, `ErrorStateView`, `EmptyStateView`, `AppProgressBar`, `StatusTag` | `PlaybackPlaceholderCard`, `PlaybackResourceSummaryView` |
+| `PlaybackView` | `EmptyStateView`, `appSurface`, DesignSystem tokens | `PlaybackDriveLogHeader`, `PlaybackSegmentedControl`, `PlaybackSearchField`, `PlaybackLogTile`, `PlaybackLogArtworkView` |
 | `DownloadsView` | `AppTopBar`, `SectionCard`, `PrimaryButton`, `StatusTag`, `EmptyStateView` | `DownloadsActionButton` |
 | `EventsView` | `AppTopBar`, `SectionCard`, `PrimaryButton`, `StatusTag`, `EmptyStateView` | `EventsFilterButton`, `EventsStatusRow` |
 

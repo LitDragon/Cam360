@@ -49,7 +49,10 @@ struct AppRootView: View {
         case .playback:
             PlaybackView(
                 store: bootstrap.container.playbackStore,
-                onClose: router.closeFeature
+                onClose: router.closeFeature,
+                onOpenSettings: {
+                    router.showMain(tab: .settings)
+                }
             )
         case .downloads:
             DownloadsView(
