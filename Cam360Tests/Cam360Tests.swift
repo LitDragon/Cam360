@@ -456,6 +456,44 @@ struct Cam360Tests {
                     action: .retryControlChannel
                 )
         )
+        #expect(
+            DeviceOnboardingRecoveryAction.retryHotspot.guidance ==
+                "Open iOS Settings > Wi-Fi, join the dashcam hotspot with the shown password, then return to Cam360 and try again."
+        )
+        #expect(
+            DeviceOnboardingRecoveryAction.checkLocalNetworkPermission.guidance ==
+                "Open iOS Settings > Cam360 and allow Local Network access, then retry validation."
+        )
+    }
+
+    @Test
+    func deviceOnboardingManualSetupGuidanceKeepsWiFiAndControlValidationSeparate() {
+        let testDefaults = makeUserDefaults()
+        defer { clear(testDefaults) }
+
+        let store = DeviceOnboardingStore(
+            router: AppRouter(route: .main(.dashboard)),
+            knownDeviceRepository: UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults),
+            appPreferenceStore: UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults)
+        )
+        store.networkName = "RoadCam_AP"
+
+        #expect(
+            store.manualHotspotSetupMessage ==
+                "Open iOS Settings > Wi-Fi and join RoadCam_AP, then return to Cam360."
+        )
+        #expect(
+            store.localNetworkPermissionMessage ==
+                "If iOS asks for Local Network access, allow it before device validation."
+        )
+        #expect(
+            DeviceOnboardingConnectionStage.validatingControlChannel.title(deviceName: "Road Camera") ==
+                "Validating device control"
+        )
+        #expect(
+            DeviceOnboardingConnectionStage.validatingControlChannel.message ==
+                "The phone should already be on the dashcam hotspot. Cam360 is now checking the control channel."
+        )
     }
 
     @Test

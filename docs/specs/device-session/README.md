@@ -8,6 +8,7 @@
 - 握手链路已编排 `APP_ACCESS`、`PROTOCOL_VERSION`、`CTP_CMD_OPENAPP`、`UUID`、`FW_VERSION`、`SD_STATUS`、`BAT_STATUS`、`TF_CAP`、`CAMERA_CAPABILITY`。
 - ready 会话可发送文件列表、文件信息、回放资源、缩略图、录像状态/开关、截图、文件删除、文件加锁、热点信息、格式化和恢复出厂命令；命令结果带 ready 守卫和过期会话失效处理。
 - `ready` / `busy` 会话主动断开或重置时，先发送 `CTP_CMD_EXITAPP`，再关闭控制连接；握手未完成或失败态只关闭本地连接。
+- 设备返回的已知 `errno` 按 `device-protocol` 错误码口径映射为可读失败原因；未知错误码保留原始 `errno` 和 Topic。
 
 ## 当前范围外
 

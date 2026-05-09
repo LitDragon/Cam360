@@ -9,11 +9,11 @@ enum DeviceOnboardingRecoveryAction: Equatable {
     var guidance: String {
         switch self {
         case .retryHotspot:
-            return "Check the dashcam hotspot name and password, then try again."
+            return "Open iOS Settings > Wi-Fi, join the dashcam hotspot with the shown password, then return to Cam360 and try again."
         case .checkLocalNetworkPermission:
-            return "Allow Local Network access for Cam360 in iOS Settings, then retry validation."
+            return "Open iOS Settings > Cam360 and allow Local Network access, then retry validation."
         case .retryControlChannel:
-            return "Keep the phone on the dashcam hotspot and retry device validation."
+            return "Keep the phone on the dashcam hotspot, leave Local Network access enabled, and retry device validation."
         }
     }
 }
@@ -41,9 +41,9 @@ enum DeviceOnboardingConnectionStage: Equatable {
         case .idle:
             return "Ready to connect"
         case .connectingHotspot:
-            return "Connecting to \(deviceName)..."
+            return "Confirming \(deviceName) hotspot..."
         case .validatingControlChannel:
-            return "Device hotspot connected"
+            return "Validating device control"
         case .ready:
             return "Device ready"
         case .retryRequired:
@@ -56,9 +56,9 @@ enum DeviceOnboardingConnectionStage: Equatable {
         case .idle:
             return "Enter the dashcam hotspot details to start setup."
         case .connectingHotspot:
-            return "Joining the dashcam Wi-Fi hotspot before checking device control."
+            return "Using the hotspot you confirmed before checking device control."
         case .validatingControlChannel:
-            return "Checking whether the dashcam control channel is ready."
+            return "The phone should already be on the dashcam hotspot. Cam360 is now checking the control channel."
         case .ready:
             return "The dashcam control channel is ready."
         case .retryRequired(let message, _):
@@ -145,6 +145,16 @@ final class DeviceOnboardingStore: ObservableObject {
 
     var canContinueWithWiFiDetails: Bool {
         password.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+    }
+
+    var manualHotspotSetupMessage: String {
+        let hotspotName = networkName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let displayName = hotspotName.isEmpty ? "the dashcam hotspot" : hotspotName
+        return "Open iOS Settings > Wi-Fi and join \(displayName), then return to Cam360."
+    }
+
+    var localNetworkPermissionMessage: String {
+        "If iOS asks for Local Network access, allow it before device validation."
     }
 
     func startSearch() {

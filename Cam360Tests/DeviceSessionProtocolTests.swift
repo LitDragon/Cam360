@@ -39,7 +39,21 @@ struct DeviceSessionProtocolTests {
         startHandshake(session)
 
         #expect(await waitForSessionState { failedError(from: session.state) != nil })
-        #expect(failedError(from: session.state) == .handshakeFailed(reason: "设备错误 errno -4: APP_ACCESS"))
+        #expect(failedError(from: session.state) == .handshakeFailed(reason: "设备忙: APP_ACCESS (errno -4)"))
+    }
+
+    @Test
+    func protocolDeviceErrorReasonUsesDocumentedErrnoMapping() {
+        #expect(
+            DeviceSession.protocolFailureReason(
+                for: .deviceError(errno: -5, topic: "VIDEO_CTRL", parameters: [:])
+            ) == "不支持此功能: VIDEO_CTRL (errno -5)"
+        )
+        #expect(
+            DeviceSession.protocolFailureReason(
+                for: .deviceError(errno: -99, topic: "UNKNOWN", parameters: [:])
+            ) == "设备错误 errno -99: UNKNOWN"
+        )
     }
 
     @Test

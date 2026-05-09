@@ -134,7 +134,7 @@ private extension DeviceOnboardingView {
                     .font(AppTypography.pageTitle)
                     .foregroundColor(AppColor.textPrimary)
 
-                Text("Connect your phone to the dashcam hotspot before the app checks the control channel.")
+                Text("Confirm the phone is on the dashcam hotspot before the app checks the control channel.")
                     .font(AppTypography.body)
                     .foregroundColor(AppColor.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -175,25 +175,22 @@ private extension DeviceOnboardingView {
                 )
                 .padding(.top, AppSpacing.md)
 
-                HStack(alignment: .top, spacing: AppSpacing.sm) {
-                    Image(systemName: "info.circle.fill")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(AppColor.brand.opacity(0.65))
-                        .padding(.top, 2)
-
-                    Text("Use the hotspot name and password shown by the dashcam. Device control starts only after validation succeeds.")
-                        .font(AppTypography.caption)
-                        .foregroundColor(AppColor.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+                DeviceOnboardingTipCard(
+                    iconName: "gearshape.fill",
+                    message: [
+                        store.manualHotspotSetupMessage,
+                        store.localNetworkPermissionMessage,
+                        "Device control starts only after validation succeeds."
+                    ].joined(separator: "\n")
+                )
                 .padding(.top, AppSpacing.lg)
 
                 Spacer(minLength: 0)
 
                 PrimaryButton(
-                    title: "Continue",
+                    title: "Confirm and Continue",
                     isEnabled: store.canContinueWithWiFiDetails,
-                    trailingSystemImageName: "arrow.right",
+                    trailingSystemImageName: "checkmark",
                     action: store.continueFromWiFiDetails
                 )
             }

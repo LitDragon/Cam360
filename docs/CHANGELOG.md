@@ -4,6 +4,8 @@
 
 ## 2026-05-08
 
+- `DeviceSession` 将设备 `errno` 映射为协议文档中的可读失败原因，并补离线测试覆盖已知和未知错误码。
+- Onboarding 的 Wi-Fi 详情页补充系统 Wi-Fi 手动接入指引、本地网络权限说明和更明确的失败恢复文案；仍不接真实热点自动连接。
 - `LivePreviewStore` 和 `EventsStore` 新增离线状态、刷新反馈、禁用操作说明和事件筛选；页面仍不接真实视频流、播放器或事件推送。
 - `DownloadsStore` 新增离线队列状态、刷新 loading 和未接下载服务反馈；`DownloadsView` 增加刷新入口和禁用的选择文件/暂停队列操作展示，仍不接真实下载服务或本地保存链路。
 - `DeviceListView`、`LivePreviewView`、`PlaybackView`、`DownloadsView`、`EventsView` 接入离线 feature route；Dashboard 和 Gallery 增加对应入口，仍不接播放器、下载服务或真实设备链路。
