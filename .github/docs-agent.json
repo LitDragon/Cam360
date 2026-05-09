@@ -26,6 +26,8 @@
     "README.md",
     "docs/PROJECT_CONTEXT.md",
     "docs/TASKS.md",
+    "docs/ai-maintenance-guide.md",
+    "docs/prompts/README.md",
     "docs/specs/README.md",
     "docs/specs/device-onboarding/README.md",
     "docs/specs/device-protocol/README.md",
@@ -40,6 +42,8 @@
     "AGENTS.md",
     "docs/PROJECT_CONTEXT.md",
     "docs/TASKS.md",
+    "docs/ai-maintenance-guide.md",
+    "docs/prompts/README.md",
     "docs/specs/README.md",
     "docs/specs/device-onboarding/README.md",
     "docs/specs/device-protocol/README.md",
@@ -47,7 +51,8 @@
     "docs/specs/live-preview/README.md",
     "docs/specs/ui-flow/README.md",
     "docs/specs/ui-components/README.md",
-    "docs/specs/settings-components/README.md"
+    "docs/specs/settings-components/README.md",
+    "docs/decisions/README.md"
   ],
   "link_check_paths": [
     "README.md",

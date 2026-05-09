@@ -1,3 +1,8 @@
+---
+depends_on: [device-session, ui-components]
+hardware_required: true
+---
+
 # 设置组件规格
 
 本文件记录设置相关已落地范围和维护规则，不再维护冗长的“页面 x 组件”实现矩阵。

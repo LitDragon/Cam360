@@ -1,3 +1,8 @@
+---
+depends_on: [device-session]
+hardware_required: true
+---
+
 # 设备接入规格
 
 本文件只记录 onboarding 真实接入时必须保持的契约。

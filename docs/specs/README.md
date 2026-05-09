@@ -12,6 +12,19 @@
 6. [live-preview](live-preview/README.md)：实时预览最小链路边界。
 7. [settings-components](settings-components/README.md)：设置页已落地页面、路由和组件口径。
 
+## Front Matter 约定
+
+每个规格文件可在开头使用 YAML front matter 标注依赖和硬件门槛。该元数据不表示实现进度或验证结论，进度仍写 `../TASKS.md`。
+
+```yaml
+---
+depends_on: [other-spec-name]
+hardware_required: true | false
+```
+
+- `depends_on`：本规格依赖的其他规格。
+- `hardware_required`：完整验证是否依赖真设备或可信设备端模拟器。
+
 ## 维护规则
 
 - 规格只写契约、边界和长期约束。

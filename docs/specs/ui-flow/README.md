@@ -1,3 +1,8 @@
+---
+depends_on: [ui-components]
+hardware_required: false
+---
+
 # UI 流程规格
 
 本文件记录当前已落地页面、路由归属和页面跳转关系。只写代码里可确认的长期关系；短期任务写 `../../TASKS.md`。

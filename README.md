@@ -17,6 +17,8 @@ Cam360 采用文档优先的开发方式：阶段状态、已实现能力、硬�
 补充文档按需读取：
 
 - [docs/specs/README.md](docs/specs/README.md)：能力规格索引，按需进入具体规格
+- [docs/ai-maintenance-guide.md](docs/ai-maintenance-guide.md)：AI 维护 Harness，说明新会话、反幻觉和验证护栏
+- [docs/prompts/README.md](docs/prompts/README.md)：按任务类型准备的精简会话模板
 
 ## 自动化
 

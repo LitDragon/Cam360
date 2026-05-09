@@ -1,3 +1,8 @@
+---
+depends_on: [device-protocol]
+hardware_required: true
+---
+
 # DeviceSession 规格
 
 本文件只记录 `DeviceSession` 真实接入边界。真实设备协议事实以 [`device-protocol`](../device-protocol/README.md) 为准。

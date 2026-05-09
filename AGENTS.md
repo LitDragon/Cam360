@@ -16,6 +16,41 @@
 - 改动必须足够手术刀：只改完成当前任务所必需的代码；不顺手重构、不清理无关格式或注释；只移除本次改动直接引入的无用代码。
 - 多步骤任务先给最短计划，并为每一步指定可执行的验证点；实现完成后按验证结果汇报，不用“看起来可行”代替结果。
 
+## AI Harness
+- 新会话先运行 `./scripts/context.sh`，再按任务读取 `docs/prompts/`、`docs/specs/` 和目标代码；不要凭记忆补全事实。
+- 写代码前先用 `rg` 或现有文件确认符号、API、路由和测试位置；没在仓库中找到的内容必须说明，不要捏造。
+- 脚本只作为护栏：`api_validator.py`、`dependency_checker.py`、`impact_analyzer.py`、`test_coverage_checker.py` 提供线索，不能替代编译、测试或人工 review。
+- 影响面按实际改动选择最窄验证；文档/脚本改动不默认要求 App 全量测试，源码行为改动才按风险扩大验证。
+- 长期事实进 `PROJECT_CONTEXT.md`、`docs/specs/` 或 `docs/decisions/`；短期状态进 `TASKS.md`；避免同一事实多处重复。
+
+## 场景：修改 UI
+- 先看 `UI/` 目录下的参考截图。
+- 遵循 `Cam360/Core/DesignSystem/` 的 token 和组件规范。
+- UI 页面改动默认落在 `Cam360/Features/`；只有明确需要公共 token/组件时才改 `Cam360/Core/DesignSystem/`。
+- 不要修改 `Cam360/App/`，除非任务涉及根路由、生命周期或依赖装配。
+- 公共组件改动需确认所有使用方不受影响。
+
+## 场景：修改协议
+- 先读 `docs/specs/device-protocol/README.md`。
+- 补协议回放测试（在 `Cam360Tests/` 中用 FakeTransport）。
+- 不要修改 `Cam360/Features/` 下的代码。
+- 同步更新 `device-protocol` spec。
+
+## 场景：修改设置
+- 先读 `Cam360/Features/Settings/SettingsStore.swift` 和 `SettingsModels.swift`。
+- 设置写操作采用悲观更新策略。
+- 不要直接操作 `DeviceSession` 连接。
+
+## 场景：新增 Feature 页面
+- 先读 `docs/prompts/new-feature-page.md` 获取完整步骤。
+- View + Store + Route 文件结构保持一致。
+- 在 `AppRouter`、`AppContainer`、`AppRootView` 中注册。
+
+## 场景：修复 Bug
+- 先写失败测试，再修复，再验证。
+- 改动必须手术刀。
+- 相关测试文件见 `Cam360Tests/`。
+
 ## 验证口径
 - 默认先做最窄的非模拟器验证。
 - CI 会跑基于 iOS Simulator 的 build/test，但本地默认不做手动模拟器验证。

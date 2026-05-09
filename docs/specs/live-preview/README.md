@@ -1,3 +1,8 @@
+---
+depends_on: [device-session, device-protocol]
+hardware_required: true
+---
+
 # 实时预览规格
 
 本文件只记录实时预览最小可用链路的边界。

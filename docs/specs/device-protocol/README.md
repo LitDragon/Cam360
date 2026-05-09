@@ -1,3 +1,8 @@
+---
+depends_on: []
+hardware_required: true
+---
+
 # 设备协议规格
 
 本文件只沉淀 Cam360 iOS 后续接入真实设备时可直接使用的协议事实。原始资料中包含 Android 实现建议，本文件不继承 Android 技术栈和工程分层。
