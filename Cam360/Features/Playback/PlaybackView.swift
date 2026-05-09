@@ -164,17 +164,20 @@ private struct PlaybackSegmentedControl: View {
                 Button(action: {
                     selection = route
                 }) {
-                    Text(route.title)
-                        .font(AppTypography.bodyStrong)
-                        .foregroundColor(selection == route ? .white : AppColor.textSecondary)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 40)
-                        .background(
-                            Capsule()
-                                .fill(selection == route ? AppColor.brand : Color.clear)
-                        )
+                    ZStack {
+                        Capsule()
+                            .fill(selection == route ? AppColor.brand : Color.clear)
+
+                        Text(route.title)
+                            .font(AppTypography.bodyStrong)
+                            .foregroundColor(selection == route ? .white : AppColor.textSecondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 40)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(PlainButtonStyle())
+                .frame(maxWidth: .infinity)
             }
         }
         .padding(6)
