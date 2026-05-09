@@ -1,6 +1,6 @@
 # UI 页面缺口清单
 
-更新时间：2026-05-08
+更新时间：2026-05-09
 
 依据：仓库 `UI/` 截图、`docs/specs/ui-flow/README.md`、`docs/specs/ui-components/README.md`、`/Users/naxclow/camera-360-secives/行车记录仪APP_UI页面清单.md`、`/Users/naxclow/camera-360-secives/行车记录仪APP产品需求文档(PRD).md`。本清单只记录离线可确认的 UI 缺口，不把外部资料当作已验证设备行为。
 
@@ -22,3 +22,5 @@
 - `DeviceListView`、`LivePreviewView`、`PlaybackView`、`DownloadsView`、`EventsView` 已通过离线 feature route 可达。
 - 首页最近事件的 `View all` 进入 `EventsView`；Gallery 媒体点击进入 `PlaybackView`，下载动作进入 `DownloadsView`。
 - 实时预览和下载管理只补 UI 占位；Gallery/Playback 已有命令级文件与回放资源读取，但播放器、下载任务和本地保存未接。
+- 离线 feature 禁用态和错误态已复核：LivePreview 截图/录制/全屏保持禁用，Downloads 选择文件/暂停队列保持禁用，Events、Playback 和 DeviceList 保持空态、错误态或本地已知设备展示。
+- 不恢复独立 UI 冒烟测试 target，也不做模拟器逐页截图对比。

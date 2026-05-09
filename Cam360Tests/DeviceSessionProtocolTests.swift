@@ -122,6 +122,41 @@ struct DeviceSessionProtocolTests {
     }
 
     @Test
+    func resetSendsExitAppBeforeReturningReadySessionToIdle() async {
+        let transport = SessionFakeDeviceProtocolTransport()
+        let session = makeSession(transport: transport)
+        transport.responseProvider = { request in
+            makeHandshakeResponse(request)
+        }
+
+        startHandshake(session)
+        #expect(await waitForSessionState { session.state.isConnected })
+
+        session.send(.reset)
+
+        #expect(await waitForSessionState { transport.disconnectCount == 1 })
+        #expect(session.state == .idle)
+        #expect(transport.sentMessages.last?.topic == "CTP_CMD_EXITAPP")
+        #expect(transport.sentMessages.last?.operation == .post)
+    }
+
+    @Test
+    func disconnectDuringHandshakeClosesProtocolWithoutExitApp() async {
+        let transport = SessionFakeDeviceProtocolTransport()
+        let session = makeSession(transport: transport, handshakeCommandTimeout: 1)
+        transport.responseProvider = { _ in nil }
+
+        startHandshake(session)
+        #expect(await waitForSessionState { transport.sentMessages.count == 1 })
+
+        session.send(.disconnect)
+
+        #expect(await waitForSessionState { transport.disconnectCount == 1 })
+        #expect(session.state == .disconnected)
+        #expect(transport.sentMessages.map(\.topic) == ["APP_ACCESS"])
+    }
+
+    @Test
     func fileListReadOnlyCommandRequiresReadySession() async {
         let transport = SessionFakeDeviceProtocolTransport()
         let session = makeSession(transport: transport)
@@ -138,6 +173,33 @@ struct DeviceSessionProtocolTests {
             #expect(Bool(false))
         }
         #expect(transport.sentMessages.isEmpty)
+    }
+
+    @Test
+    func controlCommandRequiresReadySessionWhenSessionIsBusy() async {
+        let transport = SessionFakeDeviceProtocolTransport()
+        let session = makeSession(transport: transport)
+        transport.responseProvider = { request in
+            makeHandshakeResponse(request)
+        }
+        var result: Result<DeviceRecordingState, DeviceSessionCommandError>?
+
+        startHandshake(session)
+        #expect(await waitForSessionState { session.state.isConnected })
+        let sentCountBeforeBusyCommand = transport.sentMessages.count
+
+        session.send(.startOperation(.livePreview))
+        session.fetchRecordingState { commandResult in
+            result = commandResult
+        }
+
+        #expect(await waitForSessionState { result != nil })
+        if case .failure(.sessionNotReady)? = result {
+            #expect(Bool(true))
+        } else {
+            #expect(Bool(false))
+        }
+        #expect(transport.sentMessages.count == sentCountBeforeBusyCommand)
     }
 
     @Test
@@ -244,6 +306,36 @@ struct DeviceSessionProtocolTests {
         #expect(transport.sentMessages.suffix(2).first?.operation == .get)
         #expect(transport.sentMessages.last?.operation == .post)
         #expect(transport.sentMessages.last?.parameters["status"]?.intValue == 1)
+    }
+
+    @Test
+    func controlCommandDeviceErrorReturnsMappedFailureAndKeepsSessionReady() async {
+        let transport = SessionFakeDeviceProtocolTransport()
+        let session = makeSession(transport: transport)
+        transport.responseProvider = { request in
+            if request.topic == "VIDEO_CTRL" {
+                return makeControlTopicResponse(request, errno: -4)
+            }
+            return makeHandshakeResponse(request)
+        }
+        var result: Result<DeviceRecordingState, DeviceSessionCommandError>?
+
+        startHandshake(session)
+        #expect(await waitForSessionState { session.state.isConnected })
+
+        session.fetchRecordingState { commandResult in
+            result = commandResult
+        }
+
+        #expect(await waitForSessionState { result != nil })
+        if case .failure(.protocolFailure(.deviceError(let errno, let topic, _)))? = result {
+            #expect(errno == -4)
+            #expect(topic == "VIDEO_CTRL")
+        } else {
+            #expect(Bool(false))
+        }
+        #expect(result?.failureMessage == "设备忙: VIDEO_CTRL (errno -4)")
+        #expect(session.state.isConnected)
     }
 
     @Test
@@ -517,7 +609,10 @@ private func makeFileTopicResponse(_ request: DeviceProtocolMessage) -> DevicePr
     )
 }
 
-private func makeControlTopicResponse(_ request: DeviceProtocolMessage) -> DeviceProtocolMessage? {
+private func makeControlTopicResponse(
+    _ request: DeviceProtocolMessage,
+    errno: Int = 0
+) -> DeviceProtocolMessage? {
     let parameters: [String: DeviceProtocolValue]
 
     switch request.topic {
@@ -575,7 +670,7 @@ private func makeControlTopicResponse(_ request: DeviceProtocolMessage) -> Devic
         messageID: "dev-\(request.messageID)",
         notifyType: .response,
         replyTo: request.messageID,
-        errno: 0,
+        errno: errno,
         parameters: parameters
     )
 }
@@ -627,6 +722,15 @@ private func failedError(from state: DeviceSessionState) -> DeviceError? {
         return error
     }
     return nil
+}
+
+private extension Result where Failure == DeviceSessionCommandError {
+    var failureMessage: String? {
+        if case .failure(let error) = self {
+            return error.message
+        }
+        return nil
+    }
 }
 
 @MainActor
