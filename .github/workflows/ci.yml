@@ -14,6 +14,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Validate AI harness scripts
+        run: |
+          python3 -m py_compile scripts/*.py
+          ./scripts/context.sh >/tmp/cam360-context.md
+          python3 scripts/api_validator.py --format text --check-hallucinations >/tmp/cam360-api.txt
+          python3 scripts/dependency_checker.py --format text --check-circular >/tmp/cam360-deps.txt
+          python3 scripts/knowledge_graph.py --format text >/tmp/cam360-graph.txt
+          python3 scripts/impact_analyzer.py --action unstaged --format text >/tmp/cam360-impact.txt
+          python3 scripts/task_manager.py --action parse --format text >/tmp/cam360-tasks.txt
+          python3 scripts/test_coverage_checker.py --format text >/tmp/cam360-tests.txt
+
       - name: List available simulators
         run: xcrun simctl list devices available | head -30
 

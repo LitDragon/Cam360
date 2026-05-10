@@ -9,9 +9,10 @@ from __future__ import annotations
 
 import json
 import pathlib
-import re
 import subprocess
 import sys
+
+from project_docs import parse_spec_metadata, parse_tasks_md
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
@@ -41,47 +42,11 @@ def git_worktree_changes() -> list[str]:
     return [line for line in output.splitlines() if line][:40]
 
 
-def parse_tasks_phase() -> str:
-    tasks_path = ROOT / "docs" / "TASKS.md"
-    if not tasks_path.exists():
-        return "TASKS.md not found"
-    content = tasks_path.read_text(encoding="utf-8")
-    match = re.search(r"## 阶段状态\s*\n([\s\S]*?)(?=\n## |\Z)", content)
-    if match:
-        return match.group(1).strip()[:500]
-    return "Phase status section not found"
-
-
-def parse_spec_metadata() -> list[dict[str, str]]:
-    specs_dir = ROOT / "docs" / "specs"
-    results = []
-    if not specs_dir.exists():
-        return results
-    for spec_path in sorted(specs_dir.rglob("README.md")):
-        if spec_path.parent == specs_dir:
-            continue
-        content = spec_path.read_text(encoding="utf-8")
-        front_matter = {}
-        fm_match = re.match(r"^---\s*\n([\s\S]*?)\n---", content)
-        if fm_match:
-            for line in fm_match.group(1).splitlines():
-                if ":" in line:
-                    key, _, value = line.partition(":")
-                    front_matter[key.strip()] = value.strip()
-        rel_path = spec_path.relative_to(ROOT).as_posix()
-        results.append({
-            "path": rel_path,
-            "depends_on": front_matter.get("depends_on", "[]"),
-            "hardware_required": front_matter.get("hardware_required", "unknown"),
-        })
-    return results
-
-
 def main() -> int:
     branch = git_branch()
     commits = git_recent_commits(5)
     changed = git_changed_files(7)
-    phase = parse_tasks_phase()
+    phase = parse_tasks_md()["phase"][:500]
     spec_metadata = parse_spec_metadata()
 
     output = {

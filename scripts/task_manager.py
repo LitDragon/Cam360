@@ -1,334 +1,219 @@
 #!/usr/bin/env python3
-"""Task management script for Cam360 project.
-
-Provides task management capabilities:
-1. Parse TASKS.md for current phase and tasks
-2. Track task progress
-3. Generate task reports
-4. Integrate with other validation scripts
-"""
+"""Low-noise task queue helper for Cam360 AI sessions."""
 
 from __future__ import annotations
 
 import json
 import pathlib
-import re
 import sys
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List
+
+from project_docs import parse_tasks_md
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-TRACKED_TASK_SECTIONS = ("无设备期间", "硬件恢复后联调队列", "资料缺口")
+STATUSES = ("blocked", "in_progress", "pending", "completed")
+PRIORITIES = ("critical", "high", "medium", "low")
 
 
-class Task:
-    """Represents a task."""
-    
-    def __init__(self, title: str, description: str = "", status: str = "pending",
-                 priority: str = "medium", category: str = ""):
-        self.title = title
-        self.description = description
-        self.status = status  # pending, in_progress, completed, blocked
-        self.priority = priority  # low, medium, high, critical
-        self.category = category
-        self.created_at = datetime.now().isoformat()
-        self.updated_at = self.created_at
-        self.dependencies: List[str] = []
-        self.notes: List[str] = []
-    
-    def to_dict(self) -> Dict:
-        return {
-            "title": self.title,
-            "description": self.description,
-            "status": self.status,
-            "priority": self.priority,
-            "category": self.category,
-            "created_at": self.created_at,
-            "updated_at": self.updated_at,
-            "dependencies": self.dependencies,
-            "notes": self.notes
-        }
+def now_iso() -> str:
+    return datetime.now().replace(microsecond=0).isoformat()
 
 
-def section_body(content: str, title: str) -> str:
-    match = re.search(rf"## {re.escape(title)}\s*\n([\s\S]*?)(?=\n## |\Z)", content)
-    return match.group(1).strip() if match else ""
-
-
-def section_items(content: str) -> List[str]:
-    items: list[str] = []
-    for line in content.splitlines():
-        match = re.match(r"\s*(?:-\s+|\d+\.\s+)(.+)", line)
-        if match:
-            items.append(match.group(1).strip())
-    return items
-
-
-def parse_tasks_md() -> Dict:
-    """Parse TASKS.md into tracked sections without treating maintenance rules as tasks."""
-    tasks_path = ROOT / "docs" / "TASKS.md"
-    if not tasks_path.exists():
-        return {"phase": "unknown", "sections": {}, "tasks": []}
-    
-    content = tasks_path.read_text(encoding="utf-8")
-    
-    # Extract phase status
-    phase = section_body(content, "阶段状态") or "unknown"
-    
-    sections: Dict[str, List[str]] = {}
-    tasks = []
-    for section_name in TRACKED_TASK_SECTIONS:
-        items = section_items(section_body(content, section_name))
-        sections[section_name] = items
-        for item in items:
-            status = "blocked" if section_name in {"硬件恢复后联调队列", "资料缺口"} else "pending"
-            tasks.append(Task(title=item, status=status, category=section_name))
-    
+def managed_task(
+    title: str,
+    status: str = "pending",
+    priority: str = "medium",
+    category: str = "general",
+) -> Dict:
+    timestamp = now_iso()
     return {
-        "phase": phase,
-        "sections": sections,
-        "tasks": [task.to_dict() for task in tasks]
+        "title": title,
+        "description": "",
+        "status": status,
+        "priority": priority,
+        "category": category,
+        "created_at": timestamp,
+        "updated_at": timestamp,
+        "dependencies": [],
+        "notes": [],
     }
 
 
-def load_tasks_from_json(json_path: pathlib.Path) -> List[Task]:
-    """Load tasks from JSON file."""
+def load_tasks_from_json(json_path: pathlib.Path) -> List[Dict]:
     if not json_path.exists():
         return []
-    
+
     try:
         data = json.loads(json_path.read_text(encoding="utf-8"))
-        tasks = []
-        for item in data.get("tasks", []):
-            task = Task(
-                title=item.get("title", ""),
-                description=item.get("description", ""),
-                status=item.get("status", "pending"),
-                priority=item.get("priority", "medium"),
-                category=item.get("category", "")
-            )
-            task.created_at = item.get("created_at", task.created_at)
-            task.updated_at = item.get("updated_at", task.updated_at)
-            task.dependencies = item.get("dependencies", [])
-            task.notes = item.get("notes", [])
-            tasks.append(task)
-        return tasks
-    except (json.JSONDecodeError, KeyError):
+    except json.JSONDecodeError:
         return []
 
+    tasks: List[Dict] = []
+    for item in data.get("tasks", []):
+        task = managed_task(
+            title=item.get("title", ""),
+            status=item.get("status", "pending"),
+            priority=item.get("priority", "medium"),
+            category=item.get("category", "general"),
+        )
+        task["description"] = item.get("description", "")
+        task["created_at"] = item.get("created_at", task["created_at"])
+        task["updated_at"] = item.get("updated_at", task["updated_at"])
+        task["dependencies"] = item.get("dependencies", [])
+        task["notes"] = item.get("notes", [])
+        tasks.append(task)
+    return tasks
 
-def task_from_dict(item: Dict) -> Task:
-    task = Task(
-        title=item.get("title", ""),
-        description=item.get("description", ""),
-        status=item.get("status", "pending"),
-        priority=item.get("priority", "medium"),
-        category=item.get("category", ""),
-    )
-    task.created_at = item.get("created_at", task.created_at)
-    task.updated_at = item.get("updated_at", task.updated_at)
-    task.dependencies = item.get("dependencies", [])
-    task.notes = item.get("notes", [])
-    return task
 
-
-def save_tasks_to_json(tasks: List[Task], json_path: pathlib.Path) -> None:
-    """Save tasks to JSON file."""
-    data = {
-        "tasks": [task.to_dict() for task in tasks],
-        "metadata": {
-            "total": len(tasks),
-            "by_status": {
-                "pending": sum(1 for t in tasks if t.status == "pending"),
-                "in_progress": sum(1 for t in tasks if t.status == "in_progress"),
-                "completed": sum(1 for t in tasks if t.status == "completed"),
-                "blocked": sum(1 for t in tasks if t.status == "blocked")
-            },
-            "by_priority": {
-                "low": sum(1 for t in tasks if t.priority == "low"),
-                "medium": sum(1 for t in tasks if t.priority == "medium"),
-                "high": sum(1 for t in tasks if t.priority == "high"),
-                "critical": sum(1 for t in tasks if t.priority == "critical")
-            },
-            "last_updated": datetime.now().isoformat()
-        }
+def summarize_tasks(tasks: List[Dict]) -> Dict:
+    return {
+        "total": len(tasks),
+        "by_status": {status: sum(1 for task in tasks if task.get("status") == status) for status in STATUSES},
+        "by_priority": {
+            priority: sum(1 for task in tasks if task.get("priority") == priority)
+            for priority in PRIORITIES
+        },
+        "by_category": category_counts(tasks),
     }
-    
+
+
+def category_counts(tasks: List[Dict]) -> Dict[str, int]:
+    counts: Dict[str, int] = {}
+    for task in tasks:
+        category = task.get("category") or "general"
+        counts[category] = counts.get(category, 0) + 1
+    return counts
+
+
+def save_tasks_to_json(tasks: List[Dict], json_path: pathlib.Path) -> None:
+    data = {
+        "tasks": tasks,
+        "metadata": {
+            **summarize_tasks(tasks),
+            "last_updated": now_iso(),
+        },
+    }
     json_path.parent.mkdir(parents=True, exist_ok=True)
     json_path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
-def generate_task_report(tasks: List[Task]) -> str:
-    """Generate task report."""
-    lines = []
-    lines.append("# Task Report")
-    lines.append("")
-    lines.append(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    lines.append("")
-    
-    # Summary
-    lines.append("## Summary")
-    lines.append("")
-    lines.append(f"- Total tasks: {len(tasks)}")
-    lines.append(f"- Pending: {sum(1 for t in tasks if t.status == 'pending')}")
-    lines.append(f"- In progress: {sum(1 for t in tasks if t.status == 'in_progress')}")
-    lines.append(f"- Completed: {sum(1 for t in tasks if t.status == 'completed')}")
-    lines.append(f"- Blocked: {sum(1 for t in tasks if t.status == 'blocked')}")
-    lines.append("")
-    
-    # Priority breakdown
-    lines.append("## Priority Breakdown")
-    lines.append("")
-    lines.append(f"- Critical: {sum(1 for t in tasks if t.priority == 'critical')}")
-    lines.append(f"- High: {sum(1 for t in tasks if t.priority == 'high')}")
-    lines.append(f"- Medium: {sum(1 for t in tasks if t.priority == 'medium')}")
-    lines.append(f"- Low: {sum(1 for t in tasks if t.priority == 'low')}")
-    lines.append("")
-    
-    # Tasks by status
-    lines.append("## Tasks by Status")
-    lines.append("")
-    
-    for status in ["blocked", "in_progress", "pending", "completed"]:
-        status_tasks = [t for t in tasks if t.status == status]
-        if status_tasks:
-            lines.append(f"### {status.replace('_', ' ').title()}")
-            lines.append("")
-            for task in status_tasks:
-                lines.append(f"- [{task.priority}] {task.title}")
-                if task.description:
-                    lines.append(f"  {task.description}")
-            lines.append("")
-    
+def task_source(task_file: pathlib.Path) -> tuple[List[Dict], str]:
+    tasks = load_tasks_from_json(task_file)
+    if tasks:
+        return tasks, task_file.relative_to(ROOT).as_posix()
+    return parse_tasks_md()["tasks"], "docs/TASKS.md"
+
+
+def generate_task_report(tasks: List[Dict], source: str) -> str:
+    summary = summarize_tasks(tasks)
+    lines = [
+        "Task Harness Check",
+        f"- source: {source}",
+        f"- tracked tasks: {summary['total']}",
+        "- by status: "
+        + ", ".join(f"{status}:{summary['by_status'][status]}" for status in STATUSES),
+    ]
+    if summary["by_category"]:
+        lines.append(
+            "- by category: "
+            + ", ".join(
+                f"{category}:{count}"
+                for category, count in sorted(summary["by_category"].items())
+            )
+        )
+    return "\n".join(lines)
+
+
+def parse_report(result: Dict) -> str:
+    lines = [
+        "Task Harness Check",
+        f"- phase items: {len(result['phase'].splitlines())}",
+        f"- tracked tasks: {len(result['tasks'])}",
+        "- tracked sections: "
+        + ", ".join(f"{name}:{len(items)}" for name, items in result["sections"].items()),
+    ]
     return "\n".join(lines)
 
 
 def main() -> int:
-    """Main entry point."""
     import argparse
-    
-    parser = argparse.ArgumentParser(description="Manage tasks for Cam360 project")
-    parser.add_argument("--action", choices=["list", "report", "parse", "add", "update"],
-                       default="list", help="Action to perform")
-    parser.add_argument("--format", choices=["json", "text"], default="text",
-                       help="Output format")
-    parser.add_argument("--output", "-o", help="Output file")
-    parser.add_argument("--title", help="Task title (for add/update)")
-    parser.add_argument("--status", help="Task status (for update)")
-    parser.add_argument("--priority", help="Task priority (for add/update)")
-    parser.add_argument("--category", help="Task category (for add)")
-    parser.add_argument("--task-file", default="build/tasks.json",
-                       help="Task JSON file path")
+
+    parser = argparse.ArgumentParser(description="Manage Cam360 AI task queues")
+    parser.add_argument("--action", choices=["list", "report", "parse", "add", "update"], default="list")
+    parser.add_argument("--format", choices=["json", "text"], default="text")
+    parser.add_argument("--output", "-o")
+    parser.add_argument("--title", help="Task title for add/update")
+    parser.add_argument("--status", help="Task status for update")
+    parser.add_argument("--priority", help="Task priority for add/update")
+    parser.add_argument("--category", help="Task category for add")
+    parser.add_argument("--task-file", default="build/tasks.json")
     args = parser.parse_args()
-    
+
     task_file = ROOT / args.task_file
-    
+
     if args.action == "parse":
-        # Parse TASKS.md
         result = parse_tasks_md()
-        if args.format == "json":
-            output = json.dumps(result, indent=2, ensure_ascii=False)
-        else:
-            lines = ["Current Phase:"]
-            lines.append(result["phase"])
-            lines.append("")
-            lines.append("Tracked Sections:")
-            for section_name, items in result["sections"].items():
-                lines.append(f"- {section_name}: {len(items)}")
-                for item in items:
-                    lines.append(f"  - {item}")
-            lines.append("")
-            lines.append(f"Tracked queue items: {len(result['tasks'])}")
-            output = "\n".join(lines)
-    
+        output = json.dumps(result, indent=2, ensure_ascii=False) if args.format == "json" else parse_report(result)
+
     elif args.action == "list":
-        # List tasks from JSON file
-        tasks = load_tasks_from_json(task_file)
-        if not tasks:
-            # Try parsing TASKS.md
-            result = parse_tasks_md()
-            tasks = [task_from_dict(task) for task in result["tasks"]]
-        
+        tasks, source = task_source(task_file)
         if args.format == "json":
-            output = json.dumps([t.to_dict() for t in tasks], indent=2, ensure_ascii=False)
+            output = json.dumps(tasks, indent=2, ensure_ascii=False)
         else:
-            lines = [f"Tasks ({len(tasks)}):"]
+            lines = [generate_task_report(tasks, source)]
             for task in tasks:
-                lines.append(f"- [{task.status}] {task.title}")
+                lines.append(f"  {task.get('status', 'pending')}: {task.get('title', '')}")
             output = "\n".join(lines)
-    
+
     elif args.action == "report":
-        # Generate report
-        tasks = load_tasks_from_json(task_file)
-        if not tasks:
-            result = parse_tasks_md()
-            tasks = [task_from_dict(task) for task in result["tasks"]]
-        
-        report = generate_task_report(tasks)
-        
-        if args.output:
-            pathlib.Path(args.output).write_text(report, encoding="utf-8")
-            print(f"Report written to {args.output}", file=sys.stderr)
-        else:
-            print(report)
-        return 0
-    
+        tasks, source = task_source(task_file)
+        output = json.dumps({"summary": summarize_tasks(tasks), "source": source}, indent=2, ensure_ascii=False)
+        if args.format == "text":
+            output = generate_task_report(tasks, source)
+
     elif args.action == "add":
-        # Add new task
         if not args.title:
             print("Error: --title is required for add action", file=sys.stderr)
             return 1
-        
         tasks = load_tasks_from_json(task_file)
-        new_task = Task(
-            title=args.title,
-            status="pending",
-            priority=args.priority or "medium",
-            category=args.category or "general"
+        tasks.append(
+            managed_task(
+                title=args.title,
+                priority=args.priority or "medium",
+                category=args.category or "general",
+            )
         )
-        tasks.append(new_task)
         save_tasks_to_json(tasks, task_file)
-        
         print(f"Task added: {args.title}", file=sys.stderr)
         return 0
-    
+
     elif args.action == "update":
-        # Update task status
         if not args.title or not args.status:
             print("Error: --title and --status are required for update action", file=sys.stderr)
             return 1
-        
         tasks = load_tasks_from_json(task_file)
-        updated = False
-        
         for task in tasks:
-            if task.title == args.title:
-                task.status = args.status
-                task.updated_at = datetime.now().isoformat()
+            if task.get("title") == args.title:
+                task["status"] = args.status
+                task["updated_at"] = now_iso()
                 if args.priority:
-                    task.priority = args.priority
-                updated = True
-                break
-        
-        if not updated:
-            print(f"Task not found: {args.title}", file=sys.stderr)
-            return 1
-        
-        save_tasks_to_json(tasks, task_file)
-        print(f"Task updated: {args.title}", file=sys.stderr)
-        return 0
-    
+                    task["priority"] = args.priority
+                save_tasks_to_json(tasks, task_file)
+                print(f"Task updated: {args.title}", file=sys.stderr)
+                return 0
+        print(f"Task not found: {args.title}", file=sys.stderr)
+        return 1
+
     else:
         print(f"Unknown action: {args.action}", file=sys.stderr)
         return 1
-    
-    # Output results
+
     if args.output:
         pathlib.Path(args.output).write_text(output, encoding="utf-8")
         print(f"Output written to {args.output}", file=sys.stderr)
     else:
         print(output)
-    
     return 0
 
 
