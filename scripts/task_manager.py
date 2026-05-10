@@ -18,6 +18,7 @@ from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+TRACKED_TASK_SECTIONS = ("无设备期间", "硬件恢复后联调队列", "资料缺口")
 
 
 class Task:
@@ -49,49 +50,43 @@ class Task:
         }
 
 
+def section_body(content: str, title: str) -> str:
+    match = re.search(rf"## {re.escape(title)}\s*\n([\s\S]*?)(?=\n## |\Z)", content)
+    return match.group(1).strip() if match else ""
+
+
+def section_items(content: str) -> List[str]:
+    items: list[str] = []
+    for line in content.splitlines():
+        match = re.match(r"\s*(?:-\s+|\d+\.\s+)(.+)", line)
+        if match:
+            items.append(match.group(1).strip())
+    return items
+
+
 def parse_tasks_md() -> Dict:
-    """Parse TASKS.md for current phase and tasks."""
+    """Parse TASKS.md into tracked sections without treating maintenance rules as tasks."""
     tasks_path = ROOT / "docs" / "TASKS.md"
     if not tasks_path.exists():
-        return {"phase": "unknown", "tasks": []}
+        return {"phase": "unknown", "sections": {}, "tasks": []}
     
     content = tasks_path.read_text(encoding="utf-8")
     
     # Extract phase status
-    phase_match = re.search(r"## 阶段状态\s*\n([\s\S]*?)(?=\n## |\Z)", content)
-    phase = phase_match.group(1).strip() if phase_match else "unknown"
+    phase = section_body(content, "阶段状态") or "unknown"
     
-    # Extract tasks (simplified - in reality would need more sophisticated parsing)
+    sections: Dict[str, List[str]] = {}
     tasks = []
-    
-    # Look for task-like patterns
-    task_patterns = [
-        r"-\s*\[[ x]\]\s*(.+)",  # Markdown checkboxes
-        r"-\s*(.+)",  # List items
-        r"\d+\.\s*(.+)",  # Numbered lists
-    ]
-    
-    for pattern in task_patterns:
-        for match in re.finditer(pattern, content):
-            task_text = match.group(1).strip()
-            if task_text and len(task_text) > 5:  # Filter out short items
-                # Determine status from checkbox or keywords
-                status = "pending"
-                if "[x]" in match.group(0).lower():
-                    status = "completed"
-                elif "进行中" in task_text or "in progress" in task_text.lower():
-                    status = "in_progress"
-                elif "阻塞" in task_text or "blocked" in task_text.lower():
-                    status = "blocked"
-                
-                tasks.append(Task(
-                    title=task_text,
-                    status=status,
-                    category="general"
-                ))
+    for section_name in TRACKED_TASK_SECTIONS:
+        items = section_items(section_body(content, section_name))
+        sections[section_name] = items
+        for item in items:
+            status = "blocked" if section_name in {"硬件恢复后联调队列", "资料缺口"} else "pending"
+            tasks.append(Task(title=item, status=status, category=section_name))
     
     return {
         "phase": phase,
+        "sections": sections,
         "tasks": [task.to_dict() for task in tasks]
     }
 
@@ -120,6 +115,21 @@ def load_tasks_from_json(json_path: pathlib.Path) -> List[Task]:
         return tasks
     except (json.JSONDecodeError, KeyError):
         return []
+
+
+def task_from_dict(item: Dict) -> Task:
+    task = Task(
+        title=item.get("title", ""),
+        description=item.get("description", ""),
+        status=item.get("status", "pending"),
+        priority=item.get("priority", "medium"),
+        category=item.get("category", ""),
+    )
+    task.created_at = item.get("created_at", task.created_at)
+    task.updated_at = item.get("updated_at", task.updated_at)
+    task.dependencies = item.get("dependencies", [])
+    task.notes = item.get("notes", [])
+    return task
 
 
 def save_tasks_to_json(tasks: List[Task], json_path: pathlib.Path) -> None:
@@ -222,9 +232,13 @@ def main() -> int:
             lines = ["Current Phase:"]
             lines.append(result["phase"])
             lines.append("")
-            lines.append(f"Tasks found: {len(result['tasks'])}")
-            for task in result["tasks"][:10]:  # Show first 10
-                lines.append(f"- {task['title']}")
+            lines.append("Tracked Sections:")
+            for section_name, items in result["sections"].items():
+                lines.append(f"- {section_name}: {len(items)}")
+                for item in items:
+                    lines.append(f"  - {item}")
+            lines.append("")
+            lines.append(f"Tracked queue items: {len(result['tasks'])}")
             output = "\n".join(lines)
     
     elif args.action == "list":
@@ -233,7 +247,7 @@ def main() -> int:
         if not tasks:
             # Try parsing TASKS.md
             result = parse_tasks_md()
-            tasks = [Task(**task) for task in result["tasks"]]
+            tasks = [task_from_dict(task) for task in result["tasks"]]
         
         if args.format == "json":
             output = json.dumps([t.to_dict() for t in tasks], indent=2, ensure_ascii=False)
@@ -248,7 +262,7 @@ def main() -> int:
         tasks = load_tasks_from_json(task_file)
         if not tasks:
             result = parse_tasks_md()
-            tasks = [Task(**task) for task in result["tasks"]]
+            tasks = [task_from_dict(task) for task in result["tasks"]]
         
         report = generate_task_report(tasks)
         

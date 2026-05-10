@@ -8,6 +8,7 @@
 2. 读 `README.md`、`docs/PROJECT_CONTEXT.md`、`docs/TASKS.md`。
 3. 按任务读 `docs/prompts/` 或 `docs/specs/`。
 4. 用 `rg` 确认目标符号；没查到就按未知处理。
+5. 动手前先报目标文件、最小计划和验证点。
 
 ## 默认护栏
 

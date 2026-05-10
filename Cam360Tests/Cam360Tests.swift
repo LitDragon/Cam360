@@ -356,7 +356,8 @@ struct Cam360Tests {
         let store = DeviceOnboardingStore(
             router: router,
             knownDeviceRepository: repository,
-            appPreferenceStore: preferenceStore
+            appPreferenceStore: preferenceStore,
+            deviceSession: DeviceSession()
         )
 
         store.startSearch()
@@ -474,7 +475,8 @@ struct Cam360Tests {
         let store = DeviceOnboardingStore(
             router: AppRouter(route: .main(.dashboard)),
             knownDeviceRepository: UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults),
-            appPreferenceStore: UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults)
+            appPreferenceStore: UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults),
+            deviceSession: DeviceSession()
         )
         store.networkName = "RoadCam_AP"
 

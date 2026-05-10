@@ -13,6 +13,7 @@ Cam360 采用文档优先的开发方式：阶段状态、已实现能力、硬�
 | `docs/PROJECT_CONTEXT.md` | 长期有效事实、技术基线、目录边界 |
 | `docs/TASKS.md` | 当前阶段状态、交接入口、硬件联调队列 |
 | `docs/CHANGELOG.md` | 实际改动历史 |
+| `docs/UI_PAGE_GAP_CHECKLIST.md` | 离线 UI 覆盖状态和硬件保留项 |
 
 补充文档按需读取：
 

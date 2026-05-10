@@ -122,7 +122,7 @@ final class DeviceOnboardingStore: ObservableObject {
         router: AppRouter,
         knownDeviceRepository: KnownDeviceRepository,
         appPreferenceStore: AppPreferenceStore,
-        deviceSession: DeviceSession = DeviceSession()
+        deviceSession: DeviceSession
     ) {
         self.router = router
         self.knownDeviceRepository = knownDeviceRepository

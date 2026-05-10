@@ -271,7 +271,7 @@ final class DeviceSession: ObservableObject {
         case (.recovering, .recoveryFailed(let error)):
             return .failed(error)
 
-        case (.ready, .disconnect), (.busy, .disconnect), (.failed, .disconnect), (.recovering, .disconnect):
+        case (.handshaking, .disconnect), (.ready, .disconnect), (.busy, .disconnect), (.failed, .disconnect), (.recovering, .disconnect):
             return .disconnected
 
         case (_, .reset):
