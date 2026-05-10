@@ -21,14 +21,17 @@
 
 ```bash
 ./scripts/context.sh
+python3 scripts/session_verifier.py --scope unstaged --plan-only --format text
 python3 scripts/api_validator.py --format text --check-hallucinations
 python3 scripts/dependency_checker.py --format text --check-circular
 python3 scripts/impact_analyzer.py --action unstaged --format text
 python3 scripts/test_coverage_checker.py --format text
+python3 scripts/prompt_validator.py --format text
 ```
 
-- 文档/脚本改动再跑 `python3 -m py_compile scripts/*.py`、`git diff --check` 和文档链接检查。
-- 行为改动按影响面跑最窄测试；不改 App 源码时不默认跑 `xcodebuild`。
+- 文档/脚本改动跑 `python3 scripts/session_verifier.py --scope unstaged --skip-xcodebuild --format text` 和文档链接检查。
+- 行为改动跑 `python3 scripts/session_verifier.py --scope unstaged --format text`；它会按实际 Swift 改动选择 `xcodebuild build` 或 `xcodebuild test`。
+- CI 中的测试使用 `-enableCodeCoverage YES` 生成 `.xcresult`，再由 `test_coverage_checker.py --xcresult ... --check-coverage` 解析 xccov 覆盖率。
 
 ## 文档口径
 

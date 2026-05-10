@@ -24,6 +24,8 @@ jobs:
           python3 scripts/impact_analyzer.py --action unstaged --format text >/tmp/cam360-impact.txt
           python3 scripts/task_manager.py --action parse --format text >/tmp/cam360-tasks.txt
           python3 scripts/test_coverage_checker.py --format text >/tmp/cam360-tests.txt
+          python3 scripts/prompt_validator.py --format text >/tmp/cam360-prompts.txt
+          python3 scripts/session_verifier.py --scope unstaged --plan-only --format text >/tmp/cam360-session.txt
 
       - name: List available simulators
         run: xcrun simctl list devices available | head -30
@@ -48,9 +50,21 @@ jobs:
 
       - name: Run unit tests
         run: |
+          mkdir -p build
+          rm -rf build/ci-test-results.xcresult
           xcodebuild -project Cam360.xcodeproj \
             -scheme Cam360 \
             -configuration Debug \
             -destination "$SIMULATOR_DESTINATION" \
+            -enableCodeCoverage YES \
+            -resultBundlePath build/ci-test-results.xcresult \
             CODE_SIGNING_ALLOWED=NO \
             test
+
+      - name: Check code coverage
+        run: |
+          python3 scripts/test_coverage_checker.py \
+            --xcresult build/ci-test-results.xcresult \
+            --format text \
+            --check-coverage \
+            --min-line-coverage 1

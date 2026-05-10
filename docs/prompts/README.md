@@ -17,6 +17,7 @@
 ## 维护规则
 
 - 每个模板必须包含：前置读取清单、约束提醒、验证步骤。
-- 验证命令统一使用 `$SIMULATOR_DESTINATION`，由执行者按本机 `xcrun simctl list devices available` 结果设置，不在模板里写死设备型号。
+- App 相关模板的验证命令统一使用 `$SIMULATOR_DESTINATION` + `python3 scripts/session_verifier.py --scope unstaged --format text`。
+- 模板命令格式由 `python3 scripts/prompt_validator.py --format text` 自动检查。
 - 模板保持精简；不要在模板里重复 PROJECT_CONTEXT.md 已有的事实。
 - 新增模板时同步更新本索引。

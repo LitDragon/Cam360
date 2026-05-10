@@ -21,5 +21,5 @@
 ### 验证
 ```bash
 SIMULATOR_DESTINATION="${SIMULATOR_DESTINATION:?Set SIMULATOR_DESTINATION to an available simulator, e.g. platform=iOS Simulator,name=iPhone 17}"
-xcodebuild test -project Cam360.xcodeproj -scheme Cam360 -destination "$SIMULATOR_DESTINATION" CODE_SIGNING_ALLOWED=NO
+python3 scripts/session_verifier.py --scope unstaged --format text
 ```

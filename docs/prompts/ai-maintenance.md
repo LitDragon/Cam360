@@ -11,12 +11,6 @@
 
 ### 验证
 ```bash
-python3 -m py_compile scripts/*.py
-./scripts/context.sh
-python3 scripts/api_validator.py --format text --check-hallucinations
-python3 scripts/dependency_checker.py --format text --check-circular
-python3 scripts/impact_analyzer.py --action unstaged --format text
-python3 scripts/test_coverage_checker.py --format text
-git diff --check
+python3 scripts/session_verifier.py --scope unstaged --skip-xcodebuild --format text
 python3 scripts/refactor_agent.py check-doc-links --config .github/docs-agent.json
 ```
