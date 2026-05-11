@@ -22,6 +22,7 @@
 - 脚本只作为护栏：`context.sh`、`api_validator.py`、`context_snapshot.py`、`dependency_checker.py`、`impact_analyzer.py`、`knowledge_graph.py`、`project_docs.py`、`prompt_validator.py`、`refactor_agent.py`、`session_verifier.py`、`task_manager.py`、`test_coverage_checker.py` 提供线索，不能替代编译、测试或人工 review。
 - 影响面按实际改动选择最窄验证；文档/脚本改动不默认要求 App 全量测试，源码行为改动才按风险扩大验证。
 - 长期事实进 `PROJECT_CONTEXT.md`、`docs/specs/` 或 `docs/decisions/`；短期状态进 `TASKS.md`；避免同一事实多处重复。
+- 每次代码、配置、脚本或自动化改动完成前，必须显式判断是否需要同步文档；需要则同步，不需要则在最终结果中说明原因。
 
 ## 场景：修改 UI
 - 先看 `UI/` 目录下的参考截图。
