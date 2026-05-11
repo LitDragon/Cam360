@@ -22,7 +22,7 @@
 ## 目录边界
 
 - `Cam360/App`：生命周期、根路由、依赖装配、根视图
-- `Cam360/Core`：DesignSystem、Shared、Storage、Device
+- `Cam360/Core`：DesignSystem、Device、DeviceProtocol、Shared、Storage
 - `Cam360/Features`：按功能拆分的页面和 Store
 - `Cam360Tests`：当前唯一测试 target
 

@@ -9,7 +9,7 @@ hardware_required: true
 
 ## 当前离线契约
 
-- `DeviceOnboardingStore.connectionStage` 区分 `connectingHotspot`、`validatingControlChannel`、`ready` 和 `retryRequired`。
+- `DeviceOnboardingStore.connectionStage` 区分 `idle`、`connectingHotspot`、`validatingControlChannel`、`ready` 和 `retryRequired`。
 - `retryRequired` 必须携带恢复动作：热点信息重试、本地网络权限检查或控制通道重试。
 - `connecting` 路由只表示接入流程进行中；只有 `DeviceSession.ready` 后才进入 `success` 并写入已知设备。
 - 握手失败回到 `wifiDetails`，保留失败原因作为可重试提示。

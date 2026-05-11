@@ -19,7 +19,7 @@
 ## AI Harness
 - 新会话先运行 `./scripts/context.sh`，再按任务读取 `docs/prompts/`、`docs/specs/` 和目标代码；不要凭记忆补全事实。
 - 写代码前先用 `rg` 或现有文件确认符号、API、路由和测试位置；没在仓库中找到的内容必须说明，不要捏造。
-- 脚本只作为护栏：`api_validator.py`、`dependency_checker.py`、`impact_analyzer.py`、`test_coverage_checker.py` 提供线索，不能替代编译、测试或人工 review。
+- 脚本只作为护栏：`context.sh`、`api_validator.py`、`context_snapshot.py`、`dependency_checker.py`、`impact_analyzer.py`、`knowledge_graph.py`、`project_docs.py`、`prompt_validator.py`、`refactor_agent.py`、`session_verifier.py`、`task_manager.py`、`test_coverage_checker.py` 提供线索，不能替代编译、测试或人工 review。
 - 影响面按实际改动选择最窄验证；文档/脚本改动不默认要求 App 全量测试，源码行为改动才按风险扩大验证。
 - 长期事实进 `PROJECT_CONTEXT.md`、`docs/specs/` 或 `docs/decisions/`；短期状态进 `TASKS.md`；避免同一事实多处重复。
 
@@ -38,7 +38,7 @@
 
 ## 场景：修改设置
 - 先读 `Cam360/Features/Settings/SettingsStore.swift` 和 `SettingsModels.swift`。
-- 设置写操作采用悲观更新策略。
+- 设置写操作采用悲观更新策略，详见 `docs/specs/settings-components/README.md`。
 - 不要直接操作 `DeviceSession` 连接。
 
 ## 场景：新增 Feature 页面

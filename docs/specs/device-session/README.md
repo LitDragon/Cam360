@@ -15,6 +15,52 @@ hardware_required: true
 - `ready` / `busy` 会话主动断开或重置时，先发送 `CTP_CMD_EXITAPP`，再关闭控制连接；握手未完成或失败态只关闭本地连接。
 - 设备返回的已知 `errno` 按 `device-protocol` 错误码口径映射为可读失败原因；未知错误码保留原始 `errno` 和 Topic。
 
+## 状态机
+
+`DeviceSessionState` 枚举（`Core/Device/DeviceSessionState.swift`）：
+
+```
+idle → apConnecting → handshaking → ready(DeviceInfo) → busy(Operation, DeviceInfo)
+                                        ↑                    ↓ operationCompleted
+                                        └────────────────────┘
+
+apConnectionFailed / handshakeFailed / operationFailed / connectionLost
+  → failed(DeviceError)
+failed(DeviceError) --startRecovery--> recovering(previousState or idle)
+recovering(previousState) --recoverySucceeded--> previousState
+recovering(previousState) --recoveryFailed--> failed(DeviceError)
+failed(DeviceError) --disconnect--> disconnected
+```
+
+- `idle`：初始态，未发起连接。
+- `apConnecting`：等待热点连接结果。
+- `handshaking`：TCP 已通，正在执行握手命令序列。
+- `ready(DeviceInfo)`：握手完成，可接受命令。
+- `busy(Operation, DeviceInfo)`：正在执行操作（livePreview / playback / download / updateSettings）。
+- `failed(DeviceError)`：连接、握手、操作或连接丢失失败态；可由 `startRecovery` 进入恢复。
+- `recovering(previousState)`：失败后尝试恢复；恢复成功回到可恢复前态，没有可恢复前态时回到 `idle`。
+- `disconnected`：用户主动断开。
+
+`DeviceSessionEvent` 枚举（`Core/Device/DeviceSessionEvent.swift`）驱动状态转换：
+
+| 事件 | 触发时机 |
+| --- | --- |
+| `startAPConnection(ssid)` | 用户确认热点信息，开始连接 |
+| `apConnectionSucceeded` | 热点连接成功 |
+| `apConnectionFailed(reason)` | 热点连接失败 |
+| `startHandshake` | 开始 TCP 握手 |
+| `handshakeSucceeded(DeviceInfo)` | 握手完成，拿到设备信息 |
+| `handshakeFailed(reason)` | 握手失败 |
+| `startOperation(Operation)` | 开始执行操作 |
+| `operationCompleted` | 操作完成 |
+| `operationFailed(DeviceError)` | 操作失败 |
+| `connectionLost` | 连接意外断开 |
+| `startRecovery` | 开始恢复 |
+| `recoverySucceeded` | 恢复成功 |
+| `recoveryFailed(DeviceError)` | 恢复失败 |
+| `disconnect` | 用户主动断开 |
+| `reset` | 重置回 idle |
+
 ## 当前范围外
 
 - 真实 AP 连接、endpoint 自动发现、Dashboard/Settings 写操作和完整业务状态同步
