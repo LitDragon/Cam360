@@ -203,6 +203,16 @@ final class DeviceSession: ObservableObject {
     }
 
     func send(_ event: DeviceSessionEvent) {
+        if Thread.isMainThread {
+            applyTransition(event)
+        } else {
+            DispatchQueue.main.async { [weak self] in
+                self?.applyTransition(event)
+            }
+        }
+    }
+
+    private func applyTransition(_ event: DeviceSessionEvent) {
         let shouldDisconnectProtocol = shouldDisconnectProtocol(for: event)
         let shouldSendExitApp = shouldSendExitAppBeforeDisconnect(from: state, event: event)
         if shouldDisconnectProtocol {

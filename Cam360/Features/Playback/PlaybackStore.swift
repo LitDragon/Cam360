@@ -21,6 +21,7 @@ final class PlaybackStore: ObservableObject {
 
     private func bindDeviceSession() {
         deviceSession?.$state
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] state in
                 self?.syncDeviceSessionState(state)
             }

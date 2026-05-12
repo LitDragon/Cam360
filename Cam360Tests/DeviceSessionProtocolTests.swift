@@ -57,6 +57,31 @@ struct DeviceSessionProtocolTests {
     }
 
     @Test
+    func protocolFailureReasonCoversAllErrorVariants() {
+        #expect(
+            DeviceSession.protocolFailureReason(for: .transportDisconnected) == "控制通道已断开"
+        )
+        #expect(
+            DeviceSession.protocolFailureReason(for: .requestTimedOut(topic: "APP_ACCESS")) == "请求超时: APP_ACCESS"
+        )
+        #expect(
+            DeviceSession.protocolFailureReason(for: .transportFailed("connection reset")) == "传输失败: connection reset"
+        )
+        #expect(
+            DeviceSession.protocolFailureReason(for: .invalidFrame) == "协议帧无效"
+        )
+        #expect(
+            DeviceSession.protocolFailureReason(for: .encodeFailed) == "协议编码失败"
+        )
+        #expect(
+            DeviceSession.protocolFailureReason(for: .decodeFailed) == "协议解码失败"
+        )
+        #expect(
+            DeviceSession.protocolFailureReason(for: .responseWithoutRequest(replyTo: "ios-orphan")) == "未匹配的设备响应: ios-orphan"
+        )
+    }
+
+    @Test
     func protocolHandshakeTimeoutMovesSessionToFailed() async {
         let transport = SessionFakeDeviceProtocolTransport()
         let session = makeSession(transport: transport, handshakeCommandTimeout: 0.05)
@@ -455,6 +480,60 @@ struct DeviceSessionProtocolTests {
     }
 
     @Test
+    func apConnectionFailedMovesSessionToFailed() async {
+        let session = DeviceSession()
+        session.send(.startAPConnection(ssid: "Cam360_AP"))
+        #expect(session.state == .apConnecting)
+
+        session.send(.apConnectionFailed(reason: "Wi-Fi not found"))
+
+        #expect(failedError(from: session.state) == .apConnectionFailed(reason: "Wi-Fi not found"))
+    }
+
+    @Test
+    func operationFailedMovesSessionToFailed() async {
+        let transport = SessionFakeDeviceProtocolTransport()
+        let session = makeSession(transport: transport)
+        transport.responseProvider = { request in
+            makeHandshakeResponse(request)
+        }
+
+        startHandshake(session)
+        #expect(await waitForSessionState { session.state.isConnected })
+
+        session.send(.startOperation(.livePreview))
+        #expect(session.state == .busy(operation: .livePreview, deviceInfo: makeTestDeviceInfo()))
+
+        session.send(.operationFailed(.timeout))
+
+        #expect(failedError(from: session.state) == .timeout)
+    }
+
+    @Test
+    func recoveryFailedMovesSessionToFailed() async {
+        let transport = SessionFakeDeviceProtocolTransport()
+        let session = makeSession(transport: transport)
+        transport.responseProvider = { request in
+            makeHandshakeResponse(request)
+        }
+
+        startHandshake(session)
+        #expect(await waitForSessionState { session.state.isConnected })
+
+        transport.pushDisconnect()
+        #expect(await waitForSessionState { failedError(from: session.state) == .connectionLost })
+
+        session.send(.startRecovery)
+        if case .recovering = session.state {} else {
+            #expect(Bool(false))
+        }
+
+        session.send(.recoveryFailed(.timeout))
+
+        #expect(failedError(from: session.state) == .timeout)
+    }
+
+    @Test
     func playbackStoreLoadsFirstPlaybackResourceWhenSessionBecomesReady() async {
         let transport = SessionFakeDeviceProtocolTransport()
         let session = makeSession(transport: transport)
@@ -715,6 +794,15 @@ private func makeDeviceThumbnailObject() -> [String: DeviceProtocolValue] {
         "size": 18_342,
         "image_base64": "base64-jpeg"
     ]
+}
+
+private func makeTestDeviceInfo() -> DeviceInfo {
+    DeviceInfo(
+        id: "112233445566778899",
+        name: "Road Camera",
+        firmwareVersion: "v1.0.1",
+        capabilities: [.livePreview, .playback, .download, .settings]
+    )
 }
 
 private func failedError(from state: DeviceSessionState) -> DeviceError? {

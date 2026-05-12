@@ -95,7 +95,7 @@ struct DeviceProtocolTests {
         let transport = FakeDeviceProtocolTransport()
         let client = DeviceProtocolClient(
             transport: transport,
-            callbackQueue: DispatchQueue.global(qos: .userInitiated)
+            callbackQueue: DispatchQueue(label: "com.cam360.tests.device-protocol-events")
         )
         let eventLock = NSLock()
         var events: [DeviceProtocolMessage] = []
@@ -186,6 +186,302 @@ struct DeviceProtocolTests {
         #expect(transport.sentMessages.first?.topic == "APP_ACCESS")
         #expect(transport.sentMessages.first?.parameters["type"]?.intValue == 1)
         #expect(transport.sentMessages.first?.parameters["ver"]?.stringValue == "1.2.3")
+    }
+
+    @Test
+    func codecEncodesAndDecodesRoundTrip() throws {
+        let codec = DeviceProtocolCodec()
+        let original = DeviceProtocolMessage(
+            topic: "VIDEO_CTRL",
+            operation: .notify,
+            messageID: "dev-1",
+            notifyType: .response,
+            replyTo: "app-1",
+            errno: 0,
+            parameters: ["status": 1, "path": "/DCIMA/REC00001.AVI"]
+        )
+
+        let encoded = try codec.encode(original)
+        let decoded = try codec.decode(encoded)
+
+        #expect(decoded.topic == original.topic)
+        #expect(decoded.operation == original.operation)
+        #expect(decoded.messageID == original.messageID)
+        #expect(decoded.notifyType == original.notifyType)
+        #expect(decoded.replyTo == original.replyTo)
+        #expect(decoded.errno == original.errno)
+        #expect(decoded.parameters["status"]?.intValue == 1)
+        #expect(decoded.parameters["path"]?.stringValue == "/DCIMA/REC00001.AVI")
+    }
+
+    @Test
+    func codecDecodeThrowsInvalidFrameForEmptyData() {
+        let codec = DeviceProtocolCodec()
+
+        #expect(throws: DeviceProtocolError.invalidFrame) {
+            try codec.decode(Data())
+        }
+    }
+
+    @Test
+    func codecDecodeThrowsDecodeFailedForMalformedJSON() {
+        let codec = DeviceProtocolCodec()
+
+        #expect(throws: DeviceProtocolError.decodeFailed) {
+            try codec.decode(Data("{bad-json}".utf8))
+        }
+    }
+
+    @Test
+    func notifyTypeDecodesShortAliases() throws {
+        let codec = DeviceProtocolCodec()
+
+        let req = try codec.decode(Data(#"{"topic":"T","op":"NOTIFY","msg_id":"1","notify_type":"req"}"#.utf8))
+        #expect(req.notifyType == .request)
+
+        let resp = try codec.decode(Data(#"{"topic":"T","op":"NOTIFY","msg_id":"1","notify_type":"resp","reply_to":"0"}"#.utf8))
+        #expect(resp.notifyType == .response)
+
+        let evt = try codec.decode(Data(#"{"topic":"T","op":"NOTIFY","msg_id":"1","notify_type":"evt"}"#.utf8))
+        #expect(evt.notifyType == .event)
+    }
+
+    @Test
+    func operationDecodesCaseInsensitive() throws {
+        let codec = DeviceProtocolCodec()
+
+        let get = try codec.decode(Data(#"{"topic":"T","op":"get","msg_id":"1"}"#.utf8))
+        #expect(get.operation == .get)
+
+        let post = try codec.decode(Data(#"{"topic":"T","op":"post","msg_id":"1"}"#.utf8))
+        #expect(post.operation == .post)
+    }
+
+    @Test
+    func protocolValueIntFromDouble() {
+        let value = DeviceProtocolValue.double(3.0)
+        #expect(value.intValue == 3)
+    }
+
+    @Test
+    func protocolValueIntFromBool() {
+        #expect(DeviceProtocolValue.bool(true).intValue == 1)
+        #expect(DeviceProtocolValue.bool(false).intValue == 0)
+    }
+
+    @Test
+    func protocolValueNullProperties() {
+        let value = DeviceProtocolValue.null
+        #expect(value.stringValue == nil)
+        #expect(value.intValue == nil)
+        #expect(value.boolValue == nil)
+        #expect(value.objectValue == nil)
+        #expect(value.arrayValue == nil)
+    }
+
+    @Test
+    func protocolValueArrayDirectAccess() {
+        let value = DeviceProtocolValue.array([.int(1), .int(2), .int(3)])
+        #expect(value.arrayValue?.count == 3)
+        #expect(value.arrayValue?[0].intValue == 1)
+    }
+
+    @Test
+    func clientRoutesEventsThroughOnEventCallback() {
+        let transport = FakeDeviceProtocolTransport()
+        let client = DeviceProtocolClient(
+            transport: transport,
+            callbackQueue: DispatchQueue(label: "com.cam360.tests.device-protocol-event-order")
+        )
+        let eventLock = NSLock()
+        var events: [DeviceProtocolMessage] = []
+        client.onEvent = { event in
+            eventLock.withLock {
+                events.append(event)
+            }
+        }
+
+        transport.push(
+            DeviceProtocolMessage(
+                topic: "BAT_STATUS",
+                operation: .notify,
+                messageID: "evt-bat-1",
+                notifyType: .event,
+                errno: 0,
+                parameters: ["level": 85]
+            )
+        )
+        transport.push(
+            DeviceProtocolMessage(
+                topic: "SD_STATUS",
+                operation: .notify,
+                messageID: "evt-sd-1",
+                notifyType: .event,
+                errno: 0,
+                parameters: ["online": 1]
+            )
+        )
+
+        _ = waitUntil {
+            eventLock.withLock { events.count == 2 }
+        }
+
+        #expect(eventLock.withLock { events.map(\.topic) } == ["BAT_STATUS", "SD_STATUS"])
+        #expect(eventLock.withLock { events[0].parameters["level"]?.intValue } == 85)
+        #expect(eventLock.withLock { events[1].parameters["online"]?.intValue } == 1)
+    }
+
+    // MARK: - DeviceFileResponseParser error paths
+
+    @Test
+    func fileListParserThrowsWhenFilesMissing() {
+        #expect(throws: DeviceSessionReadOnlyError.invalidResponse("FILE_LIST.files 缺失")) {
+            try DeviceFileResponseParser.fileListPage(from: [:])
+        }
+    }
+
+    @Test
+    func fileListParserThrowsWhenFilesContainsNonObject() {
+        #expect(throws: DeviceSessionReadOnlyError.invalidResponse("FILE_LIST.files 包含非对象")) {
+            try DeviceFileResponseParser.fileListPage(from: [
+                "files": .array([.string("not-an-object")])
+            ])
+        }
+    }
+
+    @Test
+    func fileListParserThrowsWhenFileItemMissingName() {
+        #expect(throws: DeviceSessionReadOnlyError.invalidResponse("文件 name 缺失")) {
+            try DeviceFileResponseParser.fileListPage(from: [
+                "files": .array([
+                    .object(["path": "/DCIMA/REC00001.AVI"])
+                ])
+            ])
+        }
+    }
+
+    @Test
+    func fileListParserThrowsWhenFileItemMissingPath() {
+        #expect(throws: DeviceSessionReadOnlyError.invalidResponse("文件 path 缺失")) {
+            try DeviceFileResponseParser.fileListPage(from: [
+                "files": .array([
+                    .object(["name": "REC00001.AVI"])
+                ])
+            ])
+        }
+    }
+
+    @Test
+    func playbackResourceParserThrowsWhenPathMissing() {
+        #expect(throws: DeviceSessionReadOnlyError.invalidResponse("FILE_DOWNLOAD_URL.path 缺失")) {
+            try DeviceFileResponseParser.playbackResource(from: [:])
+        }
+    }
+
+    @Test
+    func playbackResourceParserThrowsWhenRtspURLMissing() {
+        #expect(throws: DeviceSessionReadOnlyError.invalidResponse("FILE_DOWNLOAD_URL.rtsp_url 缺失")) {
+            try DeviceFileResponseParser.playbackResource(from: [
+                "path": "/DCIMA/REC00001.AVI"
+            ])
+        }
+    }
+
+    @Test
+    func thumbnailsParserThrowsWhenThumbsMissing() {
+        #expect(throws: DeviceSessionReadOnlyError.invalidResponse("THUMB_LIST.thumbs 缺失")) {
+            try DeviceFileResponseParser.thumbnails(from: [:])
+        }
+    }
+
+    @Test
+    func thumbnailsParserThrowsWhenThumbsContainsNonObject() {
+        #expect(throws: DeviceSessionReadOnlyError.invalidResponse("THUMB_LIST.thumbs 包含非对象")) {
+            try DeviceFileResponseParser.thumbnails(from: [
+                "thumbs": .array([.int(42)])
+            ])
+        }
+    }
+
+    @Test
+    func thumbnailParserThrowsWhenPathMissing() {
+        #expect(throws: DeviceSessionReadOnlyError.invalidResponse("THUMB_GET.path 缺失")) {
+            try DeviceFileResponseParser.thumbnail(from: [:])
+        }
+    }
+
+    @Test
+    func snapshotIDParserThrowsWhenSnapshotIDMissing() {
+        #expect(throws: DeviceSessionCommandError.invalidResponse("SNAPSHOT_CTRL.snapshot_id 缺失")) {
+            try DeviceFileResponseParser.snapshotID(from: [:])
+        }
+    }
+
+    @Test
+    func snapshotResourceParserThrowsWhenSnapshotIDMissing() {
+        #expect(throws: DeviceSessionCommandError.invalidResponse("SNAPSHOT_DATA.snapshot_id 缺失")) {
+            try DeviceFileResponseParser.snapshotResource(from: [:])
+        }
+    }
+
+    @Test
+    func recordingStateParserThrowsWhenStatusMissing() {
+        #expect(throws: DeviceSessionCommandError.invalidResponse("VIDEO_CTRL.status 缺失")) {
+            try DeviceFileResponseParser.recordingState(from: [:])
+        }
+    }
+
+    @Test
+    func fileDeletionResultParserThrowsWhenPathMissing() {
+        #expect(throws: DeviceSessionCommandError.invalidResponse("FILE_DELETE.path 缺失")) {
+            try DeviceFileResponseParser.fileDeletionResult(from: [:])
+        }
+    }
+
+    @Test
+    func fileDeletionResultParserThrowsWhenDeletedMissing() {
+        #expect(throws: DeviceSessionCommandError.invalidResponse("FILE_DELETE.deleted 缺失")) {
+            try DeviceFileResponseParser.fileDeletionResult(from: [
+                "path": "/DCIMA/REC00001.AVI"
+            ])
+        }
+    }
+
+    @Test
+    func fileLockResultParserThrowsWhenFileMissing() {
+        #expect(throws: DeviceSessionCommandError.invalidResponse("FILE_LOCK.file 缺失")) {
+            try DeviceFileResponseParser.fileLockResult(from: [:])
+        }
+    }
+
+    @Test
+    func fileLockResultParserThrowsWhenStatusMissing() {
+        #expect(throws: DeviceSessionCommandError.invalidResponse("FILE_LOCK.status 缺失")) {
+            try DeviceFileResponseParser.fileLockResult(from: [
+                "file": "/DCIMA/REC00001.AVI"
+            ])
+        }
+    }
+
+    @Test
+    func accessPointIdentityParserThrowsWhenSsidMissing() {
+        #expect(throws: DeviceSessionCommandError.invalidResponse("AP_SSID_INFO.ssid 缺失")) {
+            try DeviceFileResponseParser.accessPointIdentity(from: [:])
+        }
+    }
+
+    @Test
+    func storageFormatResultParserThrowsWhenFrmMissing() {
+        #expect(throws: DeviceSessionCommandError.invalidResponse("FORMAT.frm 缺失")) {
+            try DeviceFileResponseParser.storageFormatResult(from: [:])
+        }
+    }
+
+    @Test
+    func systemDefaultResultParserThrowsWhenDefMissing() {
+        #expect(throws: DeviceSessionCommandError.invalidResponse("SYSTEM_DEFAULT.def 缺失")) {
+            try DeviceFileResponseParser.systemDefaultResult(from: [:])
+        }
     }
 
     @Test
