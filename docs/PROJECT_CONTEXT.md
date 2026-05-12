@@ -41,7 +41,7 @@ Features/{FeatureName}/
 
 当前例外情况：
 - `Dashboard` 和 `Gallery` 没有独立 Route，路由由 `AppRouter` 统一管理。
-- `Events` 只有 View，状态和路由暂由 Dashboard Store 代管。
+- `Events` 已有独立 `EventsStore`，没有独立 Route，路由由 `AppRouter` 统一管理。
 - `Settings` 因页面较多，拆分为多个 `{PageName}View.swift`。
 
 新增 Feature 时按标准结构创建；不回溯重构已有例外。
