@@ -572,6 +572,53 @@ struct Cam360Tests {
     }
 
     @Test
+    func knownDeviceRepositoryPreservesStoredDevicesWhenEncodingFails() {
+        let testDefaults = makeUserDefaults()
+        defer { clear(testDefaults) }
+
+        let existingDevice = makeKnownDevice(id: "existing-device")
+        let repository = UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults)
+        repository.store([existingDevice])
+
+        let failingRepository = UserDefaultsKnownDeviceRepository(
+            userDefaults: testDefaults.userDefaults,
+            encodeDevices: { _ in throw TestEncodingError.forced }
+        )
+
+        failingRepository.store([makeKnownDevice(id: "replacement-device")])
+
+        #expect(repository.fetchKnownDevices() == [existingDevice])
+    }
+
+    @Test
+    func appPreferenceStorePreservesNotificationPreferencesWhenEncodingFails() {
+        let testDefaults = makeUserDefaults()
+        defer { clear(testDefaults) }
+
+        let existingPreferences = NotificationPreferences(
+            emergencyEventNotifications: false,
+            collisionAlerts: true,
+            parkingIncidentAlerts: true,
+            pushNotifications: false,
+            soundForNotifications: false,
+            quietHoursEnabled: true,
+            quietHoursStart: "09:30 PM",
+            quietHoursEnd: "07:00 AM"
+        )
+        let preferenceStore = UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults)
+        preferenceStore.notificationPreferences = existingPreferences
+
+        let failingPreferenceStore = UserDefaultsAppPreferenceStore(
+            userDefaults: testDefaults.userDefaults,
+            encodeNotificationPreferences: { _ in throw TestEncodingError.forced }
+        )
+
+        failingPreferenceStore.notificationPreferences = .defaultValue
+
+        #expect(preferenceStore.notificationPreferences == existingPreferences)
+    }
+
+    @Test
     func settingsStoreRoutesAndPersistsPreferences() {
         let testDefaults = makeUserDefaults()
         defer { clear(testDefaults) }
@@ -861,6 +908,10 @@ extension UserDefaults {
 private struct TestDefaults {
     let suiteName: String
     let userDefaults: UserDefaults
+}
+
+private enum TestEncodingError: Error {
+    case forced
 }
 
 @MainActor

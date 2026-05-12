@@ -40,9 +40,3 @@ struct DeviceProtocolFrameBuffer {
         buffer.removeAll()
     }
 }
-
-private extension UInt8 {
-    var isASCIIWhitespaceOrNewline: Bool {
-        self == 0x20 || self == 0x09 || self == 0x0A || self == 0x0D
-    }
-}

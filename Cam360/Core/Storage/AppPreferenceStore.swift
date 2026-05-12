@@ -37,11 +37,18 @@ final class UserDefaultsAppPreferenceStore: AppPreferenceStore {
     }
 
     private let userDefaults: UserDefaults
-    private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
+    private let encodeNotificationPreferences: (NotificationPreferences) throws -> Data
 
-    init(userDefaults: UserDefaults) {
+    init(
+        userDefaults: UserDefaults,
+        encodeNotificationPreferences: ((NotificationPreferences) throws -> Data)? = nil
+    ) {
         self.userDefaults = userDefaults
+        let encoder = JSONEncoder()
+        self.encodeNotificationPreferences = encodeNotificationPreferences ?? { preferences in
+            try encoder.encode(preferences)
+        }
     }
 
     var hasCompletedOnboarding: Bool {
@@ -76,8 +83,11 @@ final class UserDefaultsAppPreferenceStore: AppPreferenceStore {
             return preferences
         }
         set {
-            let data = try? encoder.encode(newValue)
-            userDefaults.set(data, forKey: Key.notificationPreferences)
+            do {
+                userDefaults.set(try encodeNotificationPreferences(newValue), forKey: Key.notificationPreferences)
+            } catch {
+                assertionFailure("Failed to encode notification preferences: \(error)")
+            }
         }
     }
 

@@ -19,12 +19,19 @@ final class UserDefaultsKnownDeviceRepository: KnownDeviceRepository {
     }
 
     private let userDefaults: UserDefaults
-    private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
+    private let encodeDevices: ([KnownDeviceSummary]) throws -> Data
 
-    init(userDefaults: UserDefaults) {
+    init(
+        userDefaults: UserDefaults,
+        encodeDevices: (([KnownDeviceSummary]) throws -> Data)? = nil
+    ) {
         self.userDefaults = userDefaults
+        let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
+        self.encodeDevices = encodeDevices ?? { devices in
+            try encoder.encode(devices)
+        }
         decoder.dateDecodingStrategy = .iso8601
     }
 
@@ -37,8 +44,11 @@ final class UserDefaultsKnownDeviceRepository: KnownDeviceRepository {
     }
 
     func store(_ devices: [KnownDeviceSummary]) {
-        let data = try? encoder.encode(devices)
-        userDefaults.set(data, forKey: Key.knownDevices)
+        do {
+            userDefaults.set(try encodeDevices(devices), forKey: Key.knownDevices)
+        } catch {
+            assertionFailure("Failed to encode known devices: \(error)")
+        }
     }
 
     func clear() {
