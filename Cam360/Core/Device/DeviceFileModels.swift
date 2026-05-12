@@ -18,7 +18,7 @@ enum DeviceSessionReadOnlyError: Error, Equatable {
         case .invalidResponse(let reason):
             return "设备响应无效: \(reason)"
         case .protocolFailure(let error):
-            return DeviceSession.protocolFailureReason(for: error)
+            return DeviceProtocolFailureReason.message(for: error)
         }
     }
 }
@@ -41,7 +41,7 @@ enum DeviceSessionCommandError: Error, Equatable {
         case .invalidResponse(let reason):
             return "设备响应无效: \(reason)"
         case .protocolFailure(let error):
-            return DeviceSession.protocolFailureReason(for: error)
+            return DeviceProtocolFailureReason.message(for: error)
         }
     }
 }
