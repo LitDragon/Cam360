@@ -79,6 +79,9 @@ struct SettingsToggleRow: View {
     @Binding var isOn: Bool
     var isEnabled: Bool = true
     var showsDivider: Bool = true
+    var titleFont: Font = .system(size: 16, weight: .semibold, design: .default)
+    var subtitleFont: Font = .system(size: 12, weight: .medium, design: .default)
+    var subtitleColor: Color = AppColor.textSecondary
 
     var body: some View {
         SettingsRowLayout(
@@ -87,7 +90,10 @@ struct SettingsToggleRow: View {
             title: title,
             subtitle: subtitle,
             isEnabled: isEnabled,
-            showsDivider: showsDivider
+            showsDivider: showsDivider,
+            titleFont: titleFont,
+            subtitleFont: subtitleFont,
+            subtitleColor: subtitleColor
         ) {
             Group {
                 if #available(iOS 14.0, *) {
@@ -238,18 +244,32 @@ struct SettingsTimeField: View {
 struct SettingsFootnote: View {
     let text: String
     var iconName: String = "info.circle"
+    var iconAssetName: String? = nil
 
     var body: some View {
         HStack(alignment: .top, spacing: AppSpacing.sm) {
-            Image(systemName: iconName)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(AppColor.textSecondary)
+            icon
                 .padding(.top, 2)
 
             Text(text)
                 .font(AppTypography.caption)
                 .foregroundColor(AppColor.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    @ViewBuilder
+    private var icon: some View {
+        if let iconAssetName = iconAssetName {
+            Image(iconAssetName)
+                .resizable()
+                .renderingMode(.original)
+                .scaledToFit()
+                .frame(width: 14, height: 14)
+        } else {
+            Image(systemName: iconName)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(AppColor.textSecondary)
         }
     }
 }
@@ -563,6 +583,9 @@ private struct SettingsRowLayout<Accessory: View>: View {
     let subtitle: String?
     let isEnabled: Bool
     let showsDivider: Bool
+    let titleFont: Font
+    let subtitleFont: Font
+    let subtitleColor: Color
     let accessory: Accessory
 
     init(
@@ -572,6 +595,9 @@ private struct SettingsRowLayout<Accessory: View>: View {
         subtitle: String?,
         isEnabled: Bool,
         showsDivider: Bool,
+        titleFont: Font = .system(size: 16, weight: .semibold, design: .default),
+        subtitleFont: Font = .system(size: 12, weight: .medium, design: .default),
+        subtitleColor: Color = AppColor.textSecondary,
         @ViewBuilder accessory: () -> Accessory
     ) {
         self.iconName = iconName
@@ -580,6 +606,9 @@ private struct SettingsRowLayout<Accessory: View>: View {
         self.subtitle = subtitle
         self.isEnabled = isEnabled
         self.showsDivider = showsDivider
+        self.titleFont = titleFont
+        self.subtitleFont = subtitleFont
+        self.subtitleColor = subtitleColor
         self.accessory = accessory()
     }
 
@@ -614,14 +643,14 @@ private struct SettingsRowLayout<Accessory: View>: View {
 
             VStack(alignment: .leading, spacing: AppSpacing.xs) {
                 Text(title)
-                    .font(.system(size: 16, weight: .semibold, design: .default))
+                    .font(titleFont)
                     .foregroundColor(AppColor.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
 
                 if let subtitle = subtitle {
                     Text(subtitle)
-                        .font(.system(size: 12, weight: .medium, design: .default))
-                        .foregroundColor(AppColor.textSecondary)
+                        .font(subtitleFont)
+                        .foregroundColor(subtitleColor)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }

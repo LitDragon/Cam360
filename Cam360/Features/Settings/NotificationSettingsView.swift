@@ -14,25 +14,21 @@ struct NotificationSettingsView: View {
             )
 
             ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: AppSpacing.xl) {
-                    SettingsSectionHeader(title: "Safety Alerts")
-                    SettingsGroupCard {
-                        SettingsToggleRow(
-                            iconName: nil,
+                VStack(alignment: .leading, spacing: AppSpacing.xxl) {
+                    NotificationSettingsSection(title: "Safety Alerts") {
+                        NotificationSettingsToggleRow(
                             title: "Emergency Event Notifications",
                             subtitle: "Instant alerts for heavy braking or impact",
                             isOn: binding(for: \.emergencyEventNotifications)
                         )
 
-                        SettingsToggleRow(
-                            iconName: nil,
+                        NotificationSettingsToggleRow(
                             title: "Collision Alerts",
                             subtitle: "Real-time forward collision warnings",
                             isOn: binding(for: \.collisionAlerts)
                         )
 
-                        SettingsToggleRow(
-                            iconName: nil,
+                        NotificationSettingsToggleRow(
                             title: "Parking Incident Alerts",
                             subtitle: "Notify when motion is detected while parked",
                             isOn: binding(for: \.parkingIncidentAlerts),
@@ -40,27 +36,22 @@ struct NotificationSettingsView: View {
                         )
                     }
 
-                    SettingsSectionHeader(title: "Notification Delivery")
-                    SettingsGroupCard {
-                        SettingsToggleRow(
-                            iconName: nil,
+                    NotificationSettingsSection(title: "Notification Delivery") {
+                        NotificationSettingsToggleRow(
                             title: "Push Notifications",
                             subtitle: "Master switch for all mobile alerts",
                             isOn: binding(for: \.pushNotifications)
                         )
 
-                        SettingsToggleRow(
-                            iconName: nil,
+                        NotificationSettingsToggleRow(
                             title: "Sound for Notifications",
                             isOn: binding(for: \.soundForNotifications),
                             showsDivider: false
                         )
                     }
 
-                    SettingsSectionHeader(title: "Quiet Hours")
-                    SettingsGroupCard {
-                        SettingsToggleRow(
-                            iconName: nil,
+                    NotificationSettingsSection(title: "Quiet Hours") {
+                        NotificationSettingsToggleRow(
                             title: "Enable Quiet Hours",
                             subtitle: "Silence non-critical alerts during specific times",
                             isOn: binding(for: \.quietHoursEnabled),
@@ -84,9 +75,11 @@ struct NotificationSettingsView: View {
                     }
 
                     SettingsFootnote(
-                        text: "Critical safety alerts like Emergency Event Notifications and Collision Alerts bypass Quiet Hours to ensure your security is never compromised."
+                        text: "Critical safety alerts like Emergency Event Notifications and Collision Alerts bypass Quiet Hours to ensure your security is never compromised.",
+                        iconAssetName: "Info"
                     )
                     .padding(.horizontal, AppSpacing.sm)
+                    .padding(.top, AppSpacing.sm)
                 }
                 .padding(.horizontal, AppSpacing.xxl)
                 .padding(.top, AppSpacing.xl)
@@ -111,5 +104,48 @@ struct NotificationSettingsView: View {
         } else {
             store.dismissRoute()
         }
+    }
+}
+
+private struct NotificationSettingsSection<Content: View>: View {
+    let title: String
+    let content: Content
+
+    init(title: String, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.md) {
+            Text(title.uppercased())
+                .font(.system(size: 16, weight: .bold, design: .default))
+                .foregroundColor(Color(hex: "#424655"))
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            SettingsGroupCard {
+                content
+            }
+        }
+    }
+}
+
+private struct NotificationSettingsToggleRow: View {
+    let title: String
+    var subtitle: String? = nil
+    @Binding var isOn: Bool
+    var showsDivider: Bool = true
+
+    var body: some View {
+        SettingsToggleRow(
+            iconName: nil,
+            title: title,
+            subtitle: subtitle,
+            isOn: $isOn,
+            showsDivider: showsDivider,
+            titleFont: .system(size: 14, weight: .semibold, design: .default),
+            subtitleFont: .system(size: 12, weight: .medium, design: .default),
+            subtitleColor: Color(hex: "#424655")
+        )
     }
 }
