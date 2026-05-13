@@ -590,13 +590,14 @@ private struct SettingsRowLayout<Accessory: View>: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 accessory
             }
-            .padding(.horizontal, AppSpacing.lg)
+            .padding(.horizontal, AppSpacing.xl)
             .padding(.vertical, AppSpacing.lg)
             .opacity(isEnabled ? 1 : 0.42)
 
             if showsDivider {
-                Divider()
-                    .padding(.leading, dividerLeadingInset)
+                Rectangle()
+                    .fill(AppColor.border.opacity(0.35))
+                    .frame(height: AppLayout.hairline)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -611,7 +612,7 @@ private struct SettingsRowLayout<Accessory: View>: View {
                 SettingsIconBadge(systemImageName: iconName)
             }
 
-            VStack(alignment: .leading, spacing: AppSpacing.sm) {
+            VStack(alignment: .leading, spacing: AppSpacing.xs) {
                 Text(title)
                     .font(.system(size: 16, weight: .semibold, design: .default))
                     .foregroundColor(AppColor.textPrimary)
@@ -625,18 +626,6 @@ private struct SettingsRowLayout<Accessory: View>: View {
                 }
             }
         }
-    }
-
-    private var dividerLeadingInset: CGFloat {
-        guard iconName != nil || iconAssetName != nil else {
-            return AppSpacing.lg
-        }
-
-        return AppSpacing.lg + leadingIconSize + AppSpacing.md
-    }
-
-    private var leadingIconSize: CGFloat {
-        iconAssetName == nil ? 36 : 40
     }
 }
 

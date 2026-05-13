@@ -21,8 +21,7 @@ struct SystemPreferencesView: View {
 
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: AppSpacing.xl) {
-                    SettingsSectionHeader(title: "App Preferences")
-                    SettingsGroupCard {
+                    settingsSection(title: "App Preferences") {
                         SettingsNavigationRow(
                             iconName: nil,
                             iconAssetName: "Notification",
@@ -45,8 +44,7 @@ struct SystemPreferencesView: View {
                         .accessibility(identifier: "settings-row-system-permissions")
                     }
 
-                    SettingsSectionHeader(title: "Support")
-                    SettingsGroupCard {
+                    settingsSection(title: "Support") {
                         SettingsNavigationRow(
                             iconName: nil,
                             iconAssetName: "helpCenter",
@@ -59,8 +57,7 @@ struct SystemPreferencesView: View {
                         .accessibility(identifier: "settings-row-help-center")
                     }
 
-                    SettingsSectionHeader(title: "Diagnostics & Maintenance")
-                    SettingsGroupCard {
+                    settingsSection(title: "Diagnostics & Maintenance") {
                         SettingsToggleRow(
                             iconName: nil,
                             iconAssetName: "ShareLogs",
@@ -71,8 +68,7 @@ struct SystemPreferencesView: View {
                         )
                     }
 
-                    SettingsSectionHeader(title: "About")
-                    SettingsGroupCard {
+                    settingsSection(title: "About") {
                         SettingsStatusRow(
                             iconName: nil,
                             iconAssetName: "AppVersion",
@@ -112,6 +108,18 @@ struct SystemPreferencesView: View {
             get: { route },
             set: { route = $0 }
         )
+    }
+
+    private func settingsSection<Content: View>(
+        title: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+            SettingsSectionHeader(title: title)
+            SettingsGroupCard {
+                content()
+            }
+        }
     }
 
     private var navigationLinks: some View {
