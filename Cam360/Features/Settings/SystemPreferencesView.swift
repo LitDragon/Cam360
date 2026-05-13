@@ -24,7 +24,8 @@ struct SystemPreferencesView: View {
                     SettingsSectionHeader(title: "App Preferences")
                     SettingsGroupCard {
                         SettingsNavigationRow(
-                            iconName: "bell.badge",
+                            iconName: nil,
+                            iconAssetName: "Notification",
                             title: "Notifications",
                             action: {
                                 route = .notificationSettings
@@ -33,7 +34,8 @@ struct SystemPreferencesView: View {
                         .accessibility(identifier: "settings-row-notifications")
 
                         SettingsNavigationRow(
-                            iconName: "shield",
+                            iconName: nil,
+                            iconAssetName: "SystemPermissions",
                             title: "System Permissions",
                             showsDivider: false,
                             action: {
@@ -46,7 +48,8 @@ struct SystemPreferencesView: View {
                     SettingsSectionHeader(title: "Support")
                     SettingsGroupCard {
                         SettingsNavigationRow(
-                            iconName: "questionmark.circle",
+                            iconName: nil,
+                            iconAssetName: "helpCenter",
                             title: "Help Center",
                             showsDivider: false,
                             action: {
@@ -59,7 +62,8 @@ struct SystemPreferencesView: View {
                     SettingsSectionHeader(title: "Diagnostics & Maintenance")
                     SettingsGroupCard {
                         SettingsToggleRow(
-                            iconName: "square.and.arrow.up",
+                            iconName: nil,
+                            iconAssetName: "ShareLogs",
                             title: "Share Anonymous Logs",
                             subtitle: "Helps us improve app stability",
                             isOn: shareAnonymousLogsBinding,
@@ -70,19 +74,22 @@ struct SystemPreferencesView: View {
                     SettingsSectionHeader(title: "About")
                     SettingsGroupCard {
                         SettingsStatusRow(
-                            iconName: "info.circle",
+                            iconName: nil,
+                            iconAssetName: "AppVersion",
                             title: "App Version",
                             statusText: store.appVersionText
                         )
 
                         SettingsNavigationRow(
-                            iconName: "hand.raised",
+                            iconName: nil,
+                            iconAssetName: "PrivacyPolicy",
                             title: "Privacy Policy",
                             trailingSystemImage: "arrow.up.right.square"
                         )
 
                         SettingsNavigationRow(
-                            iconName: "doc.text",
+                            iconName: nil,
+                            iconAssetName: "Terms",
                             title: "Terms of Service",
                             trailingSystemImage: "arrow.up.right.square",
                             showsDivider: false

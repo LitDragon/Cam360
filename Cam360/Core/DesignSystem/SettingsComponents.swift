@@ -36,6 +36,7 @@ struct SettingsGroupCard<Content: View>: View {
 
 struct SettingsNavigationRow: View {
     let iconName: String?
+    var iconAssetName: String? = nil
     let title: String
     var subtitle: String? = nil
     var trailingSystemImage: String = "chevron.right"
@@ -47,6 +48,7 @@ struct SettingsNavigationRow: View {
         SettingsRowButton(action: action, isEnabled: isEnabled) {
             SettingsRowLayout(
                 iconName: iconName,
+                iconAssetName: iconAssetName,
                 title: title,
                 subtitle: subtitle,
                 isEnabled: isEnabled,
@@ -62,6 +64,7 @@ struct SettingsNavigationRow: View {
 
 struct SettingsToggleRow: View {
     let iconName: String?
+    var iconAssetName: String? = nil
     let title: String
     var subtitle: String? = nil
     @Binding var isOn: Bool
@@ -71,6 +74,7 @@ struct SettingsToggleRow: View {
     var body: some View {
         SettingsRowLayout(
             iconName: iconName,
+            iconAssetName: iconAssetName,
             title: title,
             subtitle: subtitle,
             isEnabled: isEnabled,
@@ -95,6 +99,7 @@ struct SettingsToggleRow: View {
 
 struct SettingsStatusRow: View {
     let iconName: String?
+    var iconAssetName: String? = nil
     let title: String
     var subtitle: String? = nil
     let statusText: String
@@ -106,6 +111,7 @@ struct SettingsStatusRow: View {
     var body: some View {
         SettingsRowLayout(
             iconName: iconName,
+            iconAssetName: iconAssetName,
             title: title,
             subtitle: subtitle,
             isEnabled: isEnabled,
@@ -543,6 +549,7 @@ struct SettingsNoticeCard: View {
 
 private struct SettingsRowLayout<Accessory: View>: View {
     let iconName: String?
+    let iconAssetName: String?
     let title: String
     let subtitle: String?
     let isEnabled: Bool
@@ -551,6 +558,7 @@ private struct SettingsRowLayout<Accessory: View>: View {
 
     init(
         iconName: String?,
+        iconAssetName: String? = nil,
         title: String,
         subtitle: String?,
         isEnabled: Bool,
@@ -558,6 +566,7 @@ private struct SettingsRowLayout<Accessory: View>: View {
         @ViewBuilder accessory: () -> Accessory
     ) {
         self.iconName = iconName
+        self.iconAssetName = iconAssetName
         self.title = title
         self.subtitle = subtitle
         self.isEnabled = isEnabled
@@ -568,7 +577,9 @@ private struct SettingsRowLayout<Accessory: View>: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(alignment: .center, spacing: AppSpacing.md) {
-                if let iconName = iconName {
+                if let iconAssetName = iconAssetName {
+                    SettingsIconBadge(assetName: iconAssetName)
+                } else if let iconName = iconName {
                     SettingsIconBadge(systemImageName: iconName)
                 }
 
@@ -604,11 +615,15 @@ private struct SettingsRowLayout<Accessory: View>: View {
     }
 
     private var dividerLeadingInset: CGFloat {
-        guard iconName != nil else {
+        guard iconName != nil || iconAssetName != nil else {
             return AppSpacing.lg
         }
 
-        return AppSpacing.lg + 36 + AppSpacing.md
+        return AppSpacing.lg + leadingIconSize + AppSpacing.md
+    }
+
+    private var leadingIconSize: CGFloat {
+        iconAssetName == nil ? 36 : 40
     }
 }
 
@@ -651,17 +666,38 @@ private struct SettingsProgressRing: View {
 }
 
 private struct SettingsIconBadge: View {
-    let systemImageName: String
+    let systemImageName: String?
+    let assetName: String?
+
+    init(systemImageName: String) {
+        self.systemImageName = systemImageName
+        self.assetName = nil
+    }
+
+    init(assetName: String) {
+        self.systemImageName = nil
+        self.assetName = assetName
+    }
 
     var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: AppRadius.small, style: .continuous)
-                .fill(AppColor.accentSurface)
-                .frame(width: 36, height: 36)
+        Group {
+            if let assetName = assetName {
+                Image(assetName)
+                    .resizable()
+                    .renderingMode(.original)
+                    .scaledToFit()
+                    .frame(width: 40, height: 40)
+            } else if let systemImageName = systemImageName {
+                ZStack {
+                    RoundedRectangle(cornerRadius: AppRadius.small, style: .continuous)
+                        .fill(AppColor.accentSurface)
+                        .frame(width: 36, height: 36)
 
-            Image(systemName: systemImageName)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(AppColor.brand)
+                    Image(systemName: systemImageName)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(AppColor.brand)
+                }
+            }
         }
     }
 }

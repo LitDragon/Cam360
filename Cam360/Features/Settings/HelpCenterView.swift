@@ -12,17 +12,17 @@ struct HelpCenterView: View {
     @State private var route: HelpCenterRoute?
 
     private let topicItems: [HelpCenterItem] = [
-        HelpCenterItem(iconName: "slider.horizontal.3", title: "Connect Device"),
-        HelpCenterItem(iconName: "eye", title: "Live Preview Issues"),
-        HelpCenterItem(iconName: "sdcard", title: "SD Card & Storage"),
-        HelpCenterItem(iconName: "video", title: "Recording & Events"),
-        HelpCenterItem(iconName: "wifi", title: "Wi-Fi & Connection"),
-        HelpCenterItem(iconName: "arrow.down.doc", title: "Firmware Update")
+        HelpCenterItem(iconAssetName: "ConnectDevice", title: "Connect Device"),
+        HelpCenterItem(iconAssetName: "LivePreview", title: "Live Preview Issues"),
+        HelpCenterItem(iconAssetName: "SDCard", title: "SD Card & Storage"),
+        HelpCenterItem(iconAssetName: "Recording", title: "Recording & Events"),
+        HelpCenterItem(iconAssetName: "WiFi", title: "Wi-Fi & Connection"),
+        HelpCenterItem(iconAssetName: "FirmwareUpdate", title: "Firmware Update")
     ]
 
     private let quickActionItems: [HelpCenterItem] = [
-        HelpCenterItem(iconName: "questionmark.square", title: "FAQ", route: .faq),
-        HelpCenterItem(iconName: "person.crop.circle.badge.questionmark", title: "Contact Support", route: .contactSupport)
+        HelpCenterItem(iconAssetName: "FAQ", title: "FAQ", route: .faq),
+        HelpCenterItem(iconAssetName: "ContactSupport", title: "Contact Support", route: .contactSupport)
     ]
 
     var body: some View {
@@ -77,7 +77,8 @@ struct HelpCenterView: View {
         SettingsGroupCard {
             ForEach(Array(items.enumerated()), id: \.offset) { index, item in
                 SettingsNavigationRow(
-                    iconName: item.iconName,
+                    iconName: nil,
+                    iconAssetName: item.iconAssetName,
                     title: item.title,
                     showsDivider: index < items.count - 1,
                     action: {
@@ -134,7 +135,7 @@ struct HelpCenterView: View {
 }
 
 private struct HelpCenterItem {
-    let iconName: String
+    let iconAssetName: String
     let title: String
     var route: HelpCenterRoute? = nil
 }
@@ -202,7 +203,8 @@ private struct FAQView: View {
                     }
 
                     SettingsNavigationRow(
-                        iconName: "person.crop.circle.badge.questionmark",
+                        iconName: nil,
+                        iconAssetName: "ContactSupport",
                         title: "联系我们",
                         subtitle: "需要人工协助时查看支持方式",
                         showsDivider: false
