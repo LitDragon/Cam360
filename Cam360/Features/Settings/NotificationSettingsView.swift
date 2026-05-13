@@ -59,15 +59,21 @@ struct NotificationSettingsView: View {
                         )
 
                         HStack(spacing: AppSpacing.md) {
-                            SettingsTimeField(
+                            NotificationSettingsTimePickerField(
                                 title: "Start Time",
-                                value: store.notificationPreferences.quietHoursStart
+                                value: store.notificationPreferences.quietHoursStart,
+                                selection: timeBinding(for: \.quietHoursStart),
+                                isEnabled: store.notificationPreferences.quietHoursEnabled
                             )
+                            .frame(maxWidth: .infinity)
 
-                            SettingsTimeField(
+                            NotificationSettingsTimePickerField(
                                 title: "End Time",
-                                value: store.notificationPreferences.quietHoursEnd
+                                value: store.notificationPreferences.quietHoursEnd,
+                                selection: timeBinding(for: \.quietHoursEnd),
+                                isEnabled: store.notificationPreferences.quietHoursEnabled
                             )
+                            .frame(maxWidth: .infinity)
                         }
                         .padding(.horizontal, AppSpacing.lg)
                         .padding(.bottom, AppSpacing.lg)
@@ -98,12 +104,91 @@ struct NotificationSettingsView: View {
         )
     }
 
+    private func timeBinding(for keyPath: WritableKeyPath<NotificationPreferences, String>) -> Binding<Date> {
+        Binding(
+            get: {
+                QuietHoursTimeFormatter.date(from: store.notificationPreferences[keyPath: keyPath]) ?? Date()
+            },
+            set: {
+                store.setNotificationPreference(keyPath, to: QuietHoursTimeFormatter.string(from: $0))
+            }
+        )
+    }
+
     private func dismissAction() {
         if let dismiss = dismiss {
             dismiss()
         } else {
             store.dismissRoute()
         }
+    }
+}
+
+private enum QuietHoursTimeFormatter {
+    private static let formatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "hh:mm a"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        return formatter
+    }()
+
+    static func date(from value: String) -> Date? {
+        formatter.date(from: value)
+    }
+
+    static func string(from date: Date) -> String {
+        formatter.string(from: date)
+    }
+}
+
+private struct NotificationSettingsTimePickerField: View {
+    let title: String
+    let value: String
+    @Binding var selection: Date
+    let isEnabled: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+            Text(title.uppercased())
+                .font(AppTypography.caption)
+                .foregroundColor(AppColor.textSecondary)
+
+            ZStack {
+                timeFieldBody
+                    .allowsHitTesting(false)
+
+                if #available(iOS 14.0, *) {
+                    DatePicker(
+                        title,
+                        selection: $selection,
+                        displayedComponents: .hourAndMinute
+                    )
+                    .datePickerStyle(CompactDatePickerStyle())
+                    .labelsHidden()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .opacity(0.02)
+                }
+            }
+            .disabled(isEnabled == false)
+        }
+    }
+
+    private var timeFieldBody: some View {
+        HStack(spacing: AppSpacing.sm) {
+            Text(value)
+                .font(AppTypography.bodyStrong)
+                .foregroundColor(AppColor.textPrimary)
+
+            Spacer(minLength: 0)
+
+            Image(systemName: "clock")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(AppColor.textSecondary)
+        }
+        .padding(.horizontal, AppSpacing.md)
+        .padding(.vertical, AppSpacing.md)
+        .background(AppColor.surfaceMuted)
+        .cornerRadius(AppRadius.small)
     }
 }
 
