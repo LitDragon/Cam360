@@ -5,8 +5,8 @@ struct SettingsSectionHeader: View {
 
     var body: some View {
         Text(title.uppercased())
-            .font(AppTypography.caption)
-            .foregroundColor(AppColor.textSecondary)
+            .font(.system(size: 11, weight: .medium, design: .default))
+            .foregroundColor(Color(hex: "#737687"))
             .kerning(0.8)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -40,6 +40,7 @@ struct SettingsNavigationRow: View {
     let title: String
     var subtitle: String? = nil
     var trailingSystemImage: String = "chevron.right"
+    var trailingIconAssetName: String? = nil
     var isEnabled: Bool = true
     var showsDivider: Bool = true
     var action: (() -> Void)? = nil
@@ -54,9 +55,17 @@ struct SettingsNavigationRow: View {
                 isEnabled: isEnabled,
                 showsDivider: showsDivider
             ) {
-                Image(systemName: trailingSystemImage)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(AppColor.textSecondary.opacity(0.8))
+                if let trailingIconAssetName = trailingIconAssetName {
+                    Image(trailingIconAssetName)
+                        .resizable()
+                        .renderingMode(.original)
+                        .scaledToFit()
+                        .frame(width: 18, height: 18)
+                } else {
+                    Image(systemName: trailingSystemImage)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(Color(hex: "#737687"))
+                }
             }
         }
     }
@@ -104,7 +113,7 @@ struct SettingsStatusRow: View {
     var subtitle: String? = nil
     let statusText: String
     var trailingSystemImage: String? = nil
-    var statusColor: Color = AppColor.textSecondary
+    var statusColor: Color = Color(hex: "#737687")
     var isEnabled: Bool = true
     var showsDivider: Bool = true
 
@@ -119,7 +128,7 @@ struct SettingsStatusRow: View {
         ) {
             HStack(spacing: AppSpacing.sm) {
                 Text(statusText)
-                    .font(AppTypography.caption)
+                    .font(.system(size: 14, weight: .medium, design: .default))
                     .foregroundColor(statusColor)
 
                 if let trailingSystemImage = trailingSystemImage {
@@ -576,29 +585,9 @@ private struct SettingsRowLayout<Accessory: View>: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack(alignment: .center, spacing: AppSpacing.md) {
-                if let iconAssetName = iconAssetName {
-                    SettingsIconBadge(assetName: iconAssetName)
-                } else if let iconName = iconName {
-                    SettingsIconBadge(systemImageName: iconName)
-                }
-
-                VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                    Text(title)
-                        .font(AppTypography.bodyStrong)
-                        .foregroundColor(AppColor.textPrimary)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    if let subtitle = subtitle {
-                        Text(subtitle)
-                            .font(AppTypography.caption)
-                            .foregroundColor(AppColor.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-
-                Spacer(minLength: AppSpacing.md)
-
+            HStack(alignment: .center, spacing: AppSpacing.xs) {
+                leadingContent
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 accessory
             }
             .padding(.horizontal, AppSpacing.lg)
@@ -612,6 +601,30 @@ private struct SettingsRowLayout<Accessory: View>: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(Rectangle())
+    }
+
+    private var leadingContent: some View {
+        HStack(alignment: .center, spacing: AppSpacing.md) {
+            if let iconAssetName = iconAssetName {
+                SettingsIconBadge(assetName: iconAssetName)
+            } else if let iconName = iconName {
+                SettingsIconBadge(systemImageName: iconName)
+            }
+
+            VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                Text(title)
+                    .font(.system(size: 16, weight: .semibold, design: .default))
+                    .foregroundColor(AppColor.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if let subtitle = subtitle {
+                    Text(subtitle)
+                        .font(.system(size: 12, weight: .medium, design: .default))
+                        .foregroundColor(AppColor.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
     }
 
     private var dividerLeadingInset: CGFloat {

@@ -84,14 +84,14 @@ struct SystemPreferencesView: View {
                             iconName: nil,
                             iconAssetName: "PrivacyPolicy",
                             title: "Privacy Policy",
-                            trailingSystemImage: "arrow.up.right.square"
+                            trailingIconAssetName: "MoreArrow"
                         )
 
                         SettingsNavigationRow(
                             iconName: nil,
                             iconAssetName: "Terms",
                             title: "Terms of Service",
-                            trailingSystemImage: "arrow.up.right.square",
+                            trailingIconAssetName: "MoreArrow",
                             showsDivider: false
                         )
                     }
