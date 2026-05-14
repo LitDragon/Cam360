@@ -81,6 +81,10 @@ struct SettingsView: View {
                 DeviceSettingsDetailView(store: store)
             }
 
+            navigationLink(tag: .firmwareUpdate) {
+                FirmwareUpdateView(store: store, dismiss: store.dismissRoute)
+            }
+
             navigationLink(tag: .safetySettings) {
                 SafetySettingsView(store: store)
             }

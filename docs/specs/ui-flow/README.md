@@ -87,6 +87,7 @@ flowchart TD
   - `storagePolicy` -> `StoragePolicyView`
   - `watermarkConfiguration` -> `WatermarkConfigurationView`
   - `deviceSettings` -> `DeviceSettingsDetailView`
+  - `firmwareUpdate` -> `FirmwareUpdateView`
   - `systemPreferences` -> `SystemPreferencesView`
   - `renameDevice` -> `RenameDeviceView`
   - `helpCenter` -> `HelpCenterView`

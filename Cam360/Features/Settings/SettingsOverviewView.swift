@@ -11,50 +11,43 @@ struct SettingsOverviewView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            AppTopBar(
+            DeviceSettingsTopBar(
                 title: store.devicePreferences.deviceName,
-                subtitle: store.deviceConnectionStatusText,
-                leadingSystemImage: onClose == nil ? nil : "arrow.left",
-                leadingAction: onClose
+                statusTitle: store.deviceConnectionStatusTitle,
+                statusTone: store.deviceConnectionStatusTone,
+                onBack: onClose
             )
 
             ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: AppSpacing.xl) {
-                    connectionSummary
-
-                    SettingsSectionHeader(title: "Camera Settings")
-                    SettingsGroupCard {
-                        SettingsNavigationRow(
-                            iconName: "video.badge.waveform",
+                VStack(alignment: .leading, spacing: AppSpacing.xxxl) {
+                    DeviceSettingsSection(title: "Camera Settings") {
+                        DeviceSettingsNavigationRow(
                             title: "Recording Settings",
-                            subtitle: "Resolution, quality and overwrite behavior",
+                            subtitle: "Resolution, Loop, Overwrite",
                             action: {
                                 store.show(.recordingSettings)
                             }
                         )
 
-                        SettingsNavigationRow(
-                            iconName: "shield.lefthalf.filled",
+                        DeviceSettingsNavigationRow(
                             title: "Safety Settings",
-                            subtitle: "Impact detection and parking guard rules",
+                            subtitle: "G-Sensor, Parking Mode",
                             action: {
                                 store.show(.safetySettings)
                             }
                         )
 
-                        SettingsNavigationRow(
-                            iconName: "sdcard",
+                        DeviceSettingsNavigationRow(
                             title: "Storage Policy",
-                            subtitle: "Card health, cleanup and retained event space",
+                            subtitle: "Retention, Auto-cleanup",
                             action: {
                                 store.show(.storagePolicy)
                             }
                         )
 
-                        SettingsNavigationRow(
-                            iconName: "character.textbox",
+                        DeviceSettingsNavigationRow(
                             title: "Watermark Config",
-                            subtitle: "Timestamp and license plate overlay",
+                            subtitle: "Timestamp, Plate No",
                             showsDivider: false,
                             action: {
                                 store.show(.watermarkConfiguration)
@@ -62,73 +55,239 @@ struct SettingsOverviewView: View {
                         )
                     }
 
-                    SettingsSectionHeader(title: "System Maintenance")
-                    SettingsGroupCard {
-                        SettingsNavigationRow(
-                            iconName: "gearshape.2",
-                            title: "Device Settings",
-                            subtitle: "Identity, localization, audio and reset options",
-                            action: {
-                                store.show(.deviceSettings)
-                            }
-                        )
-
-                        SettingsNavigationRow(
-                            iconName: "slider.horizontal.3",
+                    DeviceSettingsSection(title: "System & Maintenance") {
+                        DeviceSettingsNavigationRow(
                             title: "System Preferences",
-                            subtitle: "App permissions, notifications and support",
+                            subtitle: "Volume, Sounds, Language",
                             action: {
                                 store.show(.systemPreferences)
                             }
                         )
 
-                        SettingsStatusRow(
-                            iconName: "arrow.down.circle",
+                        DeviceSettingsFirmwareRow(
                             title: "Firmware Version",
-                            subtitle: "Current installed build",
-                            statusText: store.devicePreferences.firmwareVersion
+                            version: store.devicePreferences.firmwareVersion,
+                            action: {
+                                store.show(.firmwareUpdate)
+                            }
                         )
 
-                        SettingsNavigationRow(
-                            iconName: "pencil.line",
+                        DeviceSettingsNavigationRow(
                             title: "Rename Device",
-                            subtitle: "Update the display name shown in the app",
                             showsDivider: false,
                             action: {
                                 store.show(.renameDevice)
                             }
                         )
                     }
-
-                    SettingsFootnote(
-                        text: "Device identity and capabilities follow the active session; write operations stay local until command topics are wired in."
-                    )
                 }
-                .padding(.horizontal, AppSpacing.xxl)
-                .padding(.top, AppSpacing.xl)
+                .padding(.horizontal, AppSpacing.lg)
+                .padding(.top, AppSpacing.xxxl)
                 .padding(.bottom, AppLayout.scrollBottomContentInset)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(AppColor.background.edgesIgnoringSafeArea(.all))
     }
+}
 
-    private var connectionSummary: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.md) {
-            HStack(spacing: AppSpacing.md) {
-                StatusTag(title: store.deviceConnectionStatusTitle, tone: store.deviceConnectionStatusTone)
+private struct DeviceSettingsTopBar: View {
+    let title: String
+    let statusTitle: String
+    let statusTone: StatusTagTone
+    let onBack: (() -> Void)?
 
-                Text(store.devicePreferences.connectionName)
-                    .font(AppTypography.caption)
-                    .foregroundColor(AppColor.textSecondary)
+    var body: some View {
+        ZStack {
+            HStack {
+                if let onBack = onBack {
+                    Button(action: onBack) {
+                        Image(systemName: "arrow.left")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundColor(AppColor.textPrimary)
+                            .frame(width: 36, height: 36)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+
+                Spacer(minLength: 0)
             }
+            .padding(.horizontal, AppSpacing.xxl)
 
-            SettingsNoticeCard(
-                title: "Current Connection",
-                message: "\(store.devicePreferences.connectionName)\nFirmware \(store.devicePreferences.firmwareVersion)",
-                tone: .info,
-                iconName: "wifi"
+            VStack(spacing: AppSpacing.xs) {
+                Text(title)
+                    .font(.system(size: 20, weight: .semibold, design: .default))
+                    .foregroundColor(AppColor.textPrimary)
+
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(statusColor)
+                        .frame(width: 8, height: 8)
+
+                    Text(statusTitle.uppercased())
+                        .font(.system(size: 10, weight: .bold, design: .default))
+                        .foregroundColor(statusColor)
+                        .kerning(1.2)
+                }
+            }
+        }
+        .padding(.top, AppSpacing.lg)
+        .padding(.bottom, AppSpacing.lg)
+        .frame(maxWidth: .infinity)
+        .background(AppColor.surface)
+        .overlay(
+            Rectangle()
+                .fill(AppColor.border.opacity(0.55))
+                .frame(height: AppLayout.hairline),
+            alignment: .bottom
+        )
+    }
+
+    private var statusColor: Color {
+        switch statusTone {
+        case .accent, .success:
+            return AppColor.brand
+        case .warning:
+            return AppColor.warning
+        case .danger:
+            return AppColor.danger
+        case .neutral:
+            return AppColor.textSecondary
+        }
+    }
+}
+
+private struct DeviceSettingsSection<Content: View>: View {
+    let title: String
+    let content: Content
+
+    init(title: String, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.md) {
+            SettingsSectionHeader(title: title)
+                .padding(.leading, AppSpacing.lg)
+
+            VStack(spacing: 0) {
+                content
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(AppColor.surface)
+            .cornerRadius(10)
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(AppColor.border.opacity(0.55), lineWidth: AppLayout.hairline)
             )
+            .shadow(color: Color.black.opacity(0.04), radius: 14, x: 0, y: 8)
+        }
+    }
+}
+
+private struct DeviceSettingsNavigationRow: View {
+    let title: String
+    var subtitle: String? = nil
+    var showsDivider: Bool = true
+    let action: () -> Void
+
+    var body: some View {
+        DeviceSettingsRowContainer(showsDivider: showsDivider) {
+            Button(action: action) {
+                rowContent
+            }
+            .buttonStyle(PlainButtonStyle())
+        }
+    }
+
+    private var rowContent: some View {
+        HStack(spacing: AppSpacing.md) {
+            DeviceSettingsRowText(title: title, subtitle: subtitle)
+
+            Spacer(minLength: AppSpacing.md)
+
+            Image(systemName: "chevron.right")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(Color(hex: "#B4B8C5"))
+        }
+        .contentShape(Rectangle())
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct DeviceSettingsFirmwareRow: View {
+    let title: String
+    let version: String
+    let action: () -> Void
+
+    var body: some View {
+        DeviceSettingsRowContainer {
+            HStack(spacing: AppSpacing.md) {
+                DeviceSettingsRowText(title: title, subtitle: version)
+
+                Spacer(minLength: AppSpacing.md)
+
+                Button(action: action) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.system(size: 14, weight: .semibold))
+
+                        Text("Check")
+                            .font(.system(size: 14, weight: .medium, design: .default))
+                    }
+                    .foregroundColor(AppColor.textPrimary)
+                    .padding(.horizontal, AppSpacing.md)
+                    .padding(.vertical, AppSpacing.sm)
+                    .background(Color(hex: "#ECECF7"))
+                    .cornerRadius(AppRadius.large)
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+        }
+    }
+}
+
+private struct DeviceSettingsRowContainer<Content: View>: View {
+    var showsDivider: Bool = true
+    let content: Content
+
+    init(showsDivider: Bool = true, @ViewBuilder content: () -> Content) {
+        self.showsDivider = showsDivider
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            content
+                .padding(.horizontal, AppSpacing.lg)
+                .padding(.vertical, AppSpacing.lg)
+                .frame(maxWidth: .infinity, minHeight: 78, alignment: .leading)
+
+            if showsDivider {
+                Rectangle()
+                    .fill(AppColor.border.opacity(0.45))
+                    .frame(height: AppLayout.hairline)
+            }
+        }
+    }
+}
+
+private struct DeviceSettingsRowText: View {
+    let title: String
+    let subtitle: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.xs) {
+            Text(title)
+                .font(.system(size: 16, weight: .medium, design: .default))
+                .foregroundColor(AppColor.textPrimary)
+
+            if let subtitle = subtitle {
+                Text(subtitle)
+                    .font(.system(size: 14, weight: .regular, design: .default))
+                    .foregroundColor(Color(hex: "#525869"))
+            }
         }
     }
 }

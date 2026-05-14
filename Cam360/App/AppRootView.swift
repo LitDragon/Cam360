@@ -11,7 +11,7 @@ struct AppRootView: View {
     }
 
     var body: some View {
-        Group {
+        ZStack {
             switch router.route {
             case .onboarding:
                 NavigationView {
@@ -19,18 +19,28 @@ struct AppRootView: View {
                 }
                 .navigationViewStyle(StackNavigationViewStyle())
             case .main:
-                MainTabView(
-                    router: router,
-                    dashboardStore: bootstrap.container.dashboardStore,
-                    galleryStore: bootstrap.container.galleryStore,
-                    settingsStore: bootstrap.container.settingsStore,
-                    onOpenFeature: router.showFeature(_:)
-                )
+                mainTabs
+            case .feature(.deviceSettings, _):
+                mainTabs
+
+                featureScreen(.deviceSettings)
+                    .transition(.move(edge: .trailing))
+                    .zIndex(1)
             case .feature(let featureRoute, _):
                 featureScreen(featureRoute)
             }
         }
         .accentColor(AppColor.brand)
+    }
+
+    private var mainTabs: some View {
+        MainTabView(
+            router: router,
+            dashboardStore: bootstrap.container.dashboardStore,
+            galleryStore: bootstrap.container.galleryStore,
+            settingsStore: bootstrap.container.settingsStore,
+            onOpenFeature: router.showFeature(_:)
+        )
     }
 
     @ViewBuilder
@@ -45,7 +55,11 @@ struct AppRootView: View {
             SettingsView(
                 store: bootstrap.container.settingsStore,
                 root: .deviceSettings,
-                onClose: router.closeFeature
+                onClose: {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        router.closeFeature()
+                    }
+                }
             )
         case .livePreview:
             LivePreviewView(

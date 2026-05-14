@@ -51,8 +51,10 @@ struct MainTabView: View {
                     onOpenFeature(.events)
                 },
                 onOpenSettings: {
-                    settingsStore.dismissRoute()
-                    onOpenFeature(.deviceSettings)
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        settingsStore.dismissRoute()
+                        onOpenFeature(.deviceSettings)
+                    }
                 }
             )
         case .gallery:

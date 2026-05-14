@@ -4,6 +4,7 @@ enum SettingsRoute: Equatable {
     case storagePolicy
     case watermarkConfiguration
     case deviceSettings
+    case firmwareUpdate
     case safetySettings
     case renameDevice
     case helpCenter
