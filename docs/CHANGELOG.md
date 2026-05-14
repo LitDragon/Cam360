@@ -4,8 +4,8 @@
 
 ## 2026-05
 
-- 真机前无设备阶段已收口：主流程 UI、离线 feature route、onboarding/AP 边界、控制通道基础层和 `DeviceSession` 命令级契约已接入；真实预览、播放器、下载、本地保存、设置写操作和推送消费保留到硬件联调。
-- 补强离线护栏：协议错误码、会话 reset/断开、busy 命令守卫、过期回调、离线 feature 禁用态和错误态已有测试或状态覆盖。
+- 真机前无设备阶段已收口：主流程 UI、Dashboard/Gallery 原生 `NavigationLink` 页面导航、More/设备设置分流、onboarding/AP 边界、控制通道基础层和 `DeviceSession` 命令级契约已接入；真实预览、播放器、下载、本地保存、设置写操作和推送消费保留到硬件联调。
+- 删除 App 根级 `AppRouter`，Home 和相册页改由各自的 `NavigationView` 承载跳转，push 目标展示时隐藏自定义 tab bar。
 - 文档体系收敛为根 README、`PROJECT_CONTEXT`、`TASKS`、阶段级 `CHANGELOG` 和 `docs/specs/`；不恢复 UI 冒烟或截图测试 target。
 
 ## 2026-04
