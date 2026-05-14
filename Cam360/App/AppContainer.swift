@@ -28,7 +28,6 @@ final class AppContainer {
     let settingsStore: SettingsStore
 
     init(
-        router: AppRouter,
         knownDeviceRepository: KnownDeviceRepository,
         appPreferenceStore: AppPreferenceStore,
         deviceProtocolEndpointProvider: @escaping DeviceProtocolEndpointProvider = { nil }
@@ -43,7 +42,6 @@ final class AppContainer {
             deviceSession: deviceSession
         )
         deviceOnboardingStore = DeviceOnboardingStore(
-            router: router,
             knownDeviceRepository: knownDeviceRepository,
             appPreferenceStore: appPreferenceStore,
             deviceSession: deviceSession
@@ -55,7 +53,6 @@ final class AppContainer {
         downloadsStore = DownloadsStore()
         eventsStore = EventsStore()
         settingsStore = SettingsStore(
-            router: router,
             knownDeviceRepository: knownDeviceRepository,
             appPreferenceStore: appPreferenceStore,
             deviceSession: deviceSession

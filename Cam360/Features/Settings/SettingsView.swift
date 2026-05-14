@@ -8,26 +8,39 @@ enum SettingsRoot {
 struct SettingsView: View {
     @ObservedObject var store: SettingsStore
     let root: SettingsRoot
+    let embedsNavigationView: Bool
     let onClose: (() -> Void)?
 
     init(
         store: SettingsStore,
         root: SettingsRoot = .deviceSettings,
+        embedsNavigationView: Bool = true,
         onClose: (() -> Void)? = nil
     ) {
         self.store = store
         self.root = root
+        self.embedsNavigationView = embedsNavigationView
         self.onClose = onClose
     }
 
     var body: some View {
-        NavigationView {
-            rootView
-                .navigationBarHidden(true)
+        Group {
+            if embedsNavigationView {
+                NavigationView {
+                    content
+                }
+                .navigationViewStyle(StackNavigationViewStyle())
+            } else {
+                content
+            }
         }
-        .navigationViewStyle(StackNavigationViewStyle())
         .accessibility(identifier: "screen-settings")
         .onAppear(perform: store.refresh)
+    }
+
+    private var content: some View {
+        rootView
+            .navigationBarHidden(true)
     }
 
     private var routeBinding: Binding<SettingsRoute?> {

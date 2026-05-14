@@ -111,7 +111,6 @@ final class DeviceOnboardingStore: ObservableObject {
 
     let deviceSession: DeviceSession
 
-    private let router: AppRouter
     private let knownDeviceRepository: KnownDeviceRepository
     private let appPreferenceStore: AppPreferenceStore
 
@@ -119,12 +118,10 @@ final class DeviceOnboardingStore: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
 
     init(
-        router: AppRouter,
         knownDeviceRepository: KnownDeviceRepository,
         appPreferenceStore: AppPreferenceStore,
         deviceSession: DeviceSession
     ) {
-        self.router = router
         self.knownDeviceRepository = knownDeviceRepository
         self.appPreferenceStore = appPreferenceStore
         self.deviceSession = deviceSession
@@ -204,7 +201,6 @@ final class DeviceOnboardingStore: ObservableObject {
         switch route {
         case .introduction, .success:
             route = .introduction
-            router.showMain(tab: .dashboard)
         case .searching:
             route = .introduction
         case .wifiDetails:
@@ -227,7 +223,6 @@ final class DeviceOnboardingStore: ObservableObject {
         cancelScheduledTransition()
         connectionStage = .idle
         route = .introduction
-        router.showMain(tab: .dashboard)
     }
 
     func addAnotherDevice() {
@@ -249,7 +244,6 @@ final class DeviceOnboardingStore: ObservableObject {
         appPreferenceStore.reset()
         connectionStage = .idle
         route = .introduction
-        router.showMain(tab: .dashboard)
     }
 
     private func scheduleTransition(after delay: TimeInterval, action: @escaping () -> Void) {

@@ -2,6 +2,12 @@ import SwiftUI
 
 struct DeviceOnboardingView: View {
     @ObservedObject var store: DeviceOnboardingStore
+    let onReturnHome: () -> Void
+
+    init(store: DeviceOnboardingStore, onReturnHome: @escaping () -> Void = {}) {
+        self.store = store
+        self.onReturnHome = onReturnHome
+    }
 
     var body: some View {
         Group {
@@ -31,7 +37,7 @@ private extension DeviceOnboardingView {
         VStack(spacing: 0) {
             DeviceOnboardingNavigationBar(
                 title: "Add Device",
-                onBack: store.goBack
+                onBack: goBack
             )
 
             VStack(alignment: .leading, spacing: 0) {
@@ -79,7 +85,7 @@ private extension DeviceOnboardingView {
         VStack(spacing: 0) {
             DeviceOnboardingNavigationBar(
                 title: "Add Device",
-                onBack: store.goBack
+                onBack: goBack
             )
 
             VStack(spacing: 0) {
@@ -124,7 +130,7 @@ private extension DeviceOnboardingView {
         VStack(spacing: 0) {
             DeviceOnboardingNavigationBar(
                 title: "Connect to Wi-Fi",
-                onBack: store.goBack
+                onBack: goBack
             )
 
             VStack(alignment: .leading, spacing: 0) {
@@ -204,7 +210,7 @@ private extension DeviceOnboardingView {
         VStack(spacing: 0) {
             DeviceOnboardingNavigationBar(
                 title: "Nearby Devices",
-                onBack: store.goBack
+                onBack: goBack
             )
 
             VStack(spacing: 0) {
@@ -282,7 +288,7 @@ private extension DeviceOnboardingView {
             VStack(spacing: AppSpacing.lg) {
                 PrimaryButton(
                     title: "Go to Home",
-                    action: store.enterHome
+                    action: enterHome
                 )
 
                 Button(action: store.addAnotherDevice) {
@@ -295,6 +301,22 @@ private extension DeviceOnboardingView {
             .padding(.horizontal, AppSpacing.xxl)
             .padding(.bottom, AppSpacing.xxxl)
         }
+    }
+}
+
+private extension DeviceOnboardingView {
+    func goBack() {
+        let shouldReturnHome = store.route == .introduction || store.route == .success
+        store.goBack()
+
+        if shouldReturnHome {
+            onReturnHome()
+        }
+    }
+
+    func enterHome() {
+        store.enterHome()
+        onReturnHome()
     }
 }
 

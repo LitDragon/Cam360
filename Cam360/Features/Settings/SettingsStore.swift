@@ -25,7 +25,6 @@ final class SettingsStore: ObservableObject {
     @Published private(set) var deviceConnectionStatusTone: StatusTagTone = .neutral
     @Published private(set) var deviceCapabilities: Set<DeviceCapability> = []
 
-    private let router: AppRouter
     private let knownDeviceRepository: KnownDeviceRepository
     private let appPreferenceStore: AppPreferenceStore
     private let deviceSession: DeviceSession?
@@ -35,12 +34,10 @@ final class SettingsStore: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
 
     init(
-        router: AppRouter,
         knownDeviceRepository: KnownDeviceRepository,
         appPreferenceStore: AppPreferenceStore,
         deviceSession: DeviceSession? = nil
     ) {
-        self.router = router
         self.knownDeviceRepository = knownDeviceRepository
         self.appPreferenceStore = appPreferenceStore
         self.deviceSession = deviceSession
@@ -74,7 +71,6 @@ final class SettingsStore: ObservableObject {
         seedDeviceState(from: nil)
         route = nil
         refresh()
-        router.showMain(tab: .dashboard)
     }
 
     func show(_ route: SettingsRoute) {

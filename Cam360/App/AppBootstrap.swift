@@ -11,11 +11,11 @@ final class AppBootstrap {
     }
 
     let container: AppContainer
-    let router: AppRouter
+    let initialSelectedTab: MainTab
 
-    private init(container: AppContainer, router: AppRouter) {
+    private init(container: AppContainer, initialSelectedTab: MainTab) {
         self.container = container
-        self.router = router
+        self.initialSelectedTab = initialSelectedTab
     }
 
     static func launch(arguments: [String], userDefaults: UserDefaults = .standard) -> AppBootstrap {
@@ -37,12 +37,7 @@ final class AppBootstrap {
             appPreferenceStore.hasCompletedOnboarding = true
         }
 
-        let initialRoute = resolveInitialRoute(
-            selectedTab: selectedTab
-        )
-        let router = AppRouter(route: initialRoute)
         let container = AppContainer(
-            router: router,
             knownDeviceRepository: knownDeviceRepository,
             appPreferenceStore: appPreferenceStore,
             deviceProtocolEndpointProvider: {
@@ -50,13 +45,7 @@ final class AppBootstrap {
             }
         )
 
-        return AppBootstrap(container: container, router: router)
-    }
-
-    private static func resolveInitialRoute(
-        selectedTab: MainTab
-    ) -> AppRoute {
-        .main(selectedTab)
+        return AppBootstrap(container: container, initialSelectedTab: selectedTab)
     }
 
     private static func tabOverride(from arguments: [String]) -> MainTab? {

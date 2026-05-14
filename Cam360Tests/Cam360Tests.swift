@@ -11,7 +11,7 @@ struct Cam360Tests {
 
         let bootstrap = AppBootstrap.launch(arguments: ["Cam360Tests"], userDefaults: testDefaults.userDefaults)
 
-        #expect(bootstrap.router.route == .main(.dashboard))
+        #expect(bootstrap.initialSelectedTab == .dashboard)
     }
 
     @Test
@@ -24,28 +24,20 @@ struct Cam360Tests {
 
         let bootstrap = AppBootstrap.launch(arguments: ["Cam360Tests"], userDefaults: testDefaults.userDefaults)
 
-        #expect(bootstrap.router.route == .main(.dashboard))
+        #expect(bootstrap.initialSelectedTab == .dashboard)
     }
 
     @Test
-    func routerTransitionsArePredictable() {
-        let router = AppRouter(route: .main(.dashboard))
+    func bootstrapRespectsSelectedTabOverride() {
+        let testDefaults = makeUserDefaults()
+        defer { clear(testDefaults) }
 
-        router.showMain(tab: .gallery)
-        #expect(router.route == .main(.gallery))
+        let bootstrap = AppBootstrap.launch(
+            arguments: ["Cam360Tests", "-uitest-selected-tab", "gallery"],
+            userDefaults: testDefaults.userDefaults
+        )
 
-        router.selectedMainTab = .settings
-        #expect(router.route == .main(.settings))
-
-        router.showFeature(.downloads)
-        #expect(router.route == .feature(.downloads, returnTab: .settings))
-        #expect(router.selectedMainTab == .settings)
-
-        router.closeFeature()
-        #expect(router.route == .main(.settings))
-
-        router.showOnboarding()
-        #expect(router.route == .onboarding)
+        #expect(bootstrap.initialSelectedTab == .gallery)
     }
 
     @Test
@@ -306,7 +298,6 @@ struct Cam360Tests {
 
         let repository = UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults)
         let preferenceStore = UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults)
-        let router = AppRouter(route: .main(.dashboard))
         let protocolClient = OnboardingFakeProtocolClient()
         let session = DeviceSession(
             protocolClient: protocolClient,
@@ -314,7 +305,6 @@ struct Cam360Tests {
             deviceName: "Road Camera"
         )
         let store = DeviceOnboardingStore(
-            router: router,
             knownDeviceRepository: repository,
             appPreferenceStore: preferenceStore,
             deviceSession: session
@@ -342,7 +332,7 @@ struct Cam360Tests {
         #expect(preferenceStore.hasCompletedOnboarding)
 
         store.enterHome()
-        #expect(router.route == .main(.dashboard))
+        #expect(store.route == .introduction)
     }
 
     @Test
@@ -352,9 +342,7 @@ struct Cam360Tests {
 
         let repository = UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults)
         let preferenceStore = UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults)
-        let router = AppRouter(route: .main(.dashboard))
         let store = DeviceOnboardingStore(
-            router: router,
             knownDeviceRepository: repository,
             appPreferenceStore: preferenceStore,
             deviceSession: DeviceSession()
@@ -377,7 +365,6 @@ struct Cam360Tests {
 
         let repository = UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults)
         let preferenceStore = UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults)
-        let router = AppRouter(route: .main(.dashboard))
         let protocolClient = OnboardingFakeProtocolClient()
         let session = DeviceSession(
             protocolClient: protocolClient,
@@ -385,7 +372,6 @@ struct Cam360Tests {
             deviceName: "Road Camera"
         )
         let store = DeviceOnboardingStore(
-            router: router,
             knownDeviceRepository: repository,
             appPreferenceStore: preferenceStore,
             deviceSession: session
@@ -413,11 +399,9 @@ struct Cam360Tests {
 
         let repository = UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults)
         let preferenceStore = UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults)
-        let router = AppRouter(route: .main(.dashboard))
         let protocolClient = OnboardingFakeProtocolClient()
         let session = DeviceSession(protocolClient: protocolClient)
         let store = DeviceOnboardingStore(
-            router: router,
             knownDeviceRepository: repository,
             appPreferenceStore: preferenceStore,
             deviceSession: session
@@ -473,7 +457,6 @@ struct Cam360Tests {
         defer { clear(testDefaults) }
 
         let store = DeviceOnboardingStore(
-            router: AppRouter(route: .main(.dashboard)),
             knownDeviceRepository: UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults),
             appPreferenceStore: UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults),
             deviceSession: DeviceSession()
@@ -505,11 +488,9 @@ struct Cam360Tests {
 
         let repository = UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults)
         let preferenceStore = UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults)
-        let router = AppRouter(route: .main(.dashboard))
         let protocolClient = OnboardingFakeProtocolClient()
         let session = DeviceSession(protocolClient: protocolClient)
         let store = DeviceOnboardingStore(
-            router: router,
             knownDeviceRepository: repository,
             appPreferenceStore: preferenceStore,
             deviceSession: session
@@ -625,9 +606,7 @@ struct Cam360Tests {
 
         let repository = UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults)
         let preferenceStore = UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults)
-        let router = AppRouter(route: .main(.settings))
         let store = SettingsStore(
-            router: router,
             knownDeviceRepository: repository,
             appPreferenceStore: preferenceStore
         )
@@ -646,7 +625,6 @@ struct Cam360Tests {
         store.setNotificationPreference(\.parkingIncidentAlerts, to: true)
 
         let reloadedStore = SettingsStore(
-            router: router,
             knownDeviceRepository: repository,
             appPreferenceStore: preferenceStore
         )
@@ -663,9 +641,7 @@ struct Cam360Tests {
 
         let repository = UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults)
         let preferenceStore = UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults)
-        let router = AppRouter(route: .main(.settings))
         let store = SettingsStore(
-            router: router,
             knownDeviceRepository: repository,
             appPreferenceStore: preferenceStore
         )
@@ -709,9 +685,7 @@ struct Cam360Tests {
 
         let repository = UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults)
         let preferenceStore = UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults)
-        let router = AppRouter(route: .main(.settings))
         let store = SettingsStore(
-            router: router,
             knownDeviceRepository: repository,
             appPreferenceStore: preferenceStore
         )
@@ -733,13 +707,11 @@ struct Cam360Tests {
 
         let repository = UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults)
         let preferenceStore = UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults)
-        let router = AppRouter(route: .main(.settings))
         repository.store([
             makeKnownDevice(id: "cam360-main", name: "Old Name"),
             makeKnownDevice(id: "cam360-rear", name: "Rear Camera")
         ])
         let store = SettingsStore(
-            router: router,
             knownDeviceRepository: repository,
             appPreferenceStore: preferenceStore
         )
@@ -765,13 +737,11 @@ struct Cam360Tests {
 
         let repository = UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults)
         let preferenceStore = UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults)
-        let router = AppRouter(route: .main(.settings))
         let session = DeviceSession()
         repository.store([
             makeKnownDevice(id: "road-camera-001", name: "Old Name")
         ])
         let store = SettingsStore(
-            router: router,
             knownDeviceRepository: repository,
             appPreferenceStore: preferenceStore,
             deviceSession: session
@@ -826,9 +796,7 @@ struct Cam360Tests {
 
         let repository = UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults)
         let preferenceStore = UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults)
-        let router = AppRouter(route: .main(.settings))
         let store = SettingsStore(
-            router: router,
             knownDeviceRepository: repository,
             appPreferenceStore: preferenceStore
         )
@@ -840,7 +808,7 @@ struct Cam360Tests {
 
         #expect(repository.fetchKnownDevices().isEmpty)
         #expect(preferenceStore.hasCompletedOnboarding == false)
-        #expect(router.route == .main(.dashboard))
+        #expect(store.route == nil)
     }
 
     private func makeUserDefaults() -> TestDefaults {
