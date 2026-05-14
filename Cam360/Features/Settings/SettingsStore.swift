@@ -120,7 +120,7 @@ final class SettingsStore: ObservableObject {
 
     func formatStorageCard() {
         storagePolicy.cardStatus = .ready
-        storagePolicy.usedSpaceGB = 18.8
+        storagePolicy.usedSpaceGB = 74.2
     }
 
     func updateWatermarkConfiguration<Value>(

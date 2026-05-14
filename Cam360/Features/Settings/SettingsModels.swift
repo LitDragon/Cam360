@@ -91,9 +91,9 @@ struct StoragePolicyState: Equatable {
 
     static let defaultValue = StoragePolicyState(
         cardStatus: .ready,
-        usedSpaceGB: 18.8,
-        totalSpaceGB: 72.4,
-        estimatedHoursRemaining: "Approx. 1.5 hours",
+        usedSpaceGB: 74.2,
+        totalSpaceGB: 128,
+        estimatedHoursRemaining: "Approx. 5.5 hours remaining at current 1080p quality.",
         autoCleanupEnabled: false,
         autoOverwriteEnabled: true,
         lockedEventRetention: .keepForever,
