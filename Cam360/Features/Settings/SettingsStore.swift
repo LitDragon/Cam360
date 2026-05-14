@@ -275,9 +275,11 @@ final class SettingsStore: ObservableObject {
 
         switch state {
         case .idle:
-            deviceConnectionStatusTitle = "OFFLINE"
-            deviceConnectionStatusText = "Not connected"
-            deviceConnectionStatusTone = .neutral
+            if seededDeviceID == nil {
+                showOfflineStatus(text: "Not connected")
+            } else {
+                showConnectedStatus()
+            }
             deviceCapabilities = []
         case .apConnecting, .handshaking, .recovering:
             deviceConnectionStatusTitle = "CONNECTING"
@@ -288,9 +290,7 @@ final class SettingsStore: ObservableObject {
                 applyDeviceInfo(deviceInfo)
                 appliedSessionDeviceInfo = deviceInfo
             }
-            deviceConnectionStatusTitle = "CONNECTED"
-            deviceConnectionStatusText = "Connected and ready to record"
-            deviceConnectionStatusTone = .success
+            showConnectedStatus()
             deviceCapabilities = deviceInfo.capabilities
         case .failed(let error):
             deviceConnectionStatusTitle = "FAILED"
@@ -298,11 +298,21 @@ final class SettingsStore: ObservableObject {
             deviceConnectionStatusTone = .danger
             deviceCapabilities = []
         case .disconnected:
-            deviceConnectionStatusTitle = "OFFLINE"
-            deviceConnectionStatusText = "Disconnected"
-            deviceConnectionStatusTone = .neutral
+            showOfflineStatus(text: "Disconnected")
             deviceCapabilities = []
         }
+    }
+
+    private func showConnectedStatus() {
+        deviceConnectionStatusTitle = "CONNECTED"
+        deviceConnectionStatusText = "Connected and ready to record"
+        deviceConnectionStatusTone = .success
+    }
+
+    private func showOfflineStatus(text: String) {
+        deviceConnectionStatusTitle = "OFFLINE"
+        deviceConnectionStatusText = text
+        deviceConnectionStatusTone = .neutral
     }
 
     private func applyDeviceInfo(_ deviceInfo: DeviceInfo) {

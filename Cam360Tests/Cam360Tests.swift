@@ -701,6 +701,27 @@ struct Cam360Tests {
     }
 
     @Test
+    func settingsStoreShowsKnownDeviceAsConnectedWhenSessionIsIdle() {
+        let testDefaults = makeUserDefaults()
+        defer { clear(testDefaults) }
+
+        let repository = UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults)
+        let preferenceStore = UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults)
+        repository.store([
+            makeKnownDevice(id: "cam360-main", name: "DriveCam X Pro")
+        ])
+        let store = SettingsStore(
+            knownDeviceRepository: repository,
+            appPreferenceStore: preferenceStore,
+            deviceSession: DeviceSession()
+        )
+
+        #expect(store.deviceConnectionStatusTitle == "CONNECTED")
+        #expect(store.deviceConnectionStatusText == "Connected and ready to record")
+        #expect(store.deviceConnectionStatusTone == .success)
+    }
+
+    @Test
     func settingsStoreRenamePersistsKnownDeviceName() {
         let testDefaults = makeUserDefaults()
         defer { clear(testDefaults) }

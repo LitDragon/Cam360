@@ -168,7 +168,10 @@ private struct DeviceSettingsSection<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.md) {
-            SettingsSectionHeader(title: title)
+            Text(title.uppercased())
+                .font(.system(size: 14, weight: .medium, design: .default))
+                .foregroundColor(Color(hex: "#424655"))
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.leading, AppSpacing.lg)
 
             VStack(spacing: 0) {
@@ -230,8 +233,11 @@ private struct DeviceSettingsFirmwareRow: View {
 
                 Button(action: action) {
                     HStack(spacing: 6) {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 14, weight: .semibold))
+                        Image("Check")
+                            .resizable()
+                            .renderingMode(.original)
+                            .scaledToFit()
+                            .frame(width: 14, height: 14)
 
                         Text("Check")
                             .font(.system(size: 14, weight: .medium, design: .default))
