@@ -205,7 +205,7 @@ private struct NotificationSettingsSection<Content: View>: View {
         VStack(alignment: .leading, spacing: AppSpacing.md) {
             Text(title.uppercased())
                 .font(.system(size: 16, weight: .bold, design: .default))
-                .foregroundColor(Color(hex: "#424655"))
+                .foregroundColor(AppColor.textPrimary)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             SettingsGroupCard {
@@ -230,7 +230,7 @@ private struct NotificationSettingsToggleRow: View {
             showsDivider: showsDivider,
             titleFont: .system(size: 14, weight: .semibold, design: .default),
             subtitleFont: .system(size: 12, weight: .medium, design: .default),
-            subtitleColor: Color(hex: "#424655")
+            subtitleColor: AppColor.textPrimary
         )
     }
 }

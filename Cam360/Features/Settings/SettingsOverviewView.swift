@@ -170,7 +170,7 @@ private struct DeviceSettingsSection<Content: View>: View {
         VStack(alignment: .leading, spacing: AppSpacing.md) {
             Text(title.uppercased())
                 .font(.system(size: 14, weight: .medium, design: .default))
-                .foregroundColor(Color(hex: "#424655"))
+                .foregroundColor(AppColor.textPrimary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.leading, AppSpacing.lg)
 

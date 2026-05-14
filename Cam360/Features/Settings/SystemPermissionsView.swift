@@ -73,7 +73,7 @@ struct SystemPermissionsView: View {
 
                     Text("DriveCam requires these permissions to operate correctly in the background.\nAll data is encrypted and stored locally by default.")
                         .font(.system(size: 12, weight: .medium, design: .default))
-                        .foregroundColor(Color(hex: "#424655").opacity(0.7))
+                        .foregroundColor(AppColor.textPrimary.opacity(0.7))
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity)
                         .padding(.top, AppSpacing.md)
@@ -244,8 +244,8 @@ private struct SystemPermissionRow: View {
     var showsDivider: Bool = true
     let openSettings: () -> Void
 
-    private let secondaryTextColor = Color(hex: "#424655")
-    private let enabledStatusColor = Color(hex: "#424655").opacity(0.4)
+    private let secondaryTextColor = AppColor.textPrimary
+    private let enabledStatusColor = AppColor.textPrimary.opacity(0.4)
 
     var body: some View {
         VStack(spacing: 0) {

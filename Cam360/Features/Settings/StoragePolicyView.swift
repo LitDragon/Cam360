@@ -14,7 +14,7 @@ struct StoragePolicyView: View {
 
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: AppSpacing.xl) {
-                    SettingsSectionHeader(title: "Maintenance")
+                    StoragePolicySectionHeader(title: "Maintenance")
                     SettingsGroupCard {
                         SettingsSegmentedRow(
                             title: "Storage State",
@@ -28,42 +28,44 @@ struct StoragePolicyView: View {
 
                     statusContent
 
-                    SettingsSectionHeader(title: "General Policy")
-                    SettingsGroupCard {
-                        SettingsToggleRow(
-                            iconName: nil,
-                            title: "Auto Cleanup",
-                            subtitle: "Delete events older than 30 days.",
-                            isOn: binding(for: \.autoCleanupEnabled),
-                            isEnabled: isStorageReady
-                        )
+                    if showsPolicySections {
+                        StoragePolicySectionHeader(title: "General Policy")
+                        SettingsGroupCard {
+                            SettingsToggleRow(
+                                iconName: nil,
+                                title: "Auto Cleanup",
+                                subtitle: "Delete events older than 30 days.",
+                                isOn: binding(for: \.autoCleanupEnabled),
+                                isEnabled: isStorageReady
+                            )
 
-                        SettingsToggleRow(
-                            iconName: nil,
-                            title: "Auto Overwrite",
-                            subtitle: "Automatically overwrite the oldest non-locked recordings when storage is full.",
-                            isOn: binding(for: \.autoOverwriteEnabled),
-                            isEnabled: isStorageReady
-                        )
+                            SettingsToggleRow(
+                                iconName: nil,
+                                title: "Auto Overwrite",
+                                subtitle: "Automatically overwrite the oldest non-locked recordings when storage is full.",
+                                isOn: binding(for: \.autoOverwriteEnabled),
+                                isEnabled: isStorageReady
+                            )
 
-                        SettingsValueRow(
-                            iconName: nil,
-                            title: "Locked Event Retention",
-                            valueText: store.storagePolicy.lockedEventRetention.rawValue,
-                            valueColor: isStorageReady ? AppColor.textSecondary : AppColor.textSecondary.opacity(0.48),
-                            showsDivider: false
-                        )
-                    }
+                            SettingsValueRow(
+                                iconName: nil,
+                                title: "Locked Event Retention",
+                                valueText: store.storagePolicy.lockedEventRetention.rawValue,
+                                valueColor: isStorageReady ? AppColor.textSecondary : AppColor.textSecondary.opacity(0.48),
+                                showsDivider: false
+                            )
+                        }
 
-                    SettingsSectionHeader(title: "Storage Allocation")
-                    SettingsGroupCard {
-                        SettingsValueRow(
-                            iconName: nil,
-                            title: "Reserved Space for Events",
-                            subtitle: "Protected storage reserved for impact and parking events.",
-                            valueText: "\(store.storagePolicy.reservedEventSpacePercent)%",
-                            showsDivider: false
-                        )
+                        StoragePolicySectionHeader(title: "Storage Allocation")
+                        SettingsGroupCard {
+                            SettingsValueRow(
+                                iconName: nil,
+                                title: "Reserved Space for Events",
+                                subtitle: "Protected storage reserved for impact and parking events.",
+                                valueText: "\(store.storagePolicy.reservedEventSpacePercent)%",
+                                showsDivider: false
+                            )
+                        }
                     }
                 }
                 .padding(.horizontal, AppSpacing.xxl)
@@ -78,6 +80,10 @@ struct StoragePolicyView: View {
 
     private var isStorageReady: Bool {
         store.storagePolicy.cardStatus == .ready
+    }
+
+    private var showsPolicySections: Bool {
+        store.storagePolicy.cardStatus != .noCard
     }
 
     @ViewBuilder
@@ -102,21 +108,8 @@ struct StoragePolicyView: View {
                 }
             }
         case .noCard:
-            VStack(alignment: .leading, spacing: AppSpacing.lg) {
-                SettingsNoticeCard(
-                    title: "No SD Card Detected",
-                    message: "Please insert a compatible microSD card to enable storage policies and loop recording.",
-                    tone: .info,
-                    iconName: "sdcard"
-                )
-
-                PrimaryButton(title: "Retry") {
-                    store.retryStorageCardCheck()
-                }
-
-                SettingsFootnote(
-                    text: "Supported card types: Insert a card, then return to Live to start recording."
-                )
+            StorageNoCardCard {
+                store.retryStorageCardCheck()
             }
         case .error:
             VStack(alignment: .leading, spacing: AppSpacing.lg) {
@@ -141,5 +134,75 @@ struct StoragePolicyView: View {
             get: { store.storagePolicy[keyPath: keyPath] },
             set: { store.updateStoragePolicy(keyPath, to: $0) }
         )
+    }
+}
+
+private struct StoragePolicySectionHeader: View {
+    let title: String
+
+    var body: some View {
+        Text(title)
+            .font(.system(size: 20, weight: .regular, design: .default))
+            .foregroundColor(.black)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct StorageNoCardCard: View {
+    let retryAction: () -> Void
+
+    var body: some View {
+        VStack(spacing: AppSpacing.xl) {
+            VStack(spacing: AppSpacing.lg) {
+                Image("NoSDCard")
+                    .resizable()
+                    .renderingMode(.original)
+                    .scaledToFit()
+                    .frame(width: 64, height: 64)
+
+                VStack(spacing: AppSpacing.sm) {
+                    Text("No SD Card detected")
+                        .font(.system(size: 18, weight: .semibold, design: .default))
+                        .foregroundColor(AppColor.textPrimary)
+
+                    Text("Please insert a compatible microSD card\nto start recording.")
+                        .font(.system(size: 14, weight: .regular, design: .default))
+                        .foregroundColor(AppColor.textSecondary)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, AppSpacing.xxxl)
+            .padding(.horizontal, AppSpacing.lg)
+            .background(Color(hex: "#F2F3FC"))
+            .cornerRadius(AppRadius.small)
+
+            PrimaryButton(
+                title: "Retry",
+                verticalPadding: 14,
+                cornerRadius: 10,
+                shadowColor: .clear,
+                action: retryAction
+            )
+            .padding(.horizontal, AppSpacing.lg)
+
+            VStack(spacing: AppSpacing.lg) {
+                Text("Supported card types")
+                    .font(.system(size: 14, weight: .medium, design: .default))
+                    .foregroundColor(AppColor.brand)
+
+                Text("Insert a card, then return to Live to start recording")
+                    .font(.system(size: 12, weight: .regular, design: .default))
+                    .foregroundColor(AppColor.textPrimary.opacity(0.7))
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(AppSpacing.sm)
+        .padding(.bottom, AppSpacing.md)
+        .frame(maxWidth: .infinity)
+        .background(AppColor.surface)
+        .cornerRadius(10)
     }
 }
