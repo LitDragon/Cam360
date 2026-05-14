@@ -1,12 +1,28 @@
 import SwiftUI
 
+enum SettingsRoot {
+    case deviceSettings
+    case more
+}
+
 struct SettingsView: View {
     @ObservedObject var store: SettingsStore
+    let root: SettingsRoot
+    let onClose: (() -> Void)?
+
+    init(
+        store: SettingsStore,
+        root: SettingsRoot = .deviceSettings,
+        onClose: (() -> Void)? = nil
+    ) {
+        self.store = store
+        self.root = root
+        self.onClose = onClose
+    }
 
     var body: some View {
         NavigationView {
-            SettingsOverviewView(store: store)
-                .background(navigationLinks)
+            rootView
                 .navigationBarHidden(true)
         }
         .navigationViewStyle(StackNavigationViewStyle())
@@ -28,10 +44,25 @@ struct SettingsView: View {
         )
     }
 
+    @ViewBuilder
+    private var rootView: some View {
+        switch root {
+        case .deviceSettings:
+            SettingsOverviewView(store: store, onClose: onClose)
+                .background(navigationLinks)
+        case .more:
+            SystemPreferencesView(
+                store: store,
+                title: "More",
+                subtitle: "App settings and support"
+            )
+        }
+    }
+
     private var navigationLinks: some View {
         Group {
             navigationLink(tag: .systemPreferences) {
-                SystemPreferencesView(store: store)
+                SystemPreferencesView(store: store, dismiss: store.dismissRoute)
             }
 
             navigationLink(tag: .recordingSettings) {

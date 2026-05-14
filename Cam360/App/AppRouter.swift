@@ -40,6 +40,7 @@ enum AppRoute: Equatable {
 
 enum AppFeatureRoute: Equatable {
     case deviceList
+    case deviceSettings
     case livePreview
     case playback
     case downloads

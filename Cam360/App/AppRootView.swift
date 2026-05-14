@@ -41,6 +41,12 @@ struct AppRootView: View {
                 store: bootstrap.container.deviceListStore,
                 onClose: router.closeFeature
             )
+        case .deviceSettings:
+            SettingsView(
+                store: bootstrap.container.settingsStore,
+                root: .deviceSettings,
+                onClose: router.closeFeature
+            )
         case .livePreview:
             LivePreviewView(
                 store: bootstrap.container.livePreviewStore,

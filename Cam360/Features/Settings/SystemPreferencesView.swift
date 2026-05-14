@@ -8,15 +8,31 @@ private enum SystemPreferencesRoute: Hashable {
 
 struct SystemPreferencesView: View {
     @ObservedObject var store: SettingsStore
+    let title: String
+    let subtitle: String
+    let dismiss: (() -> Void)?
+
     @State private var route: SystemPreferencesRoute?
+
+    init(
+        store: SettingsStore,
+        title: String = "System Preferences",
+        subtitle: String = "App permissions, support and diagnostics",
+        dismiss: (() -> Void)? = nil
+    ) {
+        self.store = store
+        self.title = title
+        self.subtitle = subtitle
+        self.dismiss = dismiss
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             AppTopBar(
-                title: "System Preferences",
-                subtitle: "App permissions, support and diagnostics",
-                leadingSystemImage: "arrow.left",
-                leadingAction: store.dismissRoute
+                title: title,
+                subtitle: subtitle,
+                leadingSystemImage: dismiss == nil ? nil : "arrow.left",
+                leadingAction: dismiss
             )
 
             ScrollView(showsIndicators: false) {

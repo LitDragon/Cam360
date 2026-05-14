@@ -2,12 +2,20 @@ import SwiftUI
 
 struct SettingsOverviewView: View {
     @ObservedObject var store: SettingsStore
+    let onClose: (() -> Void)?
+
+    init(store: SettingsStore, onClose: (() -> Void)? = nil) {
+        self.store = store
+        self.onClose = onClose
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             AppTopBar(
                 title: store.devicePreferences.deviceName,
-                subtitle: store.deviceConnectionStatusText
+                subtitle: store.deviceConnectionStatusText,
+                leadingSystemImage: onClose == nil ? nil : "arrow.left",
+                leadingAction: onClose
             )
 
             ScrollView(showsIndicators: false) {

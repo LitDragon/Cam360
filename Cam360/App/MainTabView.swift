@@ -51,7 +51,8 @@ struct MainTabView: View {
                     onOpenFeature(.events)
                 },
                 onOpenSettings: {
-                    router.showMain(tab: .settings)
+                    settingsStore.dismissRoute()
+                    onOpenFeature(.deviceSettings)
                 }
             )
         case .gallery:
@@ -65,14 +66,14 @@ struct MainTabView: View {
                 }
             )
         case .settings:
-            SettingsView(store: settingsStore)
+            SettingsView(store: settingsStore, root: .more)
         }
     }
 
     private var isTabBarHidden: Bool {
         switch router.selectedMainTab {
         case .settings:
-            return settingsStore.route != nil
+            return false
         case .dashboard:
             return dashboardStore.shouldShowFeatureSheet
         case .gallery:
