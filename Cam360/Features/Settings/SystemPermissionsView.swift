@@ -66,24 +66,17 @@ struct SystemPermissionsView: View {
                         permissionRow(
                             title: "Bluetooth",
                             subtitle: "Discover and connect to dashcams.",
-                            status: bluetoothStatus
-                        )
-
-                        SettingsActionRow(
-                            iconName: nil,
-                            title: "iOS Settings",
-                            subtitle: "Change denied, limited or not requested permissions in Settings.",
-                            actionTitle: "Open Settings",
-                            showsDivider: false,
-                            action: openAppSettings
+                            status: bluetoothStatus,
+                            showsDivider: false
                         )
                     }
 
                     Text("DriveCam requires these permissions to operate correctly in the background.\nAll data is encrypted and stored locally by default.")
-                        .font(AppTypography.caption)
-                        .foregroundColor(AppColor.textSecondary)
+                        .font(.system(size: 12, weight: .medium, design: .default))
+                        .foregroundColor(Color(hex: "#424655").opacity(0.7))
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity)
+                        .padding(.top, AppSpacing.md)
                         .padding(.horizontal, AppSpacing.xxxl)
                 }
                 .padding(.top, AppSpacing.xl)
@@ -99,15 +92,15 @@ struct SystemPermissionsView: View {
     private func permissionRow(
         title: String,
         subtitle: String,
-        status: SystemPermissionStatus
+        status: SystemPermissionStatus,
+        showsDivider: Bool = true
     ) -> some View {
-        SettingsStatusRow(
-            iconName: nil,
+        SystemPermissionRow(
             title: title,
             subtitle: subtitle,
-            statusText: status.title,
-            trailingSystemImage: status.symbolName,
-            statusColor: status.color
+            isEnabled: status == .enabled,
+            showsDivider: showsDivider,
+            openSettings: openAppSettings
         )
     }
 
@@ -244,6 +237,74 @@ struct SystemPermissionsView: View {
     }
 }
 
+private struct SystemPermissionRow: View {
+    let title: String
+    let subtitle: String
+    let isEnabled: Bool
+    var showsDivider: Bool = true
+    let openSettings: () -> Void
+
+    private let secondaryTextColor = Color(hex: "#424655")
+    private let enabledStatusColor = Color(hex: "#424655").opacity(0.4)
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(alignment: .center, spacing: AppSpacing.xs) {
+                VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                    Text(title)
+                        .font(.system(size: 16, weight: .semibold, design: .default))
+                        .foregroundColor(AppColor.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text(subtitle)
+                        .font(.system(size: 12, weight: .medium, design: .default))
+                        .foregroundColor(secondaryTextColor)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                trailingContent
+            }
+            .padding(.horizontal, AppSpacing.xl)
+            .padding(.vertical, AppSpacing.lg)
+
+            if showsDivider {
+                Rectangle()
+                    .fill(AppColor.border.opacity(0.35))
+                    .frame(height: AppLayout.hairline)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
+    }
+
+    @ViewBuilder
+    private var trailingContent: some View {
+        if isEnabled {
+            HStack(spacing: AppSpacing.xs) {
+                Text("ENABLED")
+                    .font(.system(size: 10, weight: .semibold, design: .default))
+
+                Image(systemName: "checkmark")
+                    .font(.system(size: 10, weight: .semibold))
+            }
+            .foregroundColor(enabledStatusColor)
+        } else {
+            Button(action: openSettings) {
+                Text("Open Settings")
+                    .font(.system(size: 12, weight: .medium, design: .default))
+                    .foregroundColor(AppColor.brand)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, AppSpacing.lg)
+                    .padding(.vertical, AppSpacing.md)
+                    .background(AppColor.accentSurface)
+                    .cornerRadius(AppRadius.large)
+            }
+            .buttonStyle(PlainButtonStyle())
+        }
+    }
+}
+
 private enum SystemPermissionStatus: Equatable {
     case enabled
     case disabled
@@ -251,43 +312,4 @@ private enum SystemPermissionStatus: Equatable {
     case restricted
     case limited
     case unavailable
-
-    var title: String {
-        switch self {
-        case .enabled:
-            return "ENABLED"
-        case .disabled:
-            return "DISABLED"
-        case .notDetermined:
-            return "NOT SET"
-        case .restricted:
-            return "RESTRICTED"
-        case .limited:
-            return "LIMITED"
-        case .unavailable:
-            return "UNKNOWN"
-        }
-    }
-
-    var symbolName: String {
-        switch self {
-        case .enabled:
-            return "checkmark"
-        case .limited, .notDetermined:
-            return "exclamationmark"
-        case .disabled, .restricted, .unavailable:
-            return "xmark"
-        }
-    }
-
-    var color: Color {
-        switch self {
-        case .enabled:
-            return AppColor.success
-        case .limited, .notDetermined:
-            return AppColor.warning
-        case .disabled, .restricted, .unavailable:
-            return AppColor.danger
-        }
-    }
 }
