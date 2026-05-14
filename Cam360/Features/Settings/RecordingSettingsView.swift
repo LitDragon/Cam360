@@ -189,13 +189,21 @@ private struct RecordingSegmentedControl<Option: Hashable>: View {
                 Button(action: {
                     selection = option
                 }) {
-                    Text(titleForOption(option))
-                        .font(.system(size: 14, weight: selection == option ? .semibold : .medium, design: .default))
-                        .foregroundColor(selection == option ? .white : AppColor.textPrimary)
-                        .frame(maxWidth: .infinity, minHeight: 37)
-                        .background(selection == option ? AppColor.brand : Color.clear)
-                        .cornerRadius(5)
+                    ZStack {
+                        if selection == option {
+                            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                .fill(AppColor.brand)
+                        }
+
+                        Text(titleForOption(option))
+                            .font(.system(size: 14, weight: selection == option ? .semibold : .medium, design: .default))
+                            .foregroundColor(selection == option ? .white : AppColor.textPrimary)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 37)
+                    .contentShape(Rectangle())
                 }
+                .frame(maxWidth: .infinity, minHeight: 37)
+                .contentShape(Rectangle())
                 .buttonStyle(PlainButtonStyle())
             }
         }
