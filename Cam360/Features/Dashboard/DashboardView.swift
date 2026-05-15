@@ -975,9 +975,11 @@ private struct DashboardDrawerRow: View {
 
     private var statusColor: Color {
         switch device.status {
-        case .connected, .nearby:
+        case .connected:
             return AppColor.brand
-        case .offline:
+        case .connecting:
+            return AppColor.warning
+        case .disconnected:
             return AppColor.textSecondary
         }
     }

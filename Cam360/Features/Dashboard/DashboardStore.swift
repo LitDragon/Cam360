@@ -3,17 +3,17 @@ import Foundation
 
 enum DashboardDeviceStatus: Equatable {
     case connected
-    case nearby
-    case offline
+    case connecting
+    case disconnected
 
     var title: String {
         switch self {
         case .connected:
             return "Connected"
-        case .nearby:
-            return "In Range"
-        case .offline:
-            return "Offline"
+        case .connecting:
+            return "Connecting"
+        case .disconnected:
+            return "Disconnected"
         }
     }
 
@@ -21,10 +21,10 @@ enum DashboardDeviceStatus: Equatable {
         switch self {
         case .connected:
             return "Ready to preview"
-        case .nearby:
-            return "Waiting to connect"
-        case .offline:
-            return "Last seen recently"
+        case .connecting:
+            return "Connecting to device"
+        case .disconnected:
+            return "Not connected"
         }
     }
 }
@@ -89,7 +89,6 @@ protocol DashboardContentProviding {
     var placeholderDevices: [KnownDeviceSummary] { get }
     var placeholderFeatureDeviceState: DashboardFeatureDeviceState { get }
 
-    func status(for device: KnownDeviceSummary, at index: Int) -> DashboardDeviceStatus
     func scenario(forDeviceAt index: Int) -> DashboardDeviceScenario
     func connectionStatusText(for device: DashboardDeviceItem) -> String
 }
@@ -173,11 +172,13 @@ final class DashboardStore: ObservableObject {
 
     func refresh() {
         let currentRecordingStates = recordingStatesByDeviceID
-        let items = knownDeviceRepository.fetchKnownDevices().enumerated().map { index, device in
+        let knownDevices = knownDeviceRepository.fetchKnownDevices()
+        let nextSelectedDeviceID = selectedDeviceID(in: knownDevices)
+        let items = knownDevices.enumerated().map { index, device in
             DashboardDeviceItem(
                 id: device.id,
                 name: device.name,
-                status: status(for: device, at: index),
+                status: status(for: device, selectedDeviceID: nextSelectedDeviceID),
                 hotspotSSID: device.hotspotSSID
             )
         }
@@ -188,12 +189,7 @@ final class DashboardStore: ObservableObject {
             partialResult[item.element.id] = currentRecordingStates[item.element.id] ?? defaultValue
         }
 
-        if let selectedDeviceID = selectedDeviceID,
-           items.contains(where: { $0.id == selectedDeviceID }) {
-            self.selectedDeviceID = selectedDeviceID
-        } else {
-            selectedDeviceID = items.first?.id
-        }
+        selectedDeviceID = nextSelectedDeviceID
 
         shouldShowFeatureSheet = appPreferenceStore.hasCompletedOnboarding == false
     }
@@ -254,21 +250,34 @@ final class DashboardStore: ObservableObject {
         }
     }
 
-    private func status(for device: KnownDeviceSummary, at index: Int) -> DashboardDeviceStatus {
+    private func selectedDeviceID(in devices: [KnownDeviceSummary]) -> KnownDeviceSummary.ID? {
+        if let selectedDeviceID = selectedDeviceID,
+           devices.contains(where: { $0.id == selectedDeviceID }) {
+            return selectedDeviceID
+        }
+
+        return devices.first?.id
+    }
+
+    private func status(
+        for device: KnownDeviceSummary,
+        selectedDeviceID: KnownDeviceSummary.ID?
+    ) -> DashboardDeviceStatus {
         switch deviceSessionState {
         case .ready(let deviceInfo), .busy(operation: _, deviceInfo: let deviceInfo):
             if device.id == deviceInfo.id {
                 return .connected
             }
-        case .failed, .disconnected:
-            if device.id == lastSessionDeviceID {
-                return .offline
+        case .apConnecting, .handshaking, .recovering:
+            let connectingDeviceID = lastSessionDeviceID ?? selectedDeviceID
+            if device.id == connectingDeviceID {
+                return .connecting
             }
         default:
             break
         }
 
-        return contentProvider.status(for: device, at: index)
+        return .disconnected
     }
 }
 
@@ -282,17 +291,6 @@ struct PlaceholderDashboardContentProvider: DashboardContentProviding {
             pairedDeviceName: Self.placeholderDevices.first?.name ?? "Placeholder Dashcam",
             connectionStatusText: Self.placeholderConnectionStatusText
         )
-    }
-
-    func status(for device: KnownDeviceSummary, at index: Int) -> DashboardDeviceStatus {
-        switch index {
-        case 0:
-            return .connected
-        case 1, 3:
-            return .nearby
-        default:
-            return .offline
-        }
     }
 
     func scenario(forDeviceAt index: Int) -> DashboardDeviceScenario {

@@ -204,6 +204,12 @@ struct Cam360Tests {
         )
 
         #expect(store.hasDevices)
+        #expect(store.devices.map(\.status) == [
+            .disconnected,
+            .disconnected,
+            .disconnected,
+            .disconnected
+        ])
         #expect(store.isRecording == false)
         #expect(store.recentEvents.count == 4)
 
@@ -244,7 +250,7 @@ struct Cam360Tests {
             contentProvider: TestDashboardContentProvider()
         )
 
-        #expect(store.selectedDevice?.status == .offline)
+        #expect(store.selectedDevice?.status == .disconnected)
         #expect(store.isRecording)
     }
 
@@ -267,9 +273,15 @@ struct Cam360Tests {
             deviceSession: session
         )
 
-        #expect(store.devices.first(where: { $0.id == "cam360-rear" })?.status == .offline)
+        store.selectDevice(id: "cam360-rear")
+        #expect(store.devices.first(where: { $0.id == "cam360-rear" })?.status == .disconnected)
 
         session.send(.startAPConnection(ssid: "Cam360_AP"))
+
+        #expect(await waitForOnboardingState {
+            store.devices.first(where: { $0.id == "cam360-rear" })?.status == .connecting
+        })
+
         session.send(.apConnectionSucceeded)
         session.send(.handshakeSucceeded(
             DeviceInfo(
@@ -287,7 +299,7 @@ struct Cam360Tests {
         session.send(.connectionLost)
 
         #expect(await waitForOnboardingState {
-            store.devices.first(where: { $0.id == "cam360-rear" })?.status == .offline
+            store.devices.first(where: { $0.id == "cam360-rear" })?.status == .disconnected
         })
     }
 
@@ -872,10 +884,6 @@ struct Cam360Tests {
 private struct TestDashboardContentProvider: DashboardContentProviding {
     let placeholderDevices: [KnownDeviceSummary] = []
     let placeholderFeatureDeviceState = DashboardFeatureDeviceState(pairedDeviceName: "", connectionStatusText: "")
-
-    func status(for device: KnownDeviceSummary, at index: Int) -> DashboardDeviceStatus {
-        .offline
-    }
 
     func scenario(forDeviceAt index: Int) -> DashboardDeviceScenario {
         DashboardDeviceScenario(
