@@ -16,18 +16,18 @@ struct SafetySettingsView: View {
                 VStack(alignment: .leading, spacing: AppSpacing.xl) {
                     SafetySettingsSection(title: "Collision Detection") {
                         SettingsGroupCard {
-                            SettingsSegmentedRow(
+                            SafetySegmentedRow(
                                 title: "G-Sensor Sensitivity",
+                                footnote: "Recommended for most urban driving conditions.",
                                 options: SafetySensitivityOption.allCases,
                                 selection: binding(for: \.gSensorSensitivity),
-                                titleForOption: { $0.rawValue },
-                                showsDivider: false
+                                titleForOption: { $0.rawValue }
                             )
 
                             SettingsToggleRow(
                                 iconName: nil,
                                 title: "Emergency Video Lock",
-                                subtitle: "Protect impact recordings from overwrite.",
+                                subtitle: "Protect footage on collision.",
                                 isOn: binding(for: \.emergencyVideoLockEnabled),
                                 showsDivider: false
                             )
@@ -129,6 +129,47 @@ private struct SafetySettingsSection<Content: View>: View {
             SettingsSectionHeader(title: title)
             content
         }
+    }
+}
+
+private struct SafetySegmentedRow<Option: Hashable>: View {
+    let title: String
+    let footnote: String
+    let options: [Option]
+    @Binding var selection: Option
+    let titleForOption: (Option) -> String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.md) {
+            Text(title)
+                .font(AppTypography.bodyStrong)
+                .foregroundColor(AppColor.textPrimary)
+
+            HStack(spacing: AppSpacing.sm) {
+                ForEach(options, id: \.self) { option in
+                    Button(action: {
+                        selection = option
+                    }) {
+                        Text(titleForOption(option))
+                            .font(AppTypography.bodyStrong)
+                            .foregroundColor(selection == option ? .white : AppColor.textSecondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, AppSpacing.md)
+                            .background(selection == option ? AppColor.brand : AppColor.surfaceMuted)
+                            .cornerRadius(AppRadius.small)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+            }
+
+            Text(footnote)
+                .font(.system(size: 11, weight: .medium, design: .default))
+                .foregroundColor(AppColor.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.horizontal, AppSpacing.lg)
+        .padding(.vertical, AppSpacing.lg)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
