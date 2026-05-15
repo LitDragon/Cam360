@@ -49,7 +49,7 @@ final class SettingsStore: ObservableObject {
 
     func refresh() {
         let knownDevices = knownDeviceRepository.fetchKnownDevices()
-        syncDeviceStateIfNeeded(with: knownDevices.first)
+        syncDeviceStateIfNeeded(with: preferredDevice(from: knownDevices))
         knownDeviceCount = knownDevices.count
         hasCompletedOnboarding = appPreferenceStore.hasCompletedOnboarding
         shareAnonymousLogs = appPreferenceStore.shareAnonymousLogs
@@ -83,6 +83,14 @@ final class SettingsStore: ObservableObject {
 
     func dismissRoute() {
         route = nil
+    }
+
+    func prepareDeviceSettings(for deviceID: KnownDeviceSummary.ID?) {
+        let knownDevices = knownDeviceRepository.fetchKnownDevices()
+        let device = selectedDevice(for: deviceID, in: knownDevices)
+        syncDeviceStateIfNeeded(with: device)
+        knownDeviceCount = knownDevices.count
+        syncDeviceSessionState(deviceSessionState)
     }
 
     func setShareAnonymousLogs(_ isEnabled: Bool) {
@@ -217,6 +225,25 @@ final class SettingsStore: ObservableObject {
         }
 
         seedDeviceState(from: device)
+    }
+
+    private func preferredDevice(from devices: [KnownDeviceSummary]) -> KnownDeviceSummary? {
+        guard let seededDeviceID = seededDeviceID else {
+            return devices.first
+        }
+
+        return devices.first { $0.id == seededDeviceID } ?? devices.first
+    }
+
+    private func selectedDevice(
+        for deviceID: KnownDeviceSummary.ID?,
+        in devices: [KnownDeviceSummary]
+    ) -> KnownDeviceSummary? {
+        guard let deviceID = deviceID else {
+            return preferredDevice(from: devices)
+        }
+
+        return devices.first { $0.id == deviceID } ?? preferredDevice(from: devices)
     }
 
     private func updateKnownDeviceName(_ name: String) {

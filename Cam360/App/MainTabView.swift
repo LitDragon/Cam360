@@ -108,6 +108,7 @@ struct MainTabView: View {
                 },
                 onOpenSettings: {
                     settingsStore.dismissRoute()
+                    settingsStore.prepareDeviceSettings(for: dashboardStore.selectedDeviceID)
                     dashboardRoute = .deviceSettings
                 }
             )

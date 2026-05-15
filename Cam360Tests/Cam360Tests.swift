@@ -701,6 +701,30 @@ struct Cam360Tests {
     }
 
     @Test
+    func settingsStoreRefreshKeepsSelectedKnownDevice() {
+        let testDefaults = makeUserDefaults()
+        defer { clear(testDefaults) }
+
+        let repository = UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults)
+        let preferenceStore = UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults)
+        repository.store([
+            makeKnownDevice(id: "cam360-main", name: "Front Camera"),
+            makeKnownDevice(id: "cam360-rear", name: "Rear Camera")
+        ])
+        let store = SettingsStore(
+            knownDeviceRepository: repository,
+            appPreferenceStore: preferenceStore
+        )
+
+        store.prepareDeviceSettings(for: "cam360-rear")
+        store.refresh()
+
+        #expect(store.devicePreferences.deviceName == "Rear Camera")
+        #expect(store.devicePreferences.connectionName == "Cam360_AP_cam360-rear")
+        #expect(store.knownDeviceCount == 2)
+    }
+
+    @Test
     func settingsStoreShowsKnownDeviceAsConnectedWhenSessionIsIdle() {
         let testDefaults = makeUserDefaults()
         defer { clear(testDefaults) }
