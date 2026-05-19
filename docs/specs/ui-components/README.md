@@ -63,8 +63,8 @@ hardware_required: false
 
 | 页面 | 主要公共组件 | 主要 Feature 私有组件 |
 | --- | --- | --- |
-| `HomeView` | DesignSystem tokens | `HomeHeaderView`, `HomeHeroCard`, `HomeRecentEventsSection`, `HomeRecentEventRow` |
-| `RecordingView` | `PrimaryButton`, `StatusTag`, `AppProgressBar`, `appSurface` | `RecordingHeaderView`, `RecordingPreviewCard`, `RecordingCaptureControls`, `RecordingStorageCard`, `RecordingGalleryRow`, `RecordingFeatureLinkRows`, `RecordingEventRow`, `RecordingDrawerOverlay`, `RecordingFeatureSheet` |
+| `HomeView` | DesignSystem tokens | `HomeHeaderView`, `HomeHeroCard`, `HomeRecentEventsSection`, `HomeRecentEventRow`, `RecordingDrawerOverlay` |
+| `RecordingView` | `PrimaryButton`, `StatusTag`, `AppProgressBar`, `appSurface` | `RecordingHeaderView`, `RecordingPreviewCard`, `RecordingCaptureControls`, `RecordingStorageCard`, `RecordingGalleryRow`, `RecordingFeatureLinkRows`, `RecordingEventRow`, `RecordingFeatureSheet` |
 | `GalleryView` | `EmptyStateView`, `StatusTag` | `GalleryHeaderView`, `GalleryFilterBar`, `GallerySearchBar`, `GallerySectionsList`, `GalleryMediaCard`, `GalleryThumbnail`, `GalleryBatchActionBar`, `GalleryActionSheet` |
 | `DeviceOnboardingView` | `PrimaryButton`, `AppProgressBar`, `appSurface` | `DeviceOnboardingNavigationBar`, `DeviceOnboardingSignalIllustration`, `DeviceOnboardingTipCard`, `DeviceOnboardingReadonlyField`, `DeviceOnboardingPasswordField` |
 | `SettingsView` / `SettingsOverviewView` | `AppTopBar`, `StatusTag`, Settings 组件族 | 无独立私有组件 |
@@ -72,7 +72,7 @@ hardware_required: false
 | `HelpCenterView` | `AppTopBar`, Settings 组件族 | 本地 `HelpCenterRoute`, `FAQView`, `ContactSupportView` |
 | `DeviceSettingsDetailView` | `AppTopBar`, `PrimaryButton`, `DestructiveButton`, `AppProgressBar`, Settings 组件族 | `NetworkIdentityView`, `FirmwareUpdateView`, 本地 `DeviceSettingsDetailRoute` |
 | 设置二级页 | `AppTopBar`, `PrimaryButton`, `DestructiveButton`, Settings 组件族 | 页面内 binding 和局部状态 |
-| `DeviceListView` | `AppTopBar`, `SectionCard`, `StatusTag`, `EmptyStateView` | `DeviceCell` |
+| `DeviceListView`（未使用） | `AppTopBar`, `SectionCard`, `StatusTag`, `EmptyStateView` | `DeviceCell` |
 | `LivePreviewView` | `AppTopBar`, `SectionCard`, `PrimaryButton`, `StatusTag`, `ErrorStateView` | `LivePreviewPlaceholderCard`, `LivePreviewDisabledAction` |
 | `PlaybackView` | `EmptyStateView`, `appSurface`, DesignSystem tokens | `PlaybackDriveLogHeader`, `PlaybackSegmentedControl`, `PlaybackSearchField`, `PlaybackLogTile`, `PlaybackLogArtworkView` |
 | `DownloadsView` | `AppTopBar`, `SectionCard`, `PrimaryButton`, `StatusTag`, `EmptyStateView` | `DownloadsActionButton` |

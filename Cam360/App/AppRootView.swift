@@ -26,7 +26,6 @@ struct AppRootView: View {
             recordingStore: bootstrap.container.recordingStore,
             galleryStore: bootstrap.container.galleryStore,
             settingsStore: bootstrap.container.settingsStore,
-            deviceListStore: bootstrap.container.deviceListStore,
             livePreviewStore: bootstrap.container.livePreviewStore,
             playbackStore: bootstrap.container.playbackStore,
             downloadsStore: bootstrap.container.downloadsStore,

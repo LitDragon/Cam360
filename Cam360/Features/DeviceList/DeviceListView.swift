@@ -1,5 +1,6 @@
 import SwiftUI
 
+// 未使用页面：当前没有导航入口，保留旧离线占位实现。
 struct DeviceListView: View {
     @ObservedObject var store: DeviceListStore
     var onClose: (() -> Void)? = nil

@@ -3,7 +3,6 @@ import SwiftUI
 struct RecordingView: View {
     @ObservedObject var store: RecordingStore
     let onAddDevice: () -> Void
-    let onOpenDeviceList: () -> Void
     let onOpenLivePreview: () -> Void
     let onOpenGallery: () -> Void
     let onOpenPlayback: () -> Void
@@ -11,16 +10,12 @@ struct RecordingView: View {
     let onOpenEvents: () -> Void
     let onOpenSettings: () -> Void
 
-    @State private var isDrawerPresented = false
-
     var body: some View {
         ZStack(alignment: .topLeading) {
             VStack(spacing: 0) {
                 RecordingHeaderView(
                     title: store.selectedDevice?.name ?? "Recording",
                     subtitle: store.selectedDevice?.status.title,
-                    showsMenu: store.hasDevices,
-                    onMenu: toggleDrawer,
                     onSettings: onOpenSettings
                 )
 
@@ -51,17 +46,6 @@ struct RecordingView: View {
                 }
             }
 
-            if isDrawerPresented {
-                RecordingDrawerOverlay(
-                    devices: store.devices,
-                    selectedDeviceID: store.selectedDeviceID,
-                    onClose: closeDrawer,
-                    onSelectDevice: selectDevice(_:),
-                    onOpenDeviceList: openDeviceList,
-                    onAddDevice: addDevice
-                )
-            }
-
             if store.shouldShowFeatureSheet {
                 RecordingFeatureSheet(
                     deviceState: store.featureSheetDeviceState,
@@ -73,7 +57,6 @@ struct RecordingView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(AppColor.background.edgesIgnoringSafeArea(.all))
         .accessibility(identifier: "screen-recording")
-        .animation(.easeInOut(duration: 0.2), value: isDrawerPresented)
         .animation(.easeInOut(duration: 0.2), value: store.hasDevices)
         .animation(.easeInOut(duration: 0.2), value: store.shouldShowFeatureSheet)
         .onAppear(perform: store.refresh)
@@ -81,31 +64,8 @@ struct RecordingView: View {
 }
 
 private extension RecordingView {
-    func toggleDrawer() {
-        guard store.shouldShowFeatureSheet == false else {
-            return
-        }
-
-        isDrawerPresented.toggle()
-    }
-
-    func closeDrawer() {
-        isDrawerPresented = false
-    }
-
-    func selectDevice(_ deviceID: RecordingDeviceItem.ID) {
-        store.selectDevice(id: deviceID)
-        closeDrawer()
-    }
-
     func addDevice() {
-        closeDrawer()
         onAddDevice()
-    }
-
-    func openDeviceList() {
-        closeDrawer()
-        onOpenDeviceList()
     }
 
     func dismissFeatureSheet() {
@@ -121,24 +81,12 @@ private extension RecordingView {
 private struct RecordingHeaderView: View {
     let title: String
     let subtitle: String?
-    let showsMenu: Bool
-    let onMenu: () -> Void
     let onSettings: () -> Void
 
     var body: some View {
         HStack(spacing: AppSpacing.md) {
-            if showsMenu {
-                Button(action: onMenu) {
-                    Image(systemName: "line.3.horizontal")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundColor(AppColor.brand)
-                        .frame(width: 36, height: 36)
-                }
-                .buttonStyle(PlainButtonStyle())
-            } else {
-                Color.clear
-                    .frame(width: 36, height: 36)
-            }
+            Color.clear
+                .frame(width: 36, height: 36)
 
             Spacer(minLength: 0)
 
@@ -832,12 +780,11 @@ private struct RecordingDeviceIllustration: View {
     }
 }
 
-private struct RecordingDrawerOverlay: View {
+struct RecordingDrawerOverlay: View {
     let devices: [RecordingDeviceItem]
     let selectedDeviceID: RecordingDeviceItem.ID?
     let onClose: () -> Void
     let onSelectDevice: (RecordingDeviceItem.ID) -> Void
-    let onOpenDeviceList: () -> Void
     let onAddDevice: () -> Void
 
     var body: some View {
@@ -870,22 +817,6 @@ private struct RecordingDrawerOverlay: View {
                 }
 
                 Spacer(minLength: 0)
-
-                Button(action: onOpenDeviceList) {
-                    HStack(spacing: AppSpacing.sm) {
-                        Image(systemName: "externaldrive")
-                            .font(.system(size: 16, weight: .semibold))
-
-                        Text("Manage Devices")
-                            .font(AppTypography.bodyStrong)
-                    }
-                    .foregroundColor(AppColor.textPrimary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, AppSpacing.md)
-                    .background(AppColor.background)
-                    .cornerRadius(AppRadius.medium)
-                }
-                .buttonStyle(PlainButtonStyle())
 
                 Button(action: onAddDevice) {
                     HStack(spacing: AppSpacing.sm) {

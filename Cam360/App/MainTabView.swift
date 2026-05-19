@@ -2,7 +2,6 @@ import SwiftUI
 
 private enum HomeNavigationRoute: Hashable {
     case recording
-    case deviceList
     case deviceSettings
     case livePreview
     case playback
@@ -19,7 +18,6 @@ struct MainTabView: View {
     @ObservedObject var recordingStore: RecordingStore
     @ObservedObject var galleryStore: GalleryStore
     @ObservedObject var settingsStore: SettingsStore
-    @ObservedObject var deviceListStore: DeviceListStore
     @ObservedObject var livePreviewStore: LivePreviewStore
     @ObservedObject var playbackStore: PlaybackStore
     @ObservedObject var downloadsStore: DownloadsStore
@@ -35,7 +33,6 @@ struct MainTabView: View {
         recordingStore: RecordingStore,
         galleryStore: GalleryStore,
         settingsStore: SettingsStore,
-        deviceListStore: DeviceListStore,
         livePreviewStore: LivePreviewStore,
         playbackStore: PlaybackStore,
         downloadsStore: DownloadsStore,
@@ -46,7 +43,6 @@ struct MainTabView: View {
         self.recordingStore = recordingStore
         self.galleryStore = galleryStore
         self.settingsStore = settingsStore
-        self.deviceListStore = deviceListStore
         self.livePreviewStore = livePreviewStore
         self.playbackStore = playbackStore
         self.downloadsStore = downloadsStore
@@ -89,9 +85,6 @@ struct MainTabView: View {
             HomeView(
                 store: recordingStore,
                 onAddDevice: onAddDevice,
-                onOpenDeviceList: {
-                    homeRoute = .deviceList
-                },
                 onOpenRecordingPage: {
                     homeRoute = .recording
                 },
@@ -128,9 +121,6 @@ struct MainTabView: View {
                 RecordingView(
                     store: recordingStore,
                     onAddDevice: onAddDevice,
-                    onOpenDeviceList: {
-                        homeRoute = .deviceList
-                    },
                     onOpenLivePreview: {
                         homeRoute = .livePreview
                     },
@@ -151,15 +141,6 @@ struct MainTabView: View {
                         settingsStore.dismissRoute()
                         settingsStore.prepareDeviceSettings(for: recordingStore.selectedDeviceID)
                         homeRoute = .deviceSettings
-                    }
-                )
-            }
-
-            homeNavigationLink(tag: .deviceList) {
-                DeviceListView(
-                    store: deviceListStore,
-                    onClose: {
-                        homeRoute = nil
                     }
                 )
             }
@@ -251,7 +232,7 @@ struct MainTabView: View {
     ) -> some View {
         NavigationLink(
             destination: destination()
-                .navigationBarHidden(true),
+                .navigationBarHidden(tag != .recording),
             tag: tag,
             selection: $homeRoute
         ) {

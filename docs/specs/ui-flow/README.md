@@ -29,11 +29,11 @@ flowchart TD
     Main --> Home["HomeView"]
     Main --> Gallery["GalleryView"]
     Main --> Settings["SettingsView(root: .more)"]
-    Home -->|Menu| DeviceList["DeviceListView"]
+    Home -->|Menu| Drawer["RecordingDrawerOverlay"]
     Home -->|Preview card| Recording["RecordingView (Recording)"]
     Home -->|View all events| Events["EventsView"]
     Recording -->|Add Device| Onboarding
-    Recording -->|Manage Devices| DeviceList
+    Recording -->|System back| Home
     Recording -->|Preview card / Photo| LivePreview["LivePreviewView"]
     Recording -->|Playback| Playback["PlaybackView"]
     Recording -->|Downloads| Downloads["DownloadsView"]
@@ -65,7 +65,7 @@ flowchart TD
 ## Home 流程
 
 - `HomeView` 是当前第一 tab 的真正首页，按 `UI/Home.png` 实现离线展示。
-- 顶部菜单进入 `DeviceListView`。
+- 顶部菜单展示设备抽屉 `RecordingDrawerOverlay`。
 - 主预览卡进入录像页（`RecordingView`）。
 - `Recent Events` 的 `View all` 进入 `EventsView`。
 - 首页复用 `RecordingStore` 的设备名称、连接状态和首次功能引导状态；不直接持有 `DeviceSession`。
@@ -73,11 +73,12 @@ flowchart TD
 ## 录像页（RecordingView）流程
 
 - `RecordingView` 是设备录像页。
+- 从 Home 进入时使用系统 `NavigationLink` 返回按钮回到 Home。
 - `Add Device` 通过 `AppRootView` 的 onboarding 状态进入 onboarding。
 - `Open Full Gallery` 切到 `main(.gallery)`。
 - 预览卡、拍照按钮、回放、下载管理、最近事件 `View all` 通过录像页（`RecordingView`）的 `NavigationLink` 进入对应页面。
 - 设置图标通过录像页（`RecordingView`）的 `NavigationLink` 进入 `SettingsView(root: .deviceSettings, embedsNavigationView: false)`。
-- 设备抽屉 `RecordingDrawerOverlay` 是录像页本地展示状态；`Manage Devices` 进入 `DeviceListView`。
+- 录像页左上角不再承载设备抽屉入口。
 - 首次功能引导 `RecordingFeatureSheet` 是 Recording Store 状态；展示时隐藏底部 tab。
 
 ## Gallery 流程
@@ -113,12 +114,11 @@ flowchart TD
   - `networkIdentity`
   - `firmwareUpdate`
   - `renameDevice`
-- Home、录像页（`RecordingView`）/ Gallery 的 NavigationLink 目标页不显示底部 tab；More tab 内的 `SystemPreferencesView` 本地子路由保留在主 tab 容器内。
+- Home、录像页（`RecordingView`）/ Gallery 的 NavigationLink 目标页不显示底部 tab；录像页保留系统返回按钮；More tab 内的 `SystemPreferencesView` 本地子路由保留在主 tab 容器内。
 - 返回通过 `SettingsStore.dismissRoute()`、本地 nested route 置空或 NavigationLink selection 置空完成。
 
 ## Home / 录像页（RecordingView）/ Gallery 导航目标
 
-- `DeviceListView`
 - `SettingsView(root: .deviceSettings)`
 - `LivePreviewView`
 - `PlaybackView`
@@ -126,6 +126,8 @@ flowchart TD
 - `EventsView`
 
 这些页面已可从 Home、录像页（`RecordingView`）或 Gallery 进入，但仍保持离线状态；不得在其中创建播放器、下载服务或底层设备连接。
+
+`DeviceListView` 当前标记为未使用页面，保留旧离线占位实现但不接导航入口。
 
 ## 维护规则
 

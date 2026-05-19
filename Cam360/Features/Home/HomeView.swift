@@ -3,18 +3,19 @@ import SwiftUI
 struct HomeView: View {
     @ObservedObject var store: RecordingStore
     let onAddDevice: () -> Void
-    let onOpenDeviceList: () -> Void
     let onOpenRecordingPage: () -> Void
     let onOpenEvents: () -> Void
 
+    @State private var isDrawerPresented = false
+
     var body: some View {
-        ZStack(alignment: .top) {
+        ZStack(alignment: .topLeading) {
             VStack(spacing: 0) {
                 HomeHeaderView(
                     title: title,
                     statusText: statusText,
                     showsMenu: store.hasDevices,
-                    onMenu: onOpenDeviceList
+                    onMenu: toggleDrawer
                 )
 
                 ScrollView(showsIndicators: false) {
@@ -42,6 +43,16 @@ struct HomeView: View {
                 .background(AppColor.surface)
             }
 
+            if isDrawerPresented {
+                RecordingDrawerOverlay(
+                    devices: store.devices,
+                    selectedDeviceID: store.selectedDeviceID,
+                    onClose: closeDrawer,
+                    onSelectDevice: selectDevice(_:),
+                    onAddDevice: addDevice
+                )
+            }
+
             if store.shouldShowFeatureSheet {
                 RecordingFeatureSheet(
                     deviceState: store.featureSheetDeviceState,
@@ -53,6 +64,7 @@ struct HomeView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(AppColor.surface.edgesIgnoringSafeArea(.bottom))
         .accessibility(identifier: "screen-home")
+        .animation(.easeInOut(duration: 0.2), value: isDrawerPresented)
         .onAppear(perform: store.refresh)
     }
 
@@ -62,6 +74,28 @@ struct HomeView: View {
 
     private var statusText: String {
         store.selectedDevice?.status.title ?? "Connected"
+    }
+
+    private func toggleDrawer() {
+        guard store.shouldShowFeatureSheet == false else {
+            return
+        }
+
+        isDrawerPresented.toggle()
+    }
+
+    private func closeDrawer() {
+        isDrawerPresented = false
+    }
+
+    private func selectDevice(_ deviceID: RecordingDeviceItem.ID) {
+        store.selectDevice(id: deviceID)
+        closeDrawer()
+    }
+
+    private func addDevice() {
+        closeDrawer()
+        onAddDevice()
     }
 
     private func dismissFeatureSheet() {
