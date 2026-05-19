@@ -63,7 +63,7 @@ failed(DeviceError) --disconnect--> disconnected
 
 ## 当前范围外
 
-- 真实 AP 连接、endpoint 自动发现、Dashboard/Settings 写操作和完整业务状态同步
+- 真实 AP 连接、endpoint 自动发现、录像页/Settings 写操作和完整业务状态同步
 - 真实预览流、播放器控制、下载任务、本地文件保存和截图保存
 - 文件删除、文件加锁、格式化、恢复出厂设置等危险操作的 UI 触发和真机结果确认
 - 自动重试与会话级超时调度

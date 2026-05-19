@@ -11,7 +11,7 @@
 - View 不直接持有 DeviceSession 或底层连接；共享依赖从 AppContainer 下发。
 - Store 使用 `@Published` 驱动状态，不用 `@Observable`（需兼容 iOS 13）。
 - 页面内临时 UI 状态保留在 Store 内，不升级为 App 根状态。
-- Dashboard / Gallery 的跨页面入口通过 `MainTabView` 内的 `NavigationLink` 进入；目标页展示时隐藏自定义底部 tab。
+- Home / 录像页（`RecordingView`）/ Gallery 的跨页面入口通过 `MainTabView` 内的 `NavigationLink` 进入；目标页展示时隐藏自定义底部 tab。
 
 ### 文件创建规则
 ```

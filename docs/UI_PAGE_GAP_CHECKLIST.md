@@ -6,9 +6,9 @@
 
 ## 已覆盖
 
-- 主流程：Dashboard、Gallery、Settings、DeviceOnboarding。
+- 主流程：Home、录像页（`RecordingView`）、Gallery、Settings、DeviceOnboarding。
 - 设置：已覆盖设置首页、系统偏好、录像/安全/存储/水印/设备详情、通知、权限、FAQ、Contact Support；Privacy Policy、Terms of Service 和真实联系方式仍缺业务正文。
-- 离线页面导航：离线页面已可从 Dashboard 或 Gallery 进入，清单见 `docs/specs/ui-flow/README.md`。
+- 离线页面导航：离线页面已可从 Home、录像页（`RecordingView`）或 Gallery 进入，清单见 `docs/specs/ui-flow/README.md`。
 - 离线状态：LivePreview 截图/录制/全屏保持禁用，Downloads 选择文件/暂停队列保持禁用，Events 保持空态或错误态，DeviceList 保持本地已知设备展示，Playback 以 `Drive Log` 本地网格展示。
 
 ## 保持硬件队列

@@ -63,7 +63,8 @@ hardware_required: false
 
 | 页面 | 主要公共组件 | 主要 Feature 私有组件 |
 | --- | --- | --- |
-| `DashboardView` | `PrimaryButton`, `StatusTag`, `AppProgressBar`, `appSurface` | `DashboardHeaderView`, `DashboardPreviewCard`, `DashboardCaptureControls`, `DashboardStorageCard`, `DashboardGalleryRow`, `DashboardFeatureLinkRows`, `DashboardEventRow`, `DashboardDrawerOverlay`, `DashboardFeatureSheet` |
+| `HomeView` | DesignSystem tokens | `HomeHeaderView`, `HomeHeroCard`, `HomeRecentEventsSection`, `HomeRecentEventRow` |
+| `RecordingView` | `PrimaryButton`, `StatusTag`, `AppProgressBar`, `appSurface` | `RecordingHeaderView`, `RecordingPreviewCard`, `RecordingCaptureControls`, `RecordingStorageCard`, `RecordingGalleryRow`, `RecordingFeatureLinkRows`, `RecordingEventRow`, `RecordingDrawerOverlay`, `RecordingFeatureSheet` |
 | `GalleryView` | `EmptyStateView`, `StatusTag` | `GalleryHeaderView`, `GalleryFilterBar`, `GallerySearchBar`, `GallerySectionsList`, `GalleryMediaCard`, `GalleryThumbnail`, `GalleryBatchActionBar`, `GalleryActionSheet` |
 | `DeviceOnboardingView` | `PrimaryButton`, `AppProgressBar`, `appSurface` | `DeviceOnboardingNavigationBar`, `DeviceOnboardingSignalIllustration`, `DeviceOnboardingTipCard`, `DeviceOnboardingReadonlyField`, `DeviceOnboardingPasswordField` |
 | `SettingsView` / `SettingsOverviewView` | `AppTopBar`, `StatusTag`, Settings 组件族 | 无独立私有组件 |
@@ -86,7 +87,7 @@ hardware_required: false
   - 状态徽标统一用 `StatusTag`
   - 空、错、加载态优先用 `EmptyStateView`、`ErrorStateView`、`InlineLoadingView`
 - 暂不建议上移：
-  - Dashboard 首屏插画、预览卡、设备抽屉和首次功能引导
+  - Recording 首屏插画、预览卡、设备抽屉和首次功能引导
   - Gallery 缩略图、媒体卡和操作面板
   - Onboarding 信号插画、密码输入和连接流程 UI
 - 设置组件族已经在 `Core/DesignSystem/SettingsComponents.swift`，继续服务设置域；跨域复用前先确认命名和交互不被设置语义绑定。

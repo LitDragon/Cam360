@@ -1,7 +1,7 @@
 import Combine
 import Foundation
 
-enum DashboardDeviceStatus: Equatable {
+enum RecordingDeviceStatus: Equatable {
     case connected
     case connecting
     case disconnected
@@ -29,14 +29,14 @@ enum DashboardDeviceStatus: Equatable {
     }
 }
 
-struct DashboardDeviceItem: Identifiable, Equatable {
+struct RecordingDeviceItem: Identifiable, Equatable {
     let id: String
     let name: String
-    let status: DashboardDeviceStatus
+    let status: RecordingDeviceStatus
     let hotspotSSID: String
 }
 
-struct DashboardStorageSummary: Equatable {
+struct RecordingStorageSummary: Equatable {
     let usedCapacityText: String
     let totalCapacityText: String
     let usageFraction: Double
@@ -46,62 +46,62 @@ struct DashboardStorageSummary: Equatable {
     }
 }
 
-enum DashboardStorageState: Equatable {
-    case available(DashboardStorageSummary)
+enum RecordingStorageState: Equatable {
+    case available(RecordingStorageSummary)
     case unavailable(title: String, message: String)
 }
 
-enum DashboardEventArtwork: Equatable {
+enum RecordingEventArtwork: Equatable {
     case vehicle
     case landscape
     case nightDrive
     case parking
 }
 
-struct DashboardRecentEvent: Identifiable, Equatable {
+struct RecordingRecentEvent: Identifiable, Equatable {
     let id: String
     let title: String
     let detail: String
     let badgeTitle: String
     let badgeTone: StatusTagTone
-    let artwork: DashboardEventArtwork
+    let artwork: RecordingEventArtwork
 }
 
-struct DashboardPreviewState: Equatable {
+struct RecordingPreviewState: Equatable {
     let statusTitle: String
     let resolutionTitle: String
     let timestampText: String
 }
 
-struct DashboardFeatureDeviceState: Equatable {
+struct RecordingFeatureDeviceState: Equatable {
     let pairedDeviceName: String
     let connectionStatusText: String
 }
 
-struct DashboardDeviceScenario: Equatable {
+struct RecordingDeviceScenario: Equatable {
     let startsRecording: Bool
-    let previewState: DashboardPreviewState
-    let storageState: DashboardStorageState
-    let events: [DashboardRecentEvent]
+    let previewState: RecordingPreviewState
+    let storageState: RecordingStorageState
+    let events: [RecordingRecentEvent]
 }
 
-protocol DashboardContentProviding {
+protocol RecordingContentProviding {
     var placeholderDevices: [KnownDeviceSummary] { get }
-    var placeholderFeatureDeviceState: DashboardFeatureDeviceState { get }
+    var placeholderFeatureDeviceState: RecordingFeatureDeviceState { get }
 
-    func scenario(forDeviceAt index: Int) -> DashboardDeviceScenario
-    func connectionStatusText(for device: DashboardDeviceItem) -> String
+    func scenario(forDeviceAt index: Int) -> RecordingDeviceScenario
+    func connectionStatusText(for device: RecordingDeviceItem) -> String
 }
 
-final class DashboardStore: ObservableObject {
-    @Published private(set) var devices: [DashboardDeviceItem]
-    @Published private(set) var selectedDeviceID: DashboardDeviceItem.ID?
+final class RecordingStore: ObservableObject {
+    @Published private(set) var devices: [RecordingDeviceItem]
+    @Published private(set) var selectedDeviceID: RecordingDeviceItem.ID?
     @Published private(set) var shouldShowFeatureSheet: Bool
-    @Published private(set) var recordingStatesByDeviceID: [DashboardDeviceItem.ID: Bool]
+    @Published private(set) var recordingStatesByDeviceID: [RecordingDeviceItem.ID: Bool]
 
     private let knownDeviceRepository: KnownDeviceRepository
     private let appPreferenceStore: AppPreferenceStore
-    private let contentProvider: DashboardContentProviding
+    private let contentProvider: RecordingContentProviding
     private let deviceSession: DeviceSession?
     private var deviceSessionState: DeviceSessionState = .idle
     private var lastSessionDeviceID: KnownDeviceSummary.ID?
@@ -110,7 +110,7 @@ final class DashboardStore: ObservableObject {
     init(
         knownDeviceRepository: KnownDeviceRepository,
         appPreferenceStore: AppPreferenceStore,
-        contentProvider: DashboardContentProviding = PlaceholderDashboardContentProvider(),
+        contentProvider: RecordingContentProviding = PlaceholderRecordingContentProvider(),
         deviceSession: DeviceSession? = nil
     ) {
         self.knownDeviceRepository = knownDeviceRepository
@@ -131,7 +131,7 @@ final class DashboardStore: ObservableObject {
         devices.isEmpty == false
     }
 
-    var selectedDevice: DashboardDeviceItem? {
+    var selectedDevice: RecordingDeviceItem? {
         guard let selectedDeviceID = selectedDeviceID else {
             return nil
         }
@@ -139,24 +139,24 @@ final class DashboardStore: ObservableObject {
         return devices.first(where: { $0.id == selectedDeviceID })
     }
 
-    var recentEvents: [DashboardRecentEvent] {
+    var recentEvents: [RecordingRecentEvent] {
         selectedScenario?.events ?? []
     }
 
-    var previewState: DashboardPreviewState {
+    var previewState: RecordingPreviewState {
         selectedScenario?.previewState ?? contentProvider.scenario(forDeviceAt: 0).previewState
     }
 
-    var storageState: DashboardStorageState {
+    var storageState: RecordingStorageState {
         selectedScenario?.storageState ?? contentProvider.scenario(forDeviceAt: 0).storageState
     }
 
-    var featureSheetDeviceState: DashboardFeatureDeviceState {
+    var featureSheetDeviceState: RecordingFeatureDeviceState {
         guard let selectedDevice = selectedDevice else {
             return contentProvider.placeholderFeatureDeviceState
         }
 
-        return DashboardFeatureDeviceState(
+        return RecordingFeatureDeviceState(
             pairedDeviceName: selectedDevice.name,
             connectionStatusText: contentProvider.connectionStatusText(for: selectedDevice)
         )
@@ -175,7 +175,7 @@ final class DashboardStore: ObservableObject {
         let knownDevices = knownDeviceRepository.fetchKnownDevices()
         let nextSelectedDeviceID = selectedDeviceID(in: knownDevices)
         let items = knownDevices.enumerated().map { index, device in
-            DashboardDeviceItem(
+            RecordingDeviceItem(
                 id: device.id,
                 name: device.name,
                 status: status(for: device, selectedDeviceID: nextSelectedDeviceID),
@@ -194,7 +194,7 @@ final class DashboardStore: ObservableObject {
         shouldShowFeatureSheet = appPreferenceStore.hasCompletedOnboarding == false
     }
 
-    func selectDevice(id: DashboardDeviceItem.ID) {
+    func selectDevice(id: RecordingDeviceItem.ID) {
         selectedDeviceID = id
     }
 
@@ -221,7 +221,7 @@ final class DashboardStore: ObservableObject {
         shouldShowFeatureSheet = false
     }
 
-    private var selectedScenario: DashboardDeviceScenario? {
+    private var selectedScenario: RecordingDeviceScenario? {
         guard let selectedDeviceID = selectedDeviceID,
               let selectedIndex = devices.firstIndex(where: { $0.id == selectedDeviceID }) else {
             return nil
@@ -262,7 +262,7 @@ final class DashboardStore: ObservableObject {
     private func status(
         for device: KnownDeviceSummary,
         selectedDeviceID: KnownDeviceSummary.ID?
-    ) -> DashboardDeviceStatus {
+    ) -> RecordingDeviceStatus {
         switch deviceSessionState {
         case .ready(let deviceInfo), .busy(operation: _, deviceInfo: let deviceInfo):
             if device.id == deviceInfo.id {
@@ -281,63 +281,63 @@ final class DashboardStore: ObservableObject {
     }
 }
 
-struct PlaceholderDashboardContentProvider: DashboardContentProviding {
+struct PlaceholderRecordingContentProvider: RecordingContentProviding {
     var placeholderDevices: [KnownDeviceSummary] {
         Self.placeholderDevices
     }
 
-    var placeholderFeatureDeviceState: DashboardFeatureDeviceState {
-        DashboardFeatureDeviceState(
+    var placeholderFeatureDeviceState: RecordingFeatureDeviceState {
+        RecordingFeatureDeviceState(
             pairedDeviceName: Self.placeholderDevices.first?.name ?? "Placeholder Dashcam",
             connectionStatusText: Self.placeholderConnectionStatusText
         )
     }
 
-    func scenario(forDeviceAt index: Int) -> DashboardDeviceScenario {
+    func scenario(forDeviceAt index: Int) -> RecordingDeviceScenario {
         let normalizedIndex = index % Self.placeholderScenarios.count
         return Self.placeholderScenarios[normalizedIndex]
     }
 
-    func connectionStatusText(for device: DashboardDeviceItem) -> String {
+    func connectionStatusText(for device: RecordingDeviceItem) -> String {
         Self.placeholderConnectionStatusText
     }
 }
 
-private extension PlaceholderDashboardContentProvider {
+private extension PlaceholderRecordingContentProvider {
     static let placeholderDevices: [KnownDeviceSummary] = [
         KnownDeviceSummary(
-            id: "dashboard-device-main",
+            id: "recording-device-main",
             name: "Vigilant Lens DL-400",
             hotspotSSID: "Cam360_DL400",
             lastConnectedAt: Date(timeIntervalSince1970: 1_713_139_200)
         ),
         KnownDeviceSummary(
-            id: "dashboard-device-rear",
+            id: "recording-device-rear",
             name: "Rear View Pro",
             hotspotSSID: "Cam360_Rear",
             lastConnectedAt: Date(timeIntervalSince1970: 1_713_128_400)
         ),
         KnownDeviceSummary(
-            id: "dashboard-device-cabin",
+            id: "recording-device-cabin",
             name: "Cabin Cam",
             hotspotSSID: "Cam360_Cabin",
             lastConnectedAt: Date(timeIntervalSince1970: 1_713_117_600)
         ),
         KnownDeviceSummary(
-            id: "dashboard-device-side",
+            id: "recording-device-side",
             name: "Side Cam",
             hotspotSSID: "Cam360_Side",
             lastConnectedAt: Date(timeIntervalSince1970: 1_713_106_800)
         )
     ]
 
-    static let defaultStorageSummary = DashboardStorageSummary(
+    static let defaultStorageSummary = RecordingStorageSummary(
         usedCapacityText: "74.2 GB",
         totalCapacityText: "128 GB",
         usageFraction: 0.58
     )
 
-    static let placeholderPreviewState = DashboardPreviewState(
+    static let placeholderPreviewState = RecordingPreviewState(
         statusTitle: "LIVE",
         resolutionTitle: "4K",
         timestampText: "2023-10-27 14:32:15"
@@ -345,13 +345,13 @@ private extension PlaceholderDashboardContentProvider {
 
     static let placeholderConnectionStatusText = "Signal Strength: Optimal"
 
-    static let placeholderScenarios: [DashboardDeviceScenario] = [
-        DashboardDeviceScenario(
+    static let placeholderScenarios: [RecordingDeviceScenario] = [
+        RecordingDeviceScenario(
             startsRecording: false,
             previewState: placeholderPreviewState,
             storageState: .available(defaultStorageSummary),
             events: [
-                DashboardRecentEvent(
+                RecordingRecentEvent(
                     id: "collision-detected",
                     title: "Collision Detected",
                     detail: "Today, 10:42 AM",
@@ -359,7 +359,7 @@ private extension PlaceholderDashboardContentProvider {
                     badgeTone: .danger,
                     artwork: .vehicle
                 ),
-                DashboardRecentEvent(
+                RecordingRecentEvent(
                     id: "motion-detected",
                     title: "Motion Detected",
                     detail: "Today, 9:15 AM",
@@ -367,7 +367,7 @@ private extension PlaceholderDashboardContentProvider {
                     badgeTone: .neutral,
                     artwork: .landscape
                 ),
-                DashboardRecentEvent(
+                RecordingRecentEvent(
                     id: "manual-save",
                     title: "Manual Save",
                     detail: "Yesterday, 8:15 PM",
@@ -375,7 +375,7 @@ private extension PlaceholderDashboardContentProvider {
                     badgeTone: .neutral,
                     artwork: .nightDrive
                 ),
-                DashboardRecentEvent(
+                RecordingRecentEvent(
                     id: "parking-incident",
                     title: "Parking Incident",
                     detail: "Mon, 2:30 PM",
@@ -385,12 +385,12 @@ private extension PlaceholderDashboardContentProvider {
                 )
             ]
         ),
-        DashboardDeviceScenario(
+        RecordingDeviceScenario(
             startsRecording: true,
             previewState: placeholderPreviewState,
             storageState: .available(defaultStorageSummary),
             events: [
-                DashboardRecentEvent(
+                RecordingRecentEvent(
                     id: "collision-detected-secondary",
                     title: "Collision Detected",
                     detail: "Today, 10:42 AM",
@@ -398,7 +398,7 @@ private extension PlaceholderDashboardContentProvider {
                     badgeTone: .danger,
                     artwork: .vehicle
                 ),
-                DashboardRecentEvent(
+                RecordingRecentEvent(
                     id: "motion-detected-secondary",
                     title: "Motion Detected",
                     detail: "Today, 9:15 AM",
@@ -406,7 +406,7 @@ private extension PlaceholderDashboardContentProvider {
                     badgeTone: .neutral,
                     artwork: .nightDrive
                 ),
-                DashboardRecentEvent(
+                RecordingRecentEvent(
                     id: "manual-save-secondary",
                     title: "Manual Save",
                     detail: "Yesterday, 8:15 PM",
@@ -416,13 +416,13 @@ private extension PlaceholderDashboardContentProvider {
                 )
             ]
         ),
-        DashboardDeviceScenario(
+        RecordingDeviceScenario(
             startsRecording: true,
             previewState: placeholderPreviewState,
             storageState: .available(defaultStorageSummary),
             events: []
         ),
-        DashboardDeviceScenario(
+        RecordingDeviceScenario(
             startsRecording: true,
             previewState: placeholderPreviewState,
             storageState: .unavailable(

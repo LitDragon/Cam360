@@ -1,13 +1,13 @@
 import SwiftUI
 
-struct DashboardFeatureSheet: View {
+struct RecordingFeatureSheet: View {
     private enum Page: Int {
         case splash
         case connect
         case success
     }
 
-    let deviceState: DashboardFeatureDeviceState
+    let deviceState: RecordingFeatureDeviceState
     let onSkip: () -> Void
     let onEnterHome: () -> Void
 
@@ -17,7 +17,7 @@ struct DashboardFeatureSheet: View {
     var body: some View {
         ZStack {
             LinearGradient(
-                colors: AppArtworkPalette.dashboardFeatureBackground,
+                colors: AppArtworkPalette.recordingFeatureBackground,
                 startPoint: .top,
                 endPoint: .bottom
             )
@@ -32,7 +32,7 @@ struct DashboardFeatureSheet: View {
                 successPage
             }
         }
-        .accessibility(identifier: "dashboard-feature-onboarding")
+        .accessibility(identifier: "recording-feature-onboarding")
         .animation(.easeInOut(duration: 0.25), value: currentPage)
         .onAppear(perform: startSplashAnimation)
     }
@@ -48,7 +48,7 @@ struct DashboardFeatureSheet: View {
 
             Spacer(minLength: 0)
 
-            DashboardFeatureSplashIllustration()
+            RecordingFeatureSplashIllustration()
 
             Text("VIGILANT LENS")
                 .font(.system(size: 30, weight: .heavy))
@@ -64,8 +64,8 @@ struct DashboardFeatureSheet: View {
             Spacer(minLength: 0)
 
             VStack(spacing: AppSpacing.lg) {
-                DashboardFeatureProgressBar(progress: splashProgress)
-                    .frame(width: DashboardFeatureProgressBar.width)
+                RecordingFeatureProgressBar(progress: splashProgress)
+                    .frame(width: RecordingFeatureProgressBar.width)
 
                 Text(AppInfo.shortVersionText)
                     .font(.system(size: 12, weight: .medium))
@@ -92,7 +92,7 @@ struct DashboardFeatureSheet: View {
 
             Spacer(minLength: 32)
 
-            DashboardFeatureConnectIllustration()
+            RecordingFeatureConnectIllustration()
                 .padding(.horizontal, 36)
 
             Text("Connect via WiFi")
@@ -108,12 +108,12 @@ struct DashboardFeatureSheet: View {
                 .padding(.top, 18)
                 .padding(.horizontal, 48)
 
-            DashboardFeaturePageIndicator(currentIndex: 1)
+            RecordingFeaturePageIndicator(currentIndex: 1)
                 .padding(.top, 42)
 
             Spacer(minLength: 0)
 
-            DashboardFeaturePrimaryButton(
+            RecordingFeaturePrimaryButton(
                 title: "Next Step",
                 action: showSuccess
             )
@@ -154,7 +154,7 @@ struct DashboardFeatureSheet: View {
 
             Spacer(minLength: 56)
 
-            DashboardFeatureSuccessIllustration()
+            RecordingFeatureSuccessIllustration()
 
             Text("Connection Successful")
                 .font(.system(size: 31, weight: .bold))
@@ -163,7 +163,7 @@ struct DashboardFeatureSheet: View {
                 .padding(.top, 42)
                 .padding(.horizontal, 24)
 
-            DashboardFeatureDeviceCard(state: deviceState)
+            RecordingFeatureDeviceCard(state: deviceState)
                 .padding(.top, 24)
                 .padding(.horizontal, 34)
 
@@ -177,13 +177,13 @@ struct DashboardFeatureSheet: View {
 
             Spacer(minLength: 0)
 
-            DashboardFeaturePrimaryButton(
+            RecordingFeaturePrimaryButton(
                 title: "Enter Home",
                 action: onEnterHome
             )
             .padding(.horizontal, 34)
 
-            DashboardFeatureFooterChips()
+            RecordingFeatureFooterChips()
                 .padding(.top, 64)
                 .padding(.bottom, 32)
         }
@@ -212,7 +212,7 @@ struct DashboardFeatureSheet: View {
     }
 }
 
-private struct DashboardFeatureSplashIllustration: View {
+private struct RecordingFeatureSplashIllustration: View {
     var body: some View {
         ZStack {
             Circle()
@@ -237,13 +237,13 @@ private struct DashboardFeatureSplashIllustration: View {
     }
 }
 
-private struct DashboardFeatureConnectIllustration: View {
+private struct RecordingFeatureConnectIllustration: View {
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(
                     LinearGradient(
-                        colors: AppArtworkPalette.dashboardFeatureCameraBody,
+                        colors: AppArtworkPalette.recordingFeatureCameraBody,
                         startPoint: .top,
                         endPoint: .bottom
                     )
@@ -259,7 +259,7 @@ private struct DashboardFeatureConnectIllustration: View {
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
                             .fill(
                                 LinearGradient(
-                                    colors: AppArtworkPalette.dashboardFeatureCameraScreen,
+                                    colors: AppArtworkPalette.recordingFeatureCameraScreen,
                                     startPoint: .top,
                                     endPoint: .bottom
                                 )
@@ -275,7 +275,7 @@ private struct DashboardFeatureConnectIllustration: View {
 
             ZStack {
                 RoundedRectangle(cornerRadius: 36, style: .continuous)
-                    .fill(AppArtworkPalette.dashboardFeaturePhoneBody)
+                    .fill(AppArtworkPalette.recordingFeaturePhoneBody)
                     .frame(width: 126, height: 224)
                     .overlay(
                         RoundedRectangle(cornerRadius: 36, style: .continuous)
@@ -327,7 +327,7 @@ private struct DashboardFeatureConnectIllustration: View {
     }
 }
 
-private struct DashboardFeatureSuccessIllustration: View {
+private struct RecordingFeatureSuccessIllustration: View {
     var body: some View {
         ZStack {
             Circle()
@@ -354,8 +354,8 @@ private struct DashboardFeatureSuccessIllustration: View {
     }
 }
 
-private struct DashboardFeatureDeviceCard: View {
-    let state: DashboardFeatureDeviceState
+private struct RecordingFeatureDeviceCard: View {
+    let state: RecordingFeatureDeviceState
 
     var body: some View {
         VStack(spacing: 18) {
@@ -392,7 +392,7 @@ private struct DashboardFeatureDeviceCard: View {
     }
 }
 
-private struct DashboardFeatureFooterChips: View {
+private struct RecordingFeatureFooterChips: View {
     private let titles = ["LINKED", "5G DATA", "GPS ACTIVE"]
 
     var body: some View {
@@ -417,7 +417,7 @@ private struct DashboardFeatureFooterChips: View {
     }
 }
 
-private struct DashboardFeaturePrimaryButton: View {
+private struct RecordingFeaturePrimaryButton: View {
     let title: String
     let action: () -> Void
 
@@ -446,7 +446,7 @@ private struct DashboardFeaturePrimaryButton: View {
     }
 }
 
-private struct DashboardFeaturePageIndicator: View {
+private struct RecordingFeaturePageIndicator: View {
     let currentIndex: Int
 
     var body: some View {
@@ -466,7 +466,7 @@ private struct DashboardFeaturePageIndicator: View {
     }
 }
 
-private struct DashboardFeatureProgressBar: View {
+private struct RecordingFeatureProgressBar: View {
     static let width: CGFloat = 194
 
     let progress: CGFloat

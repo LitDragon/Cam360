@@ -23,7 +23,7 @@ struct AppRootView: View {
     private var mainTabs: some View {
         MainTabView(
             initialSelectedTab: bootstrap.initialSelectedTab,
-            dashboardStore: bootstrap.container.dashboardStore,
+            recordingStore: bootstrap.container.recordingStore,
             galleryStore: bootstrap.container.galleryStore,
             settingsStore: bootstrap.container.settingsStore,
             deviceListStore: bootstrap.container.deviceListStore,

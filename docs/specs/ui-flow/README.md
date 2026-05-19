@@ -11,11 +11,11 @@ hardware_required: false
 
 - `AppRootView` 维护 onboarding 是否展示；主流程显示 `MainTabView`。
 - 主 tab 由 `MainTabView` 本地状态维护当前展示页：
-  - `dashboard` -> `DashboardView`
+  - `home` -> `HomeView`
   - `gallery` -> `GalleryView`
   - `settings` -> `SettingsView(root: .more)`
-- Dashboard 和 Gallery 的跨页面跳转由各自的 `NavigationView` + `NavigationLink` 承载；跳转页展示时隐藏自定义底部 tab。
-- 设备设置页由 Dashboard 的 `NavigationLink` 承载，root 为 `SettingsView(root: .deviceSettings, embedsNavigationView: false)`。
+- Home、录像页（`RecordingView`）和 Gallery 的跨页面跳转由各自的 `NavigationView` + `NavigationLink` 承载；跳转页展示时隐藏自定义底部 tab。
+- 设备设置页由录像页（`RecordingView`）的 `NavigationLink` 承载，root 为 `SettingsView(root: .deviceSettings, embedsNavigationView: false)`。
 - 设备设置二级页由 `SettingsStore.route` 维护，复用外层 `NavigationView`。
 - 页面内临时 UI 状态保留在页面或对应 Store 内，不升级为 App 根路由。
 
@@ -26,17 +26,20 @@ flowchart TD
     Root["AppRootView"]
     Root --> Onboarding["DeviceOnboardingView"]
     Root --> Main["MainTabView"]
-    Main --> Dashboard["DashboardView"]
+    Main --> Home["HomeView"]
     Main --> Gallery["GalleryView"]
     Main --> Settings["SettingsView(root: .more)"]
-    Dashboard -->|Add Device| Onboarding
-    Dashboard -->|Manage Devices| DeviceList["DeviceListView"]
-    Dashboard -->|Preview card / Photo| LivePreview["LivePreviewView"]
-    Dashboard -->|Playback| Playback["PlaybackView"]
-    Dashboard -->|Downloads| Downloads["DownloadsView"]
-    Dashboard -->|View all events| Events["EventsView"]
-    Dashboard -->|Open Full Gallery / View all| Gallery
-    Dashboard -->|Settings icon| DeviceSettings["SettingsView(root: .deviceSettings)"]
+    Home -->|Menu| DeviceList["DeviceListView"]
+    Home -->|Preview card| Recording["RecordingView (Recording)"]
+    Home -->|View all events| Events["EventsView"]
+    Recording -->|Add Device| Onboarding
+    Recording -->|Manage Devices| DeviceList
+    Recording -->|Preview card / Photo| LivePreview["LivePreviewView"]
+    Recording -->|Playback| Playback["PlaybackView"]
+    Recording -->|Downloads| Downloads["DownloadsView"]
+    Recording -->|View all events| Events["EventsView"]
+    Recording -->|Open Full Gallery / View all| Gallery
+    Recording -->|Settings icon| DeviceSettings["SettingsView(root: .deviceSettings)"]
     Gallery -->|Media item| Playback
     Gallery -->|Download action| Downloads
 ```
@@ -59,15 +62,23 @@ flowchart TD
   - `searching`、`wifiDetails` 返回 `introduction`
   - `connecting` 返回或取消时 reset `DeviceSession`，回到 `wifiDetails`
 
-## Dashboard 流程
+## Home 流程
 
-- `DashboardView` 是首页 tab。
+- `HomeView` 是当前第一 tab 的真正首页，按 `UI/Home.png` 实现离线展示。
+- 顶部菜单进入 `DeviceListView`。
+- 主预览卡进入录像页（`RecordingView`）。
+- `Recent Events` 的 `View all` 进入 `EventsView`。
+- 首页复用 `RecordingStore` 的设备名称、连接状态和首次功能引导状态；不直接持有 `DeviceSession`。
+
+## 录像页（RecordingView）流程
+
+- `RecordingView` 是设备录像页。
 - `Add Device` 通过 `AppRootView` 的 onboarding 状态进入 onboarding。
 - `Open Full Gallery` 切到 `main(.gallery)`。
-- 预览卡、拍照按钮、回放、下载管理、最近事件 `View all` 通过 Dashboard 的 `NavigationLink` 进入对应页面。
-- 设置图标通过 Dashboard 的 `NavigationLink` 进入 `SettingsView(root: .deviceSettings, embedsNavigationView: false)`。
-- 设备抽屉 `DashboardDrawerOverlay` 是首页本地展示状态；`Manage Devices` 进入 `DeviceListView`。
-- 首次功能引导 `DashboardFeatureSheet` 是 Dashboard Store 状态；展示时隐藏底部 tab。
+- 预览卡、拍照按钮、回放、下载管理、最近事件 `View all` 通过录像页（`RecordingView`）的 `NavigationLink` 进入对应页面。
+- 设置图标通过录像页（`RecordingView`）的 `NavigationLink` 进入 `SettingsView(root: .deviceSettings, embedsNavigationView: false)`。
+- 设备抽屉 `RecordingDrawerOverlay` 是录像页本地展示状态；`Manage Devices` 进入 `DeviceListView`。
+- 首次功能引导 `RecordingFeatureSheet` 是 Recording Store 状态；展示时隐藏底部 tab。
 
 ## Gallery 流程
 
@@ -78,7 +89,7 @@ flowchart TD
 ## Settings 流程
 
 - 第三个 tab `settings` 显示 `SettingsView(root: .more)`，root 内容为标题 `More` 的 `SystemPreferencesView`，不显示返回按钮。
-- 首页设置图标进入 `SettingsView(root: .deviceSettings, embedsNavigationView: false)`，root 内容为 `SettingsOverviewView`，显示返回按钮并 pop 回 Dashboard。
+- 录像页设置图标进入 `SettingsView(root: .deviceSettings, embedsNavigationView: false)`，root 内容为 `SettingsOverviewView`，显示返回按钮并 pop 回录像页。
 - `SettingsOverviewView` 可进入：
   - `recordingSettings` -> `RecordingSettingsView`
   - `safetySettings` -> `SafetySettingsView`
@@ -102,10 +113,10 @@ flowchart TD
   - `networkIdentity`
   - `firmwareUpdate`
   - `renameDevice`
-- Dashboard / Gallery 的 NavigationLink 目标页不显示底部 tab；More tab 内的 `SystemPreferencesView` 本地子路由保留在主 tab 容器内。
+- Home、录像页（`RecordingView`）/ Gallery 的 NavigationLink 目标页不显示底部 tab；More tab 内的 `SystemPreferencesView` 本地子路由保留在主 tab 容器内。
 - 返回通过 `SettingsStore.dismissRoute()`、本地 nested route 置空或 NavigationLink selection 置空完成。
 
-## Dashboard / Gallery 导航目标
+## Home / 录像页（RecordingView）/ Gallery 导航目标
 
 - `DeviceListView`
 - `SettingsView(root: .deviceSettings)`
@@ -114,7 +125,7 @@ flowchart TD
 - `DownloadsView`
 - `EventsView`
 
-这些页面已可从 Dashboard 或 Gallery 进入，但仍保持离线状态；不得在其中创建播放器、下载服务或底层设备连接。
+这些页面已可从 Home、录像页（`RecordingView`）或 Gallery 进入，但仍保持离线状态；不得在其中创建播放器、下载服务或底层设备连接。
 
 ## 维护规则
 

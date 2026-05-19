@@ -32,7 +32,7 @@ final class AppBootstrap {
             appPreferenceStore.reset()
         }
 
-        let selectedTab = tabOverride(from: arguments) ?? .dashboard
+        let selectedTab = tabOverride(from: arguments) ?? .home
         if arguments.contains(LaunchArgument.forceMain) {
             appPreferenceStore.hasCompletedOnboarding = true
         }

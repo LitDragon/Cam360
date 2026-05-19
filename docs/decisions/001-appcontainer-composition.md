@@ -7,7 +7,7 @@ date: 2026-04-01
 
 ## 上下文
 
-项目有多个 Feature Store（Dashboard、Settings、Playback 等），它们共享底层依赖（DeviceSession、KnownDeviceRepository、AppPreferenceStore）。需要决定依赖注入的方式。
+项目有多个 Feature Store（Recording、Settings、Playback 等），它们共享底层依赖（DeviceSession、KnownDeviceRepository、AppPreferenceStore）。需要决定依赖注入的方式。
 
 ## 决策
 

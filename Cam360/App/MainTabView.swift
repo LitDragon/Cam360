@@ -1,6 +1,7 @@
 import SwiftUI
 
-private enum DashboardNavigationRoute: Hashable {
+private enum HomeNavigationRoute: Hashable {
+    case recording
     case deviceList
     case deviceSettings
     case livePreview
@@ -15,7 +16,7 @@ private enum GalleryNavigationRoute: Hashable {
 }
 
 struct MainTabView: View {
-    @ObservedObject var dashboardStore: DashboardStore
+    @ObservedObject var recordingStore: RecordingStore
     @ObservedObject var galleryStore: GalleryStore
     @ObservedObject var settingsStore: SettingsStore
     @ObservedObject var deviceListStore: DeviceListStore
@@ -26,12 +27,12 @@ struct MainTabView: View {
     let onAddDevice: () -> Void
 
     @State private var selectedTab: MainTab
-    @State private var dashboardRoute: DashboardNavigationRoute?
+    @State private var homeRoute: HomeNavigationRoute?
     @State private var galleryRoute: GalleryNavigationRoute?
 
     init(
-        initialSelectedTab: MainTab = .dashboard,
-        dashboardStore: DashboardStore,
+        initialSelectedTab: MainTab = .home,
+        recordingStore: RecordingStore,
         galleryStore: GalleryStore,
         settingsStore: SettingsStore,
         deviceListStore: DeviceListStore,
@@ -42,7 +43,7 @@ struct MainTabView: View {
         onAddDevice: @escaping () -> Void
     ) {
         _selectedTab = State(initialValue: initialSelectedTab)
-        self.dashboardStore = dashboardStore
+        self.recordingStore = recordingStore
         self.galleryStore = galleryStore
         self.settingsStore = settingsStore
         self.deviceListStore = deviceListStore
@@ -74,8 +75,8 @@ struct MainTabView: View {
     @ViewBuilder
     private var currentScreen: some View {
         switch selectedTab {
-        case .dashboard:
-            dashboardScreen
+        case .home:
+            homeScreen
         case .gallery:
             galleryScreen
         case .settings:
@@ -83,36 +84,22 @@ struct MainTabView: View {
         }
     }
 
-    private var dashboardScreen: some View {
+    private var homeScreen: some View {
         NavigationView {
-            DashboardView(
-                store: dashboardStore,
+            HomeView(
+                store: recordingStore,
                 onAddDevice: onAddDevice,
                 onOpenDeviceList: {
-                    dashboardRoute = .deviceList
+                    homeRoute = .deviceList
                 },
-                onOpenLivePreview: {
-                    dashboardRoute = .livePreview
-                },
-                onOpenGallery: {
-                    selectedTab = .gallery
-                },
-                onOpenPlayback: {
-                    dashboardRoute = .playback
-                },
-                onOpenDownloads: {
-                    dashboardRoute = .downloads
+                onOpenRecordingPage: {
+                    homeRoute = .recording
                 },
                 onOpenEvents: {
-                    dashboardRoute = .events
-                },
-                onOpenSettings: {
-                    settingsStore.dismissRoute()
-                    settingsStore.prepareDeviceSettings(for: dashboardStore.selectedDeviceID)
-                    dashboardRoute = .deviceSettings
+                    homeRoute = .events
                 }
             )
-            .background(dashboardNavigationLinks)
+            .background(homeNavigationLinks)
             .navigationBarHidden(true)
         }
         .navigationViewStyle(StackNavigationViewStyle())
@@ -135,64 +122,95 @@ struct MainTabView: View {
         .navigationViewStyle(StackNavigationViewStyle())
     }
 
-    private var dashboardNavigationLinks: some View {
+    private var homeNavigationLinks: some View {
         Group {
-            dashboardNavigationLink(tag: .deviceList) {
-                DeviceListView(
-                    store: deviceListStore,
-                    onClose: {
-                        dashboardRoute = nil
+            homeNavigationLink(tag: .recording) {
+                RecordingView(
+                    store: recordingStore,
+                    onAddDevice: onAddDevice,
+                    onOpenDeviceList: {
+                        homeRoute = .deviceList
+                    },
+                    onOpenLivePreview: {
+                        homeRoute = .livePreview
+                    },
+                    onOpenGallery: {
+                        homeRoute = nil
+                        selectedTab = .gallery
+                    },
+                    onOpenPlayback: {
+                        homeRoute = .playback
+                    },
+                    onOpenDownloads: {
+                        homeRoute = .downloads
+                    },
+                    onOpenEvents: {
+                        homeRoute = .events
+                    },
+                    onOpenSettings: {
+                        settingsStore.dismissRoute()
+                        settingsStore.prepareDeviceSettings(for: recordingStore.selectedDeviceID)
+                        homeRoute = .deviceSettings
                     }
                 )
             }
 
-            dashboardNavigationLink(tag: .deviceSettings) {
+            homeNavigationLink(tag: .deviceList) {
+                DeviceListView(
+                    store: deviceListStore,
+                    onClose: {
+                        homeRoute = nil
+                    }
+                )
+            }
+
+            homeNavigationLink(tag: .deviceSettings) {
                 SettingsView(
                     store: settingsStore,
                     root: .deviceSettings,
                     embedsNavigationView: false,
                     onClose: {
-                        dashboardRoute = nil
+                        homeRoute = nil
                     }
                 )
             }
 
-            dashboardNavigationLink(tag: .livePreview) {
+            homeNavigationLink(tag: .livePreview) {
                 LivePreviewView(
                     store: livePreviewStore,
                     onClose: {
-                        dashboardRoute = nil
+                        homeRoute = nil
                     }
                 )
             }
 
-            dashboardNavigationLink(tag: .playback) {
+            homeNavigationLink(tag: .playback) {
                 PlaybackView(
                     store: playbackStore,
                     onClose: {
-                        dashboardRoute = nil
+                        homeRoute = nil
                     },
                     onOpenSettings: {
-                        dashboardRoute = nil
+                        homeRoute = nil
                         selectedTab = .settings
                     }
                 )
             }
 
-            dashboardNavigationLink(tag: .downloads) {
+            homeNavigationLink(tag: .downloads) {
                 DownloadsView(
                     store: downloadsStore,
                     onClose: {
-                        dashboardRoute = nil
+                        homeRoute = nil
                     }
                 )
             }
 
-            dashboardNavigationLink(tag: .events) {
+            homeNavigationLink(tag: .events) {
                 EventsView(
                     store: eventsStore,
                     onClose: {
-                        dashboardRoute = nil
+                        homeRoute = nil
                     }
                 )
             }
@@ -227,15 +245,15 @@ struct MainTabView: View {
         .hidden()
     }
 
-    private func dashboardNavigationLink<Destination: View>(
-        tag: DashboardNavigationRoute,
+    private func homeNavigationLink<Destination: View>(
+        tag: HomeNavigationRoute,
         @ViewBuilder destination: () -> Destination
     ) -> some View {
         NavigationLink(
             destination: destination()
                 .navigationBarHidden(true),
             tag: tag,
-            selection: $dashboardRoute
+            selection: $homeRoute
         ) {
             EmptyView()
         }
@@ -259,8 +277,8 @@ struct MainTabView: View {
         switch selectedTab {
         case .settings:
             return false
-        case .dashboard:
-            return dashboardStore.shouldShowFeatureSheet || dashboardRoute != nil
+        case .home:
+            return recordingStore.shouldShowFeatureSheet || homeRoute != nil
         case .gallery:
             return galleryRoute != nil
         }

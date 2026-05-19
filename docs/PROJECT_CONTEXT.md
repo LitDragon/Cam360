@@ -40,7 +40,7 @@ Features/{FeatureName}/
 ```
 
 当前例外情况：
-- `Dashboard` 和 `Gallery` 没有独立 Route 文件，页面跳转由 `MainTabView` 内的 `NavigationLink` 承载。
+- `Home`、`Recording` 和 `Gallery` 没有独立 Route 文件，页面跳转由 `MainTabView` 内的 `NavigationLink` 承载。
 - `Events` 已有独立 `EventsStore`，没有独立 Route 文件。
 - `Settings` 因页面较多，拆分为多个 `{PageName}View.swift`。
 

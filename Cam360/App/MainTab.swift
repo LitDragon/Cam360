@@ -1,11 +1,11 @@
 enum MainTab: String, CaseIterable, Codable {
-    case dashboard
+    case home
     case gallery
     case settings
 
     var title: String {
         switch self {
-        case .dashboard:
+        case .home:
             return "首页"
         case .gallery:
             return "相册"
@@ -16,7 +16,7 @@ enum MainTab: String, CaseIterable, Codable {
 
     var systemImageName: String {
         switch self {
-        case .dashboard:
+        case .home:
             return "camera.viewfinder"
         case .gallery:
             return "photo"

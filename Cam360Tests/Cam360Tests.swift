@@ -5,13 +5,13 @@ import Foundation
 @MainActor
 struct Cam360Tests {
     @Test
-    func bootstrapWithoutKnownDevicesShowsDashboard() {
+    func bootstrapWithoutKnownDevicesShowsHome() {
         let testDefaults = makeUserDefaults()
         defer { clear(testDefaults) }
 
         let bootstrap = AppBootstrap.launch(arguments: ["Cam360Tests"], userDefaults: testDefaults.userDefaults)
 
-        #expect(bootstrap.initialSelectedTab == .dashboard)
+        #expect(bootstrap.initialSelectedTab == .home)
     }
 
     @Test
@@ -24,7 +24,7 @@ struct Cam360Tests {
 
         let bootstrap = AppBootstrap.launch(arguments: ["Cam360Tests"], userDefaults: testDefaults.userDefaults)
 
-        #expect(bootstrap.initialSelectedTab == .dashboard)
+        #expect(bootstrap.initialSelectedTab == .home)
     }
 
     @Test
@@ -165,13 +165,13 @@ struct Cam360Tests {
     }
 
     @Test
-    func dashboardStoreShowsFeatureSheetUntilDismissed() {
+    func recordingStoreShowsFeatureSheetUntilDismissed() {
         let testDefaults = makeUserDefaults()
         defer { clear(testDefaults) }
 
         let repository = UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults)
         let preferenceStore = UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults)
-        let store = DashboardStore(
+        let store = RecordingStore(
             knownDeviceRepository: repository,
             appPreferenceStore: preferenceStore
         )
@@ -185,7 +185,7 @@ struct Cam360Tests {
     }
 
     @Test
-    func dashboardStoreExposesDeviceHubStates() {
+    func recordingStoreExposesDeviceHubStates() {
         let testDefaults = makeUserDefaults()
         defer { clear(testDefaults) }
 
@@ -198,7 +198,7 @@ struct Cam360Tests {
             makeKnownDevice(id: "cam360-side", name: "Side View")
         ])
 
-        let store = DashboardStore(
+        let store = RecordingStore(
             knownDeviceRepository: repository,
             appPreferenceStore: preferenceStore
         )
@@ -234,7 +234,7 @@ struct Cam360Tests {
     }
 
     @Test
-    func dashboardStoreUsesInjectedContentProvider() {
+    func recordingStoreUsesInjectedContentProvider() {
         let testDefaults = makeUserDefaults()
         defer { clear(testDefaults) }
 
@@ -244,10 +244,10 @@ struct Cam360Tests {
             makeKnownDevice(id: "cam360-real-source", name: "Road Camera")
         ])
 
-        let store = DashboardStore(
+        let store = RecordingStore(
             knownDeviceRepository: repository,
             appPreferenceStore: preferenceStore,
-            contentProvider: TestDashboardContentProvider()
+            contentProvider: TestRecordingContentProvider()
         )
 
         #expect(store.selectedDevice?.status == .disconnected)
@@ -255,7 +255,7 @@ struct Cam360Tests {
     }
 
     @Test
-    func dashboardStoreDerivesKnownDeviceStatusFromDeviceSession() async {
+    func recordingStoreDerivesKnownDeviceStatusFromDeviceSession() async {
         let testDefaults = makeUserDefaults()
         defer { clear(testDefaults) }
 
@@ -266,10 +266,10 @@ struct Cam360Tests {
             makeKnownDevice(id: "cam360-main", name: "DriveCam X Pro"),
             makeKnownDevice(id: "cam360-rear", name: "Rear View")
         ])
-        let store = DashboardStore(
+        let store = RecordingStore(
             knownDeviceRepository: repository,
             appPreferenceStore: preferenceStore,
-            contentProvider: TestDashboardContentProvider(),
+            contentProvider: TestRecordingContentProvider(),
             deviceSession: session
         )
 
@@ -304,7 +304,7 @@ struct Cam360Tests {
     }
 
     @Test
-    func deviceOnboardingStoreHappyPathPersistsDeviceAndReturnsToDashboard() async {
+    func deviceOnboardingStoreHappyPathPersistsDeviceAndReturnsHome() async {
         let testDefaults = makeUserDefaults()
         defer { clear(testDefaults) }
 
@@ -780,11 +780,11 @@ struct Cam360Tests {
         #expect(devices.first?.name == "RoadGuard Pro")
         #expect(devices.last?.name == "Rear Camera")
 
-        let dashboardStore = DashboardStore(
+        let recordingStore = RecordingStore(
             knownDeviceRepository: repository,
             appPreferenceStore: preferenceStore
         )
-        #expect(dashboardStore.selectedDevice?.name == "RoadGuard Pro")
+        #expect(recordingStore.selectedDevice?.name == "RoadGuard Pro")
     }
 
     @Test
@@ -847,7 +847,7 @@ struct Cam360Tests {
     }
 
     @Test
-    func settingsStoreResetShellReturnsToDashboard() {
+    func settingsStoreResetShellClearsRoute() {
         let testDefaults = makeUserDefaults()
         defer { clear(testDefaults) }
 
@@ -881,20 +881,20 @@ struct Cam360Tests {
     }
 }
 
-private struct TestDashboardContentProvider: DashboardContentProviding {
+private struct TestRecordingContentProvider: RecordingContentProviding {
     let placeholderDevices: [KnownDeviceSummary] = []
-    let placeholderFeatureDeviceState = DashboardFeatureDeviceState(pairedDeviceName: "", connectionStatusText: "")
+    let placeholderFeatureDeviceState = RecordingFeatureDeviceState(pairedDeviceName: "", connectionStatusText: "")
 
-    func scenario(forDeviceAt index: Int) -> DashboardDeviceScenario {
-        DashboardDeviceScenario(
+    func scenario(forDeviceAt index: Int) -> RecordingDeviceScenario {
+        RecordingDeviceScenario(
             startsRecording: true,
-            previewState: DashboardPreviewState(statusTitle: "", resolutionTitle: "", timestampText: ""),
-            storageState: .available(DashboardStorageSummary(usedCapacityText: "", totalCapacityText: "", usageFraction: 0)),
+            previewState: RecordingPreviewState(statusTitle: "", resolutionTitle: "", timestampText: ""),
+            storageState: .available(RecordingStorageSummary(usedCapacityText: "", totalCapacityText: "", usageFraction: 0)),
             events: []
         )
     }
 
-    func connectionStatusText(for device: DashboardDeviceItem) -> String {
+    func connectionStatusText(for device: RecordingDeviceItem) -> String {
         ""
     }
 }

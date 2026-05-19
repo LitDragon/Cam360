@@ -17,7 +17,7 @@ final class AppContainer {
     let appPreferenceStore: AppPreferenceStore
     let deviceSession: DeviceSession
 
-    let dashboardStore: DashboardStore
+    let recordingStore: RecordingStore
     let deviceOnboardingStore: DeviceOnboardingStore
     let deviceListStore: DeviceListStore
     let galleryStore: GalleryStore
@@ -36,7 +36,7 @@ final class AppContainer {
         self.appPreferenceStore = appPreferenceStore
         deviceSession = Self.makeDeviceSession(endpointProvider: deviceProtocolEndpointProvider)
 
-        dashboardStore = DashboardStore(
+        recordingStore = RecordingStore(
             knownDeviceRepository: knownDeviceRepository,
             appPreferenceStore: appPreferenceStore,
             deviceSession: deviceSession

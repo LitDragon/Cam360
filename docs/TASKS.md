@@ -5,12 +5,13 @@
 ## 阶段状态
 
 1. 无真设备和硬件联调条件下，可基于业务文档、UI 图、协议文档和离线测试推进的接入工作已收口。
-2. 已接入主流程 UI、onboarding/AP 连接边界、Dashboard/Gallery 离线页面导航、控制通道基础层和 `DeviceSession` 命令级契约；不把外部资料当作已验证硬件行为。
+2. 已接入主流程 UI、onboarding/AP 连接边界、Home/录像页（`RecordingView`）/Gallery 离线页面导航、控制通道基础层和 `DeviceSession` 命令级契约；不把外部资料当作已验证硬件行为。
 3. 不恢复独立 UI 冒烟或截图测试 target；后续 UI/交互微调另行推进。
 
 ## 无设备期间
 
 - 只处理发现的离线回归、文档漂移和用户后续明确提出的 UI/交互微调。
+- 真正首页已按 `UI/Home.png` 新建为 `HomeView`；当前 `RecordingView` 继续按设备录像页交接。
 - 回放 `Drive Log` 页面按 `UI/回放.png` 完成离线展示；真实文件、时间轴和播放链路仍等硬件联调。
 - 不新增依赖真实设备响应的运行时代码路径。
 

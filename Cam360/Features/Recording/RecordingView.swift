@@ -1,7 +1,7 @@
 import SwiftUI
 
-struct DashboardView: View {
-    @ObservedObject var store: DashboardStore
+struct RecordingView: View {
+    @ObservedObject var store: RecordingStore
     let onAddDevice: () -> Void
     let onOpenDeviceList: () -> Void
     let onOpenLivePreview: () -> Void
@@ -16,8 +16,8 @@ struct DashboardView: View {
     var body: some View {
         ZStack(alignment: .topLeading) {
             VStack(spacing: 0) {
-                DashboardHeaderView(
-                    title: store.selectedDevice?.name ?? "Home",
+                RecordingHeaderView(
+                    title: store.selectedDevice?.name ?? "Recording",
                     subtitle: store.selectedDevice?.status.title,
                     showsMenu: store.hasDevices,
                     onMenu: toggleDrawer,
@@ -27,7 +27,7 @@ struct DashboardView: View {
                 ScrollView(showsIndicators: false) {
                     Group {
                         if store.hasDevices {
-                            DashboardConnectedStateView(
+                            RecordingConnectedStateView(
                                 previewState: store.previewState,
                                 recentEvents: store.recentEvents,
                                 isRecording: store.isRecording,
@@ -40,7 +40,7 @@ struct DashboardView: View {
                                 onOpenEvents: onOpenEvents
                             )
                         } else {
-                            DashboardEmptyStateView(
+                            RecordingEmptyStateView(
                                 onAddDevice: addDevice
                             )
                         }
@@ -52,7 +52,7 @@ struct DashboardView: View {
             }
 
             if isDrawerPresented {
-                DashboardDrawerOverlay(
+                RecordingDrawerOverlay(
                     devices: store.devices,
                     selectedDeviceID: store.selectedDeviceID,
                     onClose: closeDrawer,
@@ -63,7 +63,7 @@ struct DashboardView: View {
             }
 
             if store.shouldShowFeatureSheet {
-                DashboardFeatureSheet(
+                RecordingFeatureSheet(
                     deviceState: store.featureSheetDeviceState,
                     onSkip: dismissFeatureSheet,
                     onEnterHome: completeFeatureSheet
@@ -72,7 +72,7 @@ struct DashboardView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(AppColor.background.edgesIgnoringSafeArea(.all))
-        .accessibility(identifier: "screen-dashboard")
+        .accessibility(identifier: "screen-recording")
         .animation(.easeInOut(duration: 0.2), value: isDrawerPresented)
         .animation(.easeInOut(duration: 0.2), value: store.hasDevices)
         .animation(.easeInOut(duration: 0.2), value: store.shouldShowFeatureSheet)
@@ -80,7 +80,7 @@ struct DashboardView: View {
     }
 }
 
-private extension DashboardView {
+private extension RecordingView {
     func toggleDrawer() {
         guard store.shouldShowFeatureSheet == false else {
             return
@@ -93,7 +93,7 @@ private extension DashboardView {
         isDrawerPresented = false
     }
 
-    func selectDevice(_ deviceID: DashboardDeviceItem.ID) {
+    func selectDevice(_ deviceID: RecordingDeviceItem.ID) {
         store.selectDevice(id: deviceID)
         closeDrawer()
     }
@@ -118,7 +118,7 @@ private extension DashboardView {
     }
 }
 
-private struct DashboardHeaderView: View {
+private struct RecordingHeaderView: View {
     let title: String
     let subtitle: String?
     let showsMenu: Bool
@@ -184,11 +184,11 @@ private struct DashboardHeaderView: View {
     }
 }
 
-private struct DashboardConnectedStateView: View {
-    let previewState: DashboardPreviewState
-    let recentEvents: [DashboardRecentEvent]
+private struct RecordingConnectedStateView: View {
+    let previewState: RecordingPreviewState
+    let recentEvents: [RecordingRecentEvent]
     let isRecording: Bool
-    let storageState: DashboardStorageState
+    let storageState: RecordingStorageState
     let onOpenLivePreview: () -> Void
     let onToggleRecording: () -> Void
     let onOpenGallery: () -> Void
@@ -199,11 +199,11 @@ private struct DashboardConnectedStateView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.xl) {
             Button(action: onOpenLivePreview) {
-                DashboardPreviewCard(state: previewState)
+                RecordingPreviewCard(state: previewState)
             }
             .buttonStyle(PlainButtonStyle())
 
-            DashboardCaptureControls(
+            RecordingCaptureControls(
                 isRecording: isRecording,
                 onCapturePhoto: onOpenLivePreview,
                 onToggleRecording: onToggleRecording
@@ -211,16 +211,16 @@ private struct DashboardConnectedStateView: View {
 
             switch storageState {
             case let .available(summary):
-                DashboardStorageCard(summary: summary)
+                RecordingStorageCard(summary: summary)
             case let .unavailable(title, message):
-                DashboardStorageUnavailableCard(
+                RecordingStorageUnavailableCard(
                     title: title,
                     message: message
                 )
             }
 
-            DashboardGalleryRow(action: onOpenGallery)
-            DashboardFeatureLinkRows(
+            RecordingGalleryRow(action: onOpenGallery)
+            RecordingFeatureLinkRows(
                 onOpenPlayback: onOpenPlayback,
                 onOpenDownloads: onOpenDownloads
             )
@@ -244,11 +244,11 @@ private struct DashboardConnectedStateView: View {
                 }
 
                 if recentEvents.isEmpty {
-                    DashboardRecentEventsEmptyState()
+                    RecordingRecentEventsEmptyState()
                 } else {
                     VStack(spacing: AppSpacing.md) {
                         ForEach(recentEvents) { event in
-                            DashboardEventRow(event: event)
+                            RecordingEventRow(event: event)
                         }
                     }
                 }
@@ -257,8 +257,8 @@ private struct DashboardConnectedStateView: View {
     }
 }
 
-private struct DashboardPreviewCard: View {
-    let state: DashboardPreviewState
+private struct RecordingPreviewCard: View {
+    let state: RecordingPreviewState
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -266,16 +266,16 @@ private struct DashboardPreviewCard: View {
                 .resizable()
                 .scaledToFill()
                 .frame(maxWidth: .infinity)
-                .frame(height: AppLayout.dashboardPreviewHeight)
+                .frame(height: AppLayout.recordingPreviewHeight)
                 .clipped()
 
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: AppSpacing.sm) {
-                    DashboardPreviewPill(
+                    RecordingPreviewPill(
                         title: state.statusTitle,
                         dotColor: AppColor.danger
                     )
-                    DashboardPreviewPill(title: state.resolutionTitle)
+                    RecordingPreviewPill(title: state.resolutionTitle)
 
                     Spacer(minLength: 0)
                 }
@@ -287,7 +287,7 @@ private struct DashboardPreviewCard: View {
 
                     Text(state.timestampText)
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(AppArtworkPalette.dashboardPreviewTimestamp)
+                        .foregroundColor(AppArtworkPalette.recordingPreviewTimestamp)
                         .padding(.horizontal, AppSpacing.sm)
                         .frame(height: 16)
                         .background(
@@ -302,29 +302,29 @@ private struct DashboardPreviewCard: View {
         .clipShape(RoundedRectangle(cornerRadius: AppRadius.large, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: AppRadius.large, style: .continuous)
-                .stroke(AppArtworkPalette.dashboardPreviewOverlayStroke, lineWidth: AppLayout.hairline)
+                .stroke(AppArtworkPalette.recordingPreviewOverlayStroke, lineWidth: AppLayout.hairline)
         )
         .shadow(
-            color: AppShadow.dashboardPreview.color,
-            radius: AppShadow.dashboardPreview.radius,
-            x: AppShadow.dashboardPreview.x,
-            y: AppShadow.dashboardPreview.y
+            color: AppShadow.recordingPreview.color,
+            radius: AppShadow.recordingPreview.radius,
+            x: AppShadow.recordingPreview.x,
+            y: AppShadow.recordingPreview.y
         )
     }
 }
 
-private struct DashboardPreviewPill: View {
+private struct RecordingPreviewPill: View {
     let title: String
     var dotColor: Color? = nil
 
     var body: some View {
-        HStack(spacing: AppLayout.dashboardPreviewPillDotSize) {
+        HStack(spacing: AppLayout.recordingPreviewPillDotSize) {
             if let dotColor = dotColor {
                 Circle()
                     .fill(dotColor)
                     .frame(
-                        width: AppLayout.dashboardPreviewPillDotSize,
-                        height: AppLayout.dashboardPreviewPillDotSize
+                        width: AppLayout.recordingPreviewPillDotSize,
+                        height: AppLayout.recordingPreviewPillDotSize
                     )
             }
 
@@ -333,13 +333,13 @@ private struct DashboardPreviewPill: View {
                 .foregroundColor(.white)
         }
         .padding(.horizontal, AppSpacing.sm)
-        .padding(.vertical, AppLayout.dashboardPreviewPillVerticalPadding)
-        .background(AppArtworkPalette.dashboardPreviewPillBackground)
-        .cornerRadius(AppRadius.dashboardPreviewPill)
+        .padding(.vertical, AppLayout.recordingPreviewPillVerticalPadding)
+        .background(AppArtworkPalette.recordingPreviewPillBackground)
+        .cornerRadius(AppRadius.recordingPreviewPill)
     }
 }
 
-private struct DashboardCaptureControls: View {
+private struct RecordingCaptureControls: View {
     let isRecording: Bool
     let onCapturePhoto: () -> Void
     let onToggleRecording: () -> Void
@@ -386,8 +386,8 @@ private struct DashboardCaptureControls: View {
     }
 }
 
-private struct DashboardStorageCard: View {
-    let summary: DashboardStorageSummary
+private struct RecordingStorageCard: View {
+    let summary: RecordingStorageSummary
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.md) {
@@ -420,7 +420,7 @@ private struct DashboardStorageCard: View {
     }
 }
 
-private struct DashboardStorageUnavailableCard: View {
+private struct RecordingStorageUnavailableCard: View {
     let title: String
     let message: String
 
@@ -453,7 +453,7 @@ private struct DashboardStorageUnavailableCard: View {
     }
 }
 
-private struct DashboardGalleryRow: View {
+private struct RecordingGalleryRow: View {
     let action: () -> Void
 
     var body: some View {
@@ -481,19 +481,19 @@ private struct DashboardGalleryRow: View {
     }
 }
 
-private struct DashboardFeatureLinkRows: View {
+private struct RecordingFeatureLinkRows: View {
     let onOpenPlayback: () -> Void
     let onOpenDownloads: () -> Void
 
     var body: some View {
         HStack(spacing: AppSpacing.md) {
-            DashboardFeatureLinkButton(
+            RecordingFeatureLinkButton(
                 title: "Playback",
                 subtitle: "查看可回放资源",
                 systemImage: "play.rectangle",
                 action: onOpenPlayback
             )
-            DashboardFeatureLinkButton(
+            RecordingFeatureLinkButton(
                 title: "Downloads",
                 subtitle: "管理离线队列",
                 systemImage: "arrow.down.circle",
@@ -503,7 +503,7 @@ private struct DashboardFeatureLinkRows: View {
     }
 }
 
-private struct DashboardFeatureLinkButton: View {
+private struct RecordingFeatureLinkButton: View {
     let title: String
     let subtitle: String
     let systemImage: String
@@ -541,7 +541,7 @@ private struct DashboardFeatureLinkButton: View {
     }
 }
 
-private struct DashboardRecentEventsEmptyState: View {
+private struct RecordingRecentEventsEmptyState: View {
     var body: some View {
         VStack(spacing: AppSpacing.lg) {
             Circle()
@@ -575,12 +575,12 @@ private struct DashboardRecentEventsEmptyState: View {
     }
 }
 
-private struct DashboardEventRow: View {
-    let event: DashboardRecentEvent
+private struct RecordingEventRow: View {
+    let event: RecordingRecentEvent
 
     var body: some View {
         HStack(spacing: AppSpacing.md) {
-            DashboardEventArtworkView(artwork: event.artwork)
+            RecordingEventArtworkView(artwork: event.artwork)
 
             VStack(alignment: .leading, spacing: AppSpacing.xs) {
                 Text(event.title)
@@ -588,7 +588,7 @@ private struct DashboardEventRow: View {
                     .foregroundColor(AppColor.textPrimary)
 
                 HStack(spacing: AppSpacing.sm) {
-                    DashboardEventBadge(event: event)
+                    RecordingEventBadge(event: event)
 
                     Text(event.detail)
                         .font(AppTypography.caption)
@@ -609,8 +609,8 @@ private struct DashboardEventRow: View {
     }
 }
 
-private struct DashboardEventBadge: View {
-    let event: DashboardRecentEvent
+private struct RecordingEventBadge: View {
+    let event: RecordingRecentEvent
 
     var body: some View {
         Text(event.badgeTitle)
@@ -632,8 +632,8 @@ private struct DashboardEventBadge: View {
     }
 }
 
-private struct DashboardEventArtworkView: View {
-    let artwork: DashboardEventArtwork
+private struct RecordingEventArtworkView: View {
+    let artwork: RecordingEventArtwork
 
     var body: some View {
         ZStack {
@@ -651,25 +651,25 @@ private struct DashboardEventArtworkView: View {
         switch artwork {
         case .vehicle:
             return LinearGradient(
-                colors: AppArtworkPalette.dashboardEventVehicle,
+                colors: AppArtworkPalette.recordingEventVehicle,
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
         case .landscape:
             return LinearGradient(
-                colors: AppArtworkPalette.dashboardEventLandscape,
+                colors: AppArtworkPalette.recordingEventLandscape,
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
         case .nightDrive:
             return LinearGradient(
-                colors: AppArtworkPalette.dashboardEventNightDrive,
+                colors: AppArtworkPalette.recordingEventNightDrive,
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
         case .parking:
             return LinearGradient(
-                colors: AppArtworkPalette.dashboardEventParking,
+                colors: AppArtworkPalette.recordingEventParking,
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
@@ -690,14 +690,14 @@ private struct DashboardEventArtworkView: View {
     }
 }
 
-private struct DashboardEmptyStateView: View {
+private struct RecordingEmptyStateView: View {
     let onAddDevice: () -> Void
 
     var body: some View {
         VStack(spacing: AppSpacing.xl) {
             Spacer(minLength: 28)
 
-            DashboardDeviceIllustration()
+            RecordingDeviceIllustration()
 
             VStack(spacing: AppSpacing.sm) {
                 Text("No device added yet")
@@ -731,7 +731,7 @@ private struct DashboardEmptyStateView: View {
     }
 }
 
-private struct DashboardDeviceIllustration: View {
+private struct RecordingDeviceIllustration: View {
     var body: some View {
         ZStack {
             Circle()
@@ -781,7 +781,7 @@ private struct DashboardDeviceIllustration: View {
                 RoundedRectangle(cornerRadius: 26, style: .continuous)
                     .fill(
                         LinearGradient(
-                            colors: AppArtworkPalette.dashboardDeviceBody,
+                            colors: AppArtworkPalette.recordingDeviceBody,
                             startPoint: .top,
                             endPoint: .bottom
                         )
@@ -832,11 +832,11 @@ private struct DashboardDeviceIllustration: View {
     }
 }
 
-private struct DashboardDrawerOverlay: View {
-    let devices: [DashboardDeviceItem]
-    let selectedDeviceID: DashboardDeviceItem.ID?
+private struct RecordingDrawerOverlay: View {
+    let devices: [RecordingDeviceItem]
+    let selectedDeviceID: RecordingDeviceItem.ID?
     let onClose: () -> Void
-    let onSelectDevice: (DashboardDeviceItem.ID) -> Void
+    let onSelectDevice: (RecordingDeviceItem.ID) -> Void
     let onOpenDeviceList: () -> Void
     let onAddDevice: () -> Void
 
@@ -859,7 +859,7 @@ private struct DashboardDrawerOverlay: View {
 
                 VStack(spacing: AppSpacing.md) {
                     ForEach(devices) { device in
-                        DashboardDrawerRow(
+                        RecordingDrawerRow(
                             device: device,
                             isSelected: device.id == selectedDeviceID,
                             action: {
@@ -911,7 +911,7 @@ private struct DashboardDrawerOverlay: View {
             .padding(.horizontal, AppSpacing.xl)
             .padding(.top, AppSpacing.xxxl)
             .padding(.bottom, AppSpacing.xl)
-            .frame(width: AppLayout.dashboardDrawerWidth)
+            .frame(width: AppLayout.recordingDrawerWidth)
             .frame(maxHeight: .infinity, alignment: .top)
             .background(AppColor.surface)
             .cornerRadius(AppRadius.xLarge)
@@ -923,8 +923,8 @@ private struct DashboardDrawerOverlay: View {
 
 }
 
-private struct DashboardDrawerRow: View {
-    let device: DashboardDeviceItem
+private struct RecordingDrawerRow: View {
+    let device: RecordingDeviceItem
     let isSelected: Bool
     let action: () -> Void
 
