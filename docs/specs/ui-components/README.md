@@ -63,8 +63,8 @@ hardware_required: false
 
 | 页面 | 主要公共组件 | 主要 Feature 私有组件 |
 | --- | --- | --- |
-| `HomeView` | DesignSystem tokens | `HomeHeaderView`, `HomeHeroCard`, `HomeRecentEventsSection`, `HomeRecentEventRow`, `RecordingDrawerOverlay` |
-| `RecordingView` | `PrimaryButton`, `StatusTag`, `AppProgressBar`, `appSurface` | `RecordingHeaderView`, `RecordingPreviewCard`, `RecordingCaptureControls`, `RecordingStorageCard`, `RecordingGalleryRow`, `RecordingFeatureLinkRows`, `RecordingEventRow`, `RecordingFeatureSheet` |
+| `HomeView` | `AppTopBar`, DesignSystem tokens | `HomeHeroCard`, `HomeRecentEventsSection`, `HomeRecentEventRow`, `RecordingDrawerOverlay` |
+| `RecordingView` | `AppTopBar`, `PrimaryButton`, `StatusTag`, `AppProgressBar`, `appSurface` | `RecordingPreviewCard`, `RecordingCaptureControls`, `RecordingStorageCard`, `RecordingGalleryRow`, `RecordingFeatureLinkRows`, `RecordingEventRow`, `RecordingFeatureSheet` |
 | `GalleryView` | `EmptyStateView`, `StatusTag` | `GalleryHeaderView`, `GalleryFilterBar`, `GallerySearchBar`, `GallerySectionsList`, `GalleryMediaCard`, `GalleryThumbnail`, `GalleryBatchActionBar`, `GalleryActionSheet` |
 | `DeviceOnboardingView` | `PrimaryButton`, `AppProgressBar`, `appSurface` | `DeviceOnboardingNavigationBar`, `DeviceOnboardingSignalIllustration`, `DeviceOnboardingTipCard`, `DeviceOnboardingReadonlyField`, `DeviceOnboardingPasswordField` |
 | `SettingsView` / `SettingsOverviewView` | `AppTopBar`, `StatusTag`, Settings 组件族 | 无独立私有组件 |

@@ -8,6 +8,8 @@ struct AppTopBar: View {
     var leadingAction: (() -> Void)? = nil
     var trailingTitle: String? = nil
     var trailingSystemImage: String? = nil
+    var trailingAssetName: String? = nil
+    var trailingAssetSize: CGFloat = 36
     var trailingAction: (() -> Void)? = nil
 
     var body: some View {
@@ -44,7 +46,7 @@ struct AppTopBar: View {
 
             Spacer()
 
-            if trailingTitle != nil || trailingSystemImage != nil {
+            if trailingTitle != nil || trailingSystemImage != nil || trailingAssetName != nil {
                 if let trailingAction = trailingAction {
                     Button(action: trailingAction) {
                         trailingContent
@@ -74,7 +76,22 @@ struct AppTopBar: View {
             .frame(width: 32, height: 32)
     }
 
+    @ViewBuilder
     private var trailingContent: some View {
+        if let trailingAssetName = trailingAssetName,
+           trailingTitle == nil,
+           trailingSystemImage == nil {
+            Image(trailingAssetName)
+                .resizable()
+                .renderingMode(.original)
+                .scaledToFit()
+                .frame(width: trailingAssetSize, height: trailingAssetSize)
+        } else {
+            trailingPillContent
+        }
+    }
+
+    private var trailingPillContent: some View {
         HStack(spacing: AppSpacing.xs) {
             if let trailingTitle = trailingTitle {
                 Text(trailingTitle)

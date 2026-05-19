@@ -2,10 +2,6 @@ import SwiftUI
 
 private enum HomeNavigationRoute: Hashable {
     case recording
-    case deviceSettings
-    case livePreview
-    case playback
-    case downloads
     case events
 }
 
@@ -120,67 +116,16 @@ struct MainTabView: View {
             homeNavigationLink(tag: .recording) {
                 RecordingView(
                     store: recordingStore,
+                    settingsStore: settingsStore,
+                    livePreviewStore: livePreviewStore,
+                    playbackStore: playbackStore,
+                    downloadsStore: downloadsStore,
+                    eventsStore: eventsStore,
                     onAddDevice: onAddDevice,
-                    onOpenLivePreview: {
-                        homeRoute = .livePreview
-                    },
                     onOpenGallery: {
                         homeRoute = nil
                         selectedTab = .gallery
                     },
-                    onOpenPlayback: {
-                        homeRoute = .playback
-                    },
-                    onOpenDownloads: {
-                        homeRoute = .downloads
-                    },
-                    onOpenEvents: {
-                        homeRoute = .events
-                    },
-                    onOpenSettings: {
-                        settingsStore.dismissRoute()
-                        settingsStore.prepareDeviceSettings(for: recordingStore.selectedDeviceID)
-                        homeRoute = .deviceSettings
-                    }
-                )
-            }
-
-            homeNavigationLink(tag: .deviceSettings) {
-                SettingsView(
-                    store: settingsStore,
-                    root: .deviceSettings,
-                    embedsNavigationView: false,
-                    onClose: {
-                        homeRoute = nil
-                    }
-                )
-            }
-
-            homeNavigationLink(tag: .livePreview) {
-                LivePreviewView(
-                    store: livePreviewStore,
-                    onClose: {
-                        homeRoute = nil
-                    }
-                )
-            }
-
-            homeNavigationLink(tag: .playback) {
-                PlaybackView(
-                    store: playbackStore,
-                    onClose: {
-                        homeRoute = nil
-                    },
-                    onOpenSettings: {
-                        homeRoute = nil
-                        selectedTab = .settings
-                    }
-                )
-            }
-
-            homeNavigationLink(tag: .downloads) {
-                DownloadsView(
-                    store: downloadsStore,
                     onClose: {
                         homeRoute = nil
                     }
@@ -232,7 +177,7 @@ struct MainTabView: View {
     ) -> some View {
         NavigationLink(
             destination: destination()
-                .navigationBarHidden(tag != .recording),
+                .navigationBarHidden(true),
             tag: tag,
             selection: $homeRoute
         ) {

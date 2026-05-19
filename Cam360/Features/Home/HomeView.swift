@@ -11,11 +11,11 @@ struct HomeView: View {
     var body: some View {
         ZStack(alignment: .topLeading) {
             VStack(spacing: 0) {
-                HomeHeaderView(
+                AppTopBar(
                     title: title,
-                    statusText: statusText,
-                    showsMenu: store.hasDevices,
-                    onMenu: toggleDrawer
+                    subtitle: statusText,
+                    leadingSystemImage: store.hasDevices ? "line.3.horizontal" : nil,
+                    leadingAction: toggleDrawer
                 )
 
                 ScrollView(showsIndicators: false) {
@@ -126,59 +126,6 @@ private struct HomeRecentEvent: Identifiable {
     let title: String
     let detail: String
     let imageName: String
-}
-
-private struct HomeHeaderView: View {
-    let title: String
-    let statusText: String
-    let showsMenu: Bool
-    let onMenu: () -> Void
-
-    var body: some View {
-        HStack(spacing: AppSpacing.md) {
-            if showsMenu {
-                Button(action: onMenu) {
-                    Image(systemName: "line.3.horizontal")
-                        .font(.system(size: 19, weight: .semibold))
-                        .foregroundColor(AppColor.brand)
-                        .frame(width: AppLayout.iconButton, height: AppLayout.iconButton)
-                }
-                .buttonStyle(PlainButtonStyle())
-            } else {
-                Color.clear
-                    .frame(width: AppLayout.iconButton, height: AppLayout.iconButton)
-            }
-
-            Spacer(minLength: 0)
-
-            VStack(spacing: 3) {
-                Text(title)
-                    .font(.system(size: 21, weight: .semibold))
-                    .foregroundColor(AppColor.textPrimary)
-                    .lineLimit(1)
-
-                HStack(spacing: 5) {
-                    Circle()
-                        .fill(AppColor.brand)
-                        .frame(width: 6, height: 6)
-
-                    Text(statusText.uppercased())
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundColor(AppColor.brand)
-                }
-            }
-
-            Spacer(minLength: 0)
-
-            Color.clear
-                .frame(width: AppLayout.iconButton, height: AppLayout.iconButton)
-        }
-        .padding(.horizontal, AppSpacing.xxl)
-        .padding(.top, AppSpacing.md)
-        .padding(.bottom, 13)
-        .frame(maxWidth: .infinity)
-        .background(AppColor.background)
-    }
 }
 
 private struct HomeHeroCard: View {

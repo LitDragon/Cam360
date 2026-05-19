@@ -1,22 +1,38 @@
 import SwiftUI
 
+private enum RecordingNavigationRoute: Hashable {
+    case deviceSettings
+    case livePreview
+    case playback
+    case downloads
+    case events
+}
+
 struct RecordingView: View {
     @ObservedObject var store: RecordingStore
+    @ObservedObject var settingsStore: SettingsStore
+    @ObservedObject var livePreviewStore: LivePreviewStore
+    @ObservedObject var playbackStore: PlaybackStore
+    @ObservedObject var downloadsStore: DownloadsStore
+    @ObservedObject var eventsStore: EventsStore
+
     let onAddDevice: () -> Void
-    let onOpenLivePreview: () -> Void
     let onOpenGallery: () -> Void
-    let onOpenPlayback: () -> Void
-    let onOpenDownloads: () -> Void
-    let onOpenEvents: () -> Void
-    let onOpenSettings: () -> Void
+    let onClose: () -> Void
+
+    @State private var route: RecordingNavigationRoute?
 
     var body: some View {
         ZStack(alignment: .topLeading) {
             VStack(spacing: 0) {
-                RecordingHeaderView(
-                    title: store.selectedDevice?.name ?? "Recording",
+                AppTopBar(
+                    title: recordingTitle,
                     subtitle: store.selectedDevice?.status.title,
-                    onSettings: onOpenSettings
+                    leadingSystemImage: "arrow.left",
+                    leadingAction: onClose,
+                    trailingAssetName: "RecordGear",
+                    trailingAssetSize: 36,
+                    trailingAction: openSettings
                 )
 
                 ScrollView(showsIndicators: false) {
@@ -27,12 +43,12 @@ struct RecordingView: View {
                                 recentEvents: store.recentEvents,
                                 isRecording: store.isRecording,
                                 storageState: store.storageState,
-                                onOpenLivePreview: onOpenLivePreview,
+                                onOpenLivePreview: openLivePreview,
                                 onToggleRecording: store.toggleRecording,
                                 onOpenGallery: onOpenGallery,
-                                onOpenPlayback: onOpenPlayback,
-                                onOpenDownloads: onOpenDownloads,
-                                onOpenEvents: onOpenEvents
+                                onOpenPlayback: openPlayback,
+                                onOpenDownloads: openDownloads,
+                                onOpenEvents: openEvents
                             )
                         } else {
                             RecordingEmptyStateView(
@@ -54,6 +70,7 @@ struct RecordingView: View {
                 )
             }
         }
+        .background(navigationLinks)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(AppColor.background.edgesIgnoringSafeArea(.all))
         .accessibility(identifier: "screen-recording")
@@ -61,9 +78,103 @@ struct RecordingView: View {
         .animation(.easeInOut(duration: 0.2), value: store.shouldShowFeatureSheet)
         .onAppear(perform: store.refresh)
     }
+
+    private var recordingTitle: String {
+        store.selectedDevice?.name ?? "Recording"
+    }
+
+    private var routeBinding: Binding<RecordingNavigationRoute?> {
+        Binding(
+            get: { route },
+            set: { route = $0 }
+        )
+    }
+
+    private var navigationLinks: some View {
+        Group {
+            navigationLink(tag: .deviceSettings) {
+                SettingsView(
+                    store: settingsStore,
+                    root: .deviceSettings,
+                    embedsNavigationView: false,
+                    onClose: dismissRoute
+                )
+            }
+
+            navigationLink(tag: .livePreview) {
+                LivePreviewView(
+                    store: livePreviewStore,
+                    onClose: dismissRoute
+                )
+            }
+
+            navigationLink(tag: .playback) {
+                PlaybackView(
+                    store: playbackStore,
+                    onClose: dismissRoute,
+                    onOpenSettings: openSettings
+                )
+            }
+
+            navigationLink(tag: .downloads) {
+                DownloadsView(
+                    store: downloadsStore,
+                    onClose: dismissRoute
+                )
+            }
+
+            navigationLink(tag: .events) {
+                EventsView(
+                    store: eventsStore,
+                    onClose: dismissRoute
+                )
+            }
+        }
+        .hidden()
+    }
+
+    private func navigationLink<Destination: View>(
+        tag: RecordingNavigationRoute,
+        @ViewBuilder destination: () -> Destination
+    ) -> some View {
+        NavigationLink(
+            destination: destination()
+                .navigationBarHidden(true),
+            tag: tag,
+            selection: routeBinding
+        ) {
+            EmptyView()
+        }
+    }
 }
 
 private extension RecordingView {
+    func openSettings() {
+        settingsStore.dismissRoute()
+        settingsStore.prepareDeviceSettings(for: store.selectedDeviceID)
+        route = .deviceSettings
+    }
+
+    func openLivePreview() {
+        route = .livePreview
+    }
+
+    func openPlayback() {
+        route = .playback
+    }
+
+    func openDownloads() {
+        route = .downloads
+    }
+
+    func openEvents() {
+        route = .events
+    }
+
+    func dismissRoute() {
+        route = nil
+    }
+
     func addDevice() {
         onAddDevice()
     }
@@ -75,60 +186,6 @@ private extension RecordingView {
     func completeFeatureSheet() {
         store.addPlaceholderDevicesIfNeeded()
         store.dismissFeatureSheet()
-    }
-}
-
-private struct RecordingHeaderView: View {
-    let title: String
-    let subtitle: String?
-    let onSettings: () -> Void
-
-    var body: some View {
-        HStack(spacing: AppSpacing.md) {
-            Color.clear
-                .frame(width: 36, height: 36)
-
-            Spacer(minLength: 0)
-
-            VStack(spacing: AppSpacing.xs) {
-                Text(title)
-                    .font(AppTypography.navigationTitle)
-                    .foregroundColor(AppColor.textPrimary)
-                    .lineLimit(1)
-
-                if let subtitle = subtitle {
-                    HStack(spacing: 5) {
-                        Circle()
-                            .fill(AppColor.brand)
-                            .frame(width: 5, height: 5)
-
-                        Text(subtitle.uppercased())
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(AppColor.brand)
-                    }
-                }
-            }
-
-            Spacer(minLength: 0)
-
-            Button(action: onSettings) {
-                Image(systemName: "gearshape")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundColor(AppColor.textPrimary)
-                    .frame(width: 36, height: 36)
-            }
-            .buttonStyle(PlainButtonStyle())
-        }
-        .padding(.horizontal, AppSpacing.xxl)
-        .padding(.vertical, AppSpacing.lg)
-        .frame(maxWidth: .infinity)
-        .background(AppColor.surface)
-        .overlay(
-            Rectangle()
-                .fill(AppColor.border.opacity(0.8))
-                .frame(height: 1),
-            alignment: .bottom
-        )
     }
 }
 
