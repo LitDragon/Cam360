@@ -4,14 +4,14 @@
 1. `docs/specs/ui-flow/README.md` — 页面导航和路由规范
 2. `docs/specs/ui-components/README.md` — 公共组件清单
 3. `Cam360/Features/` 下最近一个 Feature 的代码结构作为参考
-4. `Cam360/App/MainTabView.swift` — tab 内 NavigationLink 入口
+4. `Cam360/App/MainTabView.swift` 或来源页面本地 route — NavigationLink 入口
 5. `Cam360/App/AppContainer.swift` — 依赖注入方式
 
 ### 约束
 - View 不直接持有 DeviceSession 或底层连接；共享依赖从 AppContainer 下发。
 - Store 使用 `@Published` 驱动状态，不用 `@Observable`（需兼容 iOS 13）。
 - 页面内临时 UI 状态保留在 Store 内，不升级为 App 根状态。
-- Home / 录像页（`RecordingView`）/ Gallery 的跨页面入口通过 `MainTabView` 内的 `NavigationLink` 进入；目标页展示时隐藏自定义底部 tab。
+- Home / Gallery 的跨页面入口通过 `MainTabView` 内的 `NavigationLink` 进入；录像页（`RecordingView`）的二级页面入口保留在 `RecordingView` 本地 route。
 
 ### 文件创建规则
 ```
@@ -24,7 +24,7 @@ Cam360/Features/{FeatureName}/
 ### 步骤
 1. 创建 View + Store（+ Route）文件
 2. 在 `AppContainer.swift` 中创建 Store 实例
-3. 在 `MainTabView.swift` 中添加 NavigationLink 目标和触发入口
+3. 在 `MainTabView.swift` 或来源页面本地 route 中添加 NavigationLink 目标和触发入口
 4. 在触发入口的 View 中添加跳转回调
 5. 按需隐藏自定义底部 tab
 6. 跑 `xcodebuild build` 验证编译通过
