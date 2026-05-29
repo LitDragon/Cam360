@@ -51,7 +51,7 @@ final class AppContainer {
         livePreviewStore = LivePreviewStore()
         playbackStore = PlaybackStore(deviceSession: deviceSession)
         downloadsStore = DownloadsStore()
-        eventsStore = EventsStore()
+        eventsStore = EventsStore(deviceSession: deviceSession)
         settingsStore = SettingsStore(
             knownDeviceRepository: knownDeviceRepository,
             appPreferenceStore: appPreferenceStore,

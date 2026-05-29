@@ -362,31 +362,17 @@ enum DeviceFileResponseParser {
 }
 
 extension DeviceProtocolValue {
-    var objectValue: [String: DeviceProtocolValue]? {
+    nonisolated var objectValue: [String: DeviceProtocolValue]? {
         if case .object(let object) = self {
             return object
         }
         return nil
     }
 
-    var arrayValue: [DeviceProtocolValue]? {
+    nonisolated var arrayValue: [DeviceProtocolValue]? {
         if case .array(let array) = self {
             return array
         }
         return nil
-    }
-}
-
-private extension Dictionary where Key == String, Value == DeviceProtocolValue {
-    func string(_ key: String) -> String? {
-        self[key]?.stringValue
-    }
-
-    func int(_ key: String) -> Int? {
-        self[key]?.intValue
-    }
-
-    func bool(_ key: String) -> Bool? {
-        self[key]?.boolValue
     }
 }

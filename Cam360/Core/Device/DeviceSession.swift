@@ -75,6 +75,33 @@ final class DeviceSession: ObservableObject {
         }
     }
 
+    func fetchStateSync(
+        scope: DeviceStateSyncScope,
+        completion: @escaping (Result<DeviceStateSyncSnapshot, DeviceSessionReadOnlyError>) -> Void
+    ) {
+        performReadOnlyCommand(.stateSync(scope: scope), completion: completion) { message in
+            try DeviceAggregateResponseParser.stateSync(from: message.parameters)
+        }
+    }
+
+    func fetchRecentEvents(
+        query: DeviceRecentEventsQuery = DeviceRecentEventsQuery(),
+        completion: @escaping (Result<DeviceRecentEventsPage, DeviceSessionReadOnlyError>) -> Void
+    ) {
+        performReadOnlyCommand(.recentEvents(query: query), completion: completion) { message in
+            try DeviceAggregateResponseParser.recentEvents(from: message.parameters)
+        }
+    }
+
+    func fetchMediaIndex(
+        query: DeviceMediaIndexQuery = DeviceMediaIndexQuery(),
+        completion: @escaping (Result<DeviceMediaIndexResult, DeviceSessionReadOnlyError>) -> Void
+    ) {
+        performReadOnlyCommand(.mediaIndex(query: query), completion: completion) { message in
+            try DeviceAggregateResponseParser.mediaIndex(from: message.parameters)
+        }
+    }
+
     func fetchFileInfo(
         path: String,
         completion: @escaping (Result<DeviceFileInfo, DeviceSessionReadOnlyError>) -> Void
@@ -181,6 +208,91 @@ final class DeviceSession: ObservableObject {
     ) {
         performControlCommand(.setRecording(enabled: enabled), completion: completion) { message in
             try DeviceFileResponseParser.recordingState(from: message.parameters)
+        }
+    }
+
+    func fetchRecordingConfiguration(
+        completion: @escaping (Result<[String: DeviceProtocolValue], DeviceSessionCommandError>) -> Void
+    ) {
+        performControlCommand(.recordingConfiguration, completion: completion) { message in
+            DeviceAggregateResponseParser.configurationPayload(from: message.parameters)
+        }
+    }
+
+    func updateRecordingConfiguration(
+        parameters: [String: DeviceProtocolValue],
+        completion: @escaping (Result<[String: DeviceProtocolValue], DeviceSessionCommandError>) -> Void
+    ) {
+        performControlCommand(.updateRecordingConfiguration(parameters: parameters), completion: completion) { message in
+            DeviceAggregateResponseParser.configurationPayload(from: message.parameters)
+        }
+    }
+
+    func fetchSafetyConfiguration(
+        completion: @escaping (Result<[String: DeviceProtocolValue], DeviceSessionCommandError>) -> Void
+    ) {
+        performControlCommand(.safetyConfiguration, completion: completion) { message in
+            DeviceAggregateResponseParser.configurationPayload(from: message.parameters)
+        }
+    }
+
+    func updateSafetyConfiguration(
+        parameters: [String: DeviceProtocolValue],
+        completion: @escaping (Result<[String: DeviceProtocolValue], DeviceSessionCommandError>) -> Void
+    ) {
+        performControlCommand(.updateSafetyConfiguration(parameters: parameters), completion: completion) { message in
+            DeviceAggregateResponseParser.configurationPayload(from: message.parameters)
+        }
+    }
+
+    func fetchStoragePolicyConfiguration(
+        completion: @escaping (Result<[String: DeviceProtocolValue], DeviceSessionCommandError>) -> Void
+    ) {
+        performControlCommand(.storagePolicyConfiguration, completion: completion) { message in
+            DeviceAggregateResponseParser.configurationPayload(from: message.parameters)
+        }
+    }
+
+    func updateStoragePolicyConfiguration(
+        parameters: [String: DeviceProtocolValue],
+        completion: @escaping (Result<[String: DeviceProtocolValue], DeviceSessionCommandError>) -> Void
+    ) {
+        performControlCommand(.updateStoragePolicyConfiguration(parameters: parameters), completion: completion) { message in
+            DeviceAggregateResponseParser.configurationPayload(from: message.parameters)
+        }
+    }
+
+    func fetchSystemPreferencesConfiguration(
+        completion: @escaping (Result<[String: DeviceProtocolValue], DeviceSessionCommandError>) -> Void
+    ) {
+        performControlCommand(.systemPreferencesConfiguration, completion: completion) { message in
+            DeviceAggregateResponseParser.configurationPayload(from: message.parameters)
+        }
+    }
+
+    func updateSystemPreferencesConfiguration(
+        parameters: [String: DeviceProtocolValue],
+        completion: @escaping (Result<[String: DeviceProtocolValue], DeviceSessionCommandError>) -> Void
+    ) {
+        performControlCommand(.updateSystemPreferencesConfiguration(parameters: parameters), completion: completion) { message in
+            DeviceAggregateResponseParser.configurationPayload(from: message.parameters)
+        }
+    }
+
+    func fetchWatermarkConfiguration(
+        completion: @escaping (Result<[String: DeviceProtocolValue], DeviceSessionCommandError>) -> Void
+    ) {
+        performControlCommand(.watermarkConfiguration, completion: completion) { message in
+            DeviceAggregateResponseParser.configurationPayload(from: message.parameters)
+        }
+    }
+
+    func updateWatermarkConfiguration(
+        parameters: [String: DeviceProtocolValue],
+        completion: @escaping (Result<[String: DeviceProtocolValue], DeviceSessionCommandError>) -> Void
+    ) {
+        performControlCommand(.updateWatermarkConfiguration(parameters: parameters), completion: completion) { message in
+            DeviceAggregateResponseParser.configurationPayload(from: message.parameters)
         }
     }
 

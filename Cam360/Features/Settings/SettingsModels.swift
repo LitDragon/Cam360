@@ -190,3 +190,116 @@ enum FirmwareUpdateStage: Equatable {
     case downloading(progress: Double, downloadedSize: String, remainingTime: String)
     case failed
 }
+
+extension RecordingQualityPriorityOption {
+    nonisolated var protocolValue: String {
+        rawValue.lowercased()
+    }
+
+    nonisolated static func protocolValue(_ value: String) -> RecordingQualityPriorityOption? {
+        allCases.first { $0.protocolValue == value.lowercased() }
+    }
+}
+
+extension LoopRecordingDurationOption {
+    var minutes: Int {
+        switch self {
+        case .oneMinute:
+            return 1
+        case .threeMinutes:
+            return 3
+        case .fiveMinutes:
+            return 5
+        }
+    }
+
+    static func minutes(_ value: Int) -> LoopRecordingDurationOption? {
+        allCases.first { $0.minutes == value }
+    }
+}
+
+extension RecordingStartBehaviorOption {
+    nonisolated var protocolValue: String {
+        rawValue.lowercased()
+    }
+
+    nonisolated static func protocolValue(_ value: String) -> RecordingStartBehaviorOption? {
+        allCases.first { $0.protocolValue == value.lowercased() }
+    }
+}
+
+extension LockedEventRetentionOption {
+    nonisolated var protocolValue: String {
+        switch self {
+        case .keepForever:
+            return "forever"
+        case .thirtyDays:
+            return "days:30"
+        case .sevenDays:
+            return "days:7"
+        }
+    }
+
+    nonisolated static func protocolValue(_ value: String) -> LockedEventRetentionOption? {
+        switch value.lowercased() {
+        case "forever":
+            return .keepForever
+        case "days:30":
+            return .thirtyDays
+        case "days:7":
+            return .sevenDays
+        default:
+            return nil
+        }
+    }
+}
+
+extension StorageCardStatus {
+    nonisolated static func protocolValue(_ value: String) -> StorageCardStatus {
+        switch value.lowercased() {
+        case "missing", "no_card":
+            return .noCard
+        case "error":
+            return .error
+        default:
+            return .ready
+        }
+    }
+}
+
+extension SafetySensitivityOption {
+    nonisolated var protocolValue: String {
+        rawValue.lowercased()
+    }
+
+    nonisolated static func protocolValue(_ value: String) -> SafetySensitivityOption? {
+        allCases.first { $0.protocolValue == value.lowercased() }
+    }
+}
+
+extension EventClipDurationOption {
+    var seconds: Int {
+        switch self {
+        case .fifteenSeconds:
+            return 15
+        case .thirtySeconds:
+            return 30
+        case .sixtySeconds:
+            return 60
+        }
+    }
+
+    static func seconds(_ value: Int) -> EventClipDurationOption? {
+        allCases.first { $0.seconds == value }
+    }
+}
+
+extension SpeakerVolumeOption {
+    nonisolated var protocolValue: String {
+        rawValue.lowercased()
+    }
+
+    nonisolated static func protocolValue(_ value: String) -> SpeakerVolumeOption? {
+        allCases.first { $0.protocolValue == value.lowercased() }
+    }
+}

@@ -206,14 +206,14 @@ final class GalleryStore: ObservableObject {
         isLoadingItems = true
         lastLoadError = nil
 
-        deviceSession.fetchFileList(query: DeviceFileListQuery(type: .video, page: 1, pageSize: 20)) { [weak self] result in
+        deviceSession.fetchMediaIndex(query: DeviceMediaIndexQuery(mediaType: .video, groupBy: .date, pageSize: 20)) { [weak self] result in
             guard let self, self.isCurrentLoad(generation) else {
                 return
             }
 
             switch result {
-            case .success(let page):
-                let files = page.files
+            case .success(let index):
+                let files = index.groups.flatMap(\.items)
                 self.items = files.map(Self.galleryItem(from:))
                 self.isLoadingItems = false
                 self.lastLoadError = nil
@@ -229,7 +229,7 @@ final class GalleryStore: ObservableObject {
         }
     }
 
-    private func loadThumbnails(for files: [DeviceFileItem], generation: Int) {
+    private func loadThumbnails(for files: [DeviceMediaIndexItem], generation: Int) {
         guard let deviceSession else {
             return
         }
@@ -286,6 +286,21 @@ final class GalleryStore: ObservableObject {
         )
     }
 
+    nonisolated private static func galleryItem(from file: DeviceMediaIndexItem) -> GalleryItem {
+        let kind = mediaKind(for: file)
+
+        return GalleryItem(
+            title: file.title ?? file.name,
+            subtitle: subtitle(for: file.createTime),
+            detail: detail(for: file),
+            duration: formattedDuration(file.duration),
+            kind: kind,
+            section: section(for: file.createTime),
+            thumbnailSymbol: thumbnailSymbol(for: kind, recordType: file.eventType),
+            thumbnailStyle: thumbnailStyle(for: kind, recordType: file.eventType)
+        )
+    }
+
     nonisolated private static func mediaKind(for file: DeviceFileItem) -> GalleryMediaKind {
         if file.recordType == "emergency" || file.recordType == "parking" {
             return .event
@@ -301,16 +316,49 @@ final class GalleryStore: ObservableObject {
         return .video
     }
 
+    nonisolated private static func mediaKind(for file: DeviceMediaIndexItem) -> GalleryMediaKind {
+        if let eventType = file.eventType, eventType != "normal" {
+            return .event
+        }
+
+        let lowercasedName = file.name.lowercased()
+        if lowercasedName.hasSuffix(".jpg") ||
+            lowercasedName.hasSuffix(".jpeg") ||
+            lowercasedName.hasSuffix(".png") {
+            return .photo
+        }
+
+        return .video
+    }
+
     nonisolated private static func subtitle(for file: DeviceFileItem) -> String {
-        guard let createTime = file.createTime,
+        subtitle(for: file.createTime, fallback: file.path)
+    }
+
+    nonisolated private static func subtitle(for createTime: String?, fallback: String = "") -> String {
+        guard let createTime,
               let date = makeDeviceCreateTimeFormatter().date(from: createTime) else {
-            return file.path
+            return fallback
         }
 
         return makeDisplayTimeFormatter().string(from: date)
     }
 
     nonisolated private static func detail(for file: DeviceFileItem) -> String {
+        var parts: [String] = []
+        if let resolution = file.resolution {
+            parts.append(resolution)
+        }
+        if let size = file.size {
+            parts.append(ByteCountFormatter.string(fromByteCount: Int64(size), countStyle: .file))
+        }
+        if file.locked {
+            parts.append("LOCKED")
+        }
+        return parts.isEmpty ? file.path : parts.joined(separator: " · ")
+    }
+
+    nonisolated private static func detail(for file: DeviceMediaIndexItem) -> String {
         var parts: [String] = []
         if let resolution = file.resolution {
             parts.append(resolution)

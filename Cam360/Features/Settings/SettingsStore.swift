@@ -112,14 +112,18 @@ final class SettingsStore: ObservableObject {
         _ keyPath: WritableKeyPath<RecordingSettingsState, Value>,
         to value: Value
     ) {
-        recordingSettings[keyPath: keyPath] = value
+        var nextState = recordingSettings
+        nextState[keyPath: keyPath] = value
+        submitRecordingSettings(nextState)
     }
 
     func updateStoragePolicy<Value>(
         _ keyPath: WritableKeyPath<StoragePolicyState, Value>,
         to value: Value
     ) {
-        storagePolicy[keyPath: keyPath] = value
+        var nextState = storagePolicy
+        nextState[keyPath: keyPath] = value
+        submitStoragePolicy(nextState)
     }
 
     func retryStorageCardCheck() {
@@ -127,6 +131,24 @@ final class SettingsStore: ObservableObject {
     }
 
     func formatStorageCard() {
+        guard canSubmitSettingsToDevice, let deviceSession else {
+            storagePolicy.cardStatus = .ready
+            storagePolicy.usedSpaceGB = 74.2
+            return
+        }
+
+        deviceSession.formatStorage { [weak self] result in
+            guard let self else {
+                return
+            }
+            if case .success(let format) = result, format.formatted {
+                self.storagePolicy.cardStatus = .ready
+                self.storagePolicy.usedSpaceGB = 0
+            }
+        }
+    }
+
+    private func resetOfflineStorageCard() {
         storagePolicy.cardStatus = .ready
         storagePolicy.usedSpaceGB = 74.2
     }
@@ -139,6 +161,23 @@ final class SettingsStore: ObservableObject {
     }
 
     func saveWatermarkConfiguration() {
+        guard canSubmitSettingsToDevice, let deviceSession else {
+            route = nil
+            return
+        }
+
+        deviceSession.updateWatermarkConfiguration(parameters: Self.watermarkParameters(from: watermarkConfiguration)) { [weak self] result in
+            guard let self else {
+                return
+            }
+            if case .success(let payload) = result {
+                self.watermarkConfiguration = Self.watermarkState(from: payload) ?? self.watermarkConfiguration
+                self.route = nil
+            }
+        }
+    }
+
+    private func dismissWatermarkConfiguration() {
         route = nil
     }
 
@@ -150,6 +189,26 @@ final class SettingsStore: ObservableObject {
     }
 
     func commitNetworkIdentityChanges() {
+        guard canSubmitSettingsToDevice, let deviceSession else {
+            devicePreferences.connectionName = networkIdentity.networkName
+            return
+        }
+
+        deviceSession.updateAccessPointIdentity(ssid: networkIdentity.networkName, password: networkIdentity.password) { [weak self] result in
+            guard let self else {
+                return
+            }
+            if case .success(let identity) = result {
+                self.networkIdentity = NetworkIdentityState(
+                    networkName: identity.ssid,
+                    password: identity.password ?? self.networkIdentity.password
+                )
+                self.devicePreferences.connectionName = identity.ssid
+            }
+        }
+    }
+
+    private func commitOfflineNetworkIdentityChanges() {
         devicePreferences.connectionName = networkIdentity.networkName
     }
 
@@ -157,17 +216,37 @@ final class SettingsStore: ObservableObject {
         _ keyPath: WritableKeyPath<DevicePreferencesState, Value>,
         to value: Value
     ) {
-        devicePreferences[keyPath: keyPath] = value
+        var nextState = devicePreferences
+        nextState[keyPath: keyPath] = value
+        submitSystemPreferences(nextState)
     }
 
     func updateSafetySetting<Value>(
         _ keyPath: WritableKeyPath<SafetySettingsState, Value>,
         to value: Value
     ) {
-        safetySettings[keyPath: keyPath] = value
+        var nextState = safetySettings
+        nextState[keyPath: keyPath] = value
+        submitSafetySettings(nextState)
     }
 
     func restoreSafetyDefaults() {
+        guard canSubmitSettingsToDevice, let deviceSession else {
+            safetySettings = .defaultValue
+            return
+        }
+
+        deviceSession.updateSafetyConfiguration(parameters: ["reset_defaults": 1]) { [weak self] result in
+            guard let self else {
+                return
+            }
+            if case .success(let payload) = result {
+                self.safetySettings = Self.safetyState(from: payload) ?? .defaultValue
+            }
+        }
+    }
+
+    private func restoreOfflineSafetyDefaults() {
         safetySettings = .defaultValue
     }
 
@@ -354,6 +433,235 @@ final class SettingsStore: ObservableObject {
         networkIdentity = .defaultValue(networkName: connectionName)
         renameDeviceDraft = deviceInfo.name
         seededDeviceID = knownDevice?.id ?? seededDeviceID
+    }
+
+    private var canSubmitSettingsToDevice: Bool {
+        deviceSessionState.canSendDeviceCommand && deviceSession != nil
+    }
+
+    private func submitRecordingSettings(_ state: RecordingSettingsState) {
+        guard canSubmitSettingsToDevice, let deviceSession else {
+            recordingSettings = state
+            return
+        }
+
+        deviceSession.updateRecordingConfiguration(parameters: Self.recordingParameters(from: state)) { [weak self] result in
+            guard let self else {
+                return
+            }
+            if case .success(let payload) = result {
+                self.recordingSettings = Self.recordingState(from: payload) ?? state
+            }
+        }
+    }
+
+    private func submitStoragePolicy(_ state: StoragePolicyState) {
+        guard canSubmitSettingsToDevice, let deviceSession else {
+            storagePolicy = state
+            return
+        }
+
+        deviceSession.updateStoragePolicyConfiguration(parameters: Self.storagePolicyParameters(from: state)) { [weak self] result in
+            guard let self else {
+                return
+            }
+            if case .success(let payload) = result {
+                self.storagePolicy = Self.storagePolicyState(from: payload) ?? state
+            }
+        }
+    }
+
+    private func submitSafetySettings(_ state: SafetySettingsState) {
+        guard canSubmitSettingsToDevice, let deviceSession else {
+            safetySettings = state
+            return
+        }
+
+        deviceSession.updateSafetyConfiguration(parameters: Self.safetyParameters(from: state)) { [weak self] result in
+            guard let self else {
+                return
+            }
+            if case .success(let payload) = result {
+                self.safetySettings = Self.safetyState(from: payload) ?? state
+            }
+        }
+    }
+
+    private func submitSystemPreferences(_ state: DevicePreferencesState) {
+        guard canSubmitSettingsToDevice, let deviceSession else {
+            devicePreferences = state
+            return
+        }
+
+        deviceSession.updateSystemPreferencesConfiguration(parameters: Self.systemPreferenceParameters(from: state)) { [weak self] result in
+            guard let self else {
+                return
+            }
+            if case .success(let payload) = result {
+                self.devicePreferences = Self.devicePreferencesState(
+                    from: payload,
+                    fallback: state
+                )
+            }
+        }
+    }
+
+    private static func recordingParameters(from state: RecordingSettingsState) -> [String: DeviceProtocolValue] {
+        [
+            "resolution": .string(state.resolution.rawValue),
+            "quality_priority": .string(state.qualityPriority.protocolValue),
+            "loop_minutes": .int(state.loopDuration.minutes),
+            "auto_overwrite": .int(state.autoOverwrite ? 1 : 0),
+            "start_behavior": .string(state.startBehavior.protocolValue),
+            "audio_recording": .int(state.audioRecordingEnabled ? 1 : 0),
+            "hdr_night_recording": .int(state.hdrNightRecordingEnabled ? 1 : 0),
+            "status_indicator": .int(state.recordingStatusIndicatorEnabled ? 1 : 0),
+            "recording_reminder": .int(state.recordingReminderEnabled ? 1 : 0)
+        ]
+    }
+
+    private static func safetyParameters(from state: SafetySettingsState) -> [String: DeviceProtocolValue] {
+        [
+            "g_sensor_sensitivity": .string(state.gSensorSensitivity.protocolValue),
+            "emergency_video_lock": .int(state.emergencyVideoLockEnabled ? 1 : 0),
+            "parking_mode": .int(state.parkingModeEnabled ? 1 : 0),
+            "motion_detection": .int(state.motionDetectionEnabled ? 1 : 0),
+            "impact_detection": .int(state.impactDetectionEnabled ? 1 : 0),
+            "clip_duration_sec": .int(state.eventClipDuration.seconds),
+            "event_notifications": .int(state.eventNotificationsEnabled ? 1 : 0)
+        ]
+    }
+
+    private static func storagePolicyParameters(from state: StoragePolicyState) -> [String: DeviceProtocolValue] {
+        [
+            "auto_cleanup": .object(["enabled": .int(state.autoCleanupEnabled ? 1 : 0)]),
+            "auto_overwrite": .int(state.autoOverwriteEnabled ? 1 : 0),
+            "locked_event_retention": .string(state.lockedEventRetention.protocolValue),
+            "reserved_space_for_events_percent": .int(state.reservedEventSpacePercent)
+        ]
+    }
+
+    private static func watermarkParameters(from state: WatermarkConfigurationState) -> [String: DeviceProtocolValue] {
+        [
+            "time_enabled": .int(state.timestampEnabled ? 1 : 0),
+            "plate_enabled": .int(state.licensePlateEnabled ? 1 : 0),
+            "plate_number": .string(state.licensePlate),
+            "position": .string("bottom_right")
+        ]
+    }
+
+    private static func systemPreferenceParameters(from state: DevicePreferencesState) -> [String: DeviceProtocolValue] {
+        [
+            "device_name": .string(state.deviceName),
+            "time_zone": .string(state.timeZone),
+            "language": .string("zh-CN"),
+            "date_time_auto_sync": .int(1),
+            "speaker_volume": .string(state.speakerVolume.protocolValue),
+            "status_sounds": .int(state.statusSoundsEnabled ? 1 : 0)
+        ]
+    }
+
+    private static func recordingState(from payload: [String: DeviceProtocolValue]) -> RecordingSettingsState? {
+        guard let resolutionText = payload.object("resolution")?.string("current"),
+              let resolution = RecordingResolutionOption(rawValue: resolutionText) else {
+            return nil
+        }
+
+        var state = RecordingSettingsState.defaultValue
+        state.resolution = resolution
+        state.qualityPriority = payload.object("quality_priority")?.string("current").flatMap(RecordingQualityPriorityOption.protocolValue(_:)) ?? state.qualityPriority
+        if let loopMinutes = payload.object("loop_recording")?.int("current") {
+            state.loopDuration = LoopRecordingDurationOption.minutes(loopMinutes) ?? state.loopDuration
+        }
+        state.autoOverwrite = payload.bool("auto_overwrite") ?? state.autoOverwrite
+        state.startBehavior = payload.string("start_behavior").flatMap(RecordingStartBehaviorOption.protocolValue(_:)) ?? state.startBehavior
+        state.audioRecordingEnabled = payload.bool("audio_recording") ?? state.audioRecordingEnabled
+        state.hdrNightRecordingEnabled = payload.bool("hdr_night_recording") ?? state.hdrNightRecordingEnabled
+        state.recordingStatusIndicatorEnabled = payload.bool("status_indicator") ?? state.recordingStatusIndicatorEnabled
+        state.recordingReminderEnabled = payload.bool("recording_reminder") ?? state.recordingReminderEnabled
+        return state
+    }
+
+    private static func safetyState(from payload: [String: DeviceProtocolValue]) -> SafetySettingsState? {
+        guard let collision = payload.object("collision"),
+              let parking = payload.object("parking"),
+              let eventRecording = payload.object("event_recording"),
+              let notifications = payload.object("notifications") else {
+            return nil
+        }
+
+        var state = SafetySettingsState.defaultValue
+        state.gSensorSensitivity = collision.object("g_sensor_sensitivity")?.string("current").flatMap(SafetySensitivityOption.protocolValue(_:)) ?? state.gSensorSensitivity
+        state.emergencyVideoLockEnabled = collision.bool("emergency_video_lock") ?? state.emergencyVideoLockEnabled
+        state.parkingModeEnabled = parking.bool("parking_mode") ?? state.parkingModeEnabled
+        state.motionDetectionEnabled = parking.bool("motion_detection") ?? state.motionDetectionEnabled
+        state.impactDetectionEnabled = parking.bool("impact_detection") ?? state.impactDetectionEnabled
+        if let seconds = eventRecording.object("clip_duration_sec")?.int("current") {
+            state.eventClipDuration = EventClipDurationOption.seconds(seconds) ?? state.eventClipDuration
+        }
+        state.eventNotificationsEnabled = notifications.bool("event_notifications") ?? state.eventNotificationsEnabled
+        return state
+    }
+
+    private static func storagePolicyState(from payload: [String: DeviceProtocolValue]) -> StoragePolicyState? {
+        guard let sd = payload.object("sd"),
+              let tf = payload.object("tf") else {
+            return nil
+        }
+
+        var state = StoragePolicyState.defaultValue
+        state.cardStatus = StorageCardStatus.protocolValue(sd.string("status") ?? "normal")
+        state.usedSpaceGB = tf.double("used_gb") ?? state.usedSpaceGB
+        state.totalSpaceGB = tf.double("total_gb") ?? state.totalSpaceGB
+        if let hours = payload.object("maintenance")?.double("estimated_remaining_recording_hours") {
+            state.estimatedHoursRemaining = String(format: "Approx. %.1f hours remaining at current quality.", hours)
+        }
+        if let cleanup = payload.object("maintenance")?.object("auto_cleanup") {
+            state.autoCleanupEnabled = cleanup.bool("enabled") ?? state.autoCleanupEnabled
+        }
+        if let policy = payload.object("general_policy") {
+            state.autoOverwriteEnabled = policy.bool("auto_overwrite") ?? state.autoOverwriteEnabled
+            state.lockedEventRetention = policy.string("locked_event_retention").flatMap(LockedEventRetentionOption.protocolValue(_:)) ?? state.lockedEventRetention
+        }
+        state.reservedEventSpacePercent = payload.object("storage_allocation")?.int("reserved_space_for_events_percent") ?? state.reservedEventSpacePercent
+        return state
+    }
+
+    private static func watermarkState(from payload: [String: DeviceProtocolValue]) -> WatermarkConfigurationState? {
+        guard let timestampEnabled = payload.bool("time_enabled"),
+              let plateEnabled = payload.bool("plate_enabled") else {
+            return nil
+        }
+
+        return WatermarkConfigurationState(
+            timestampEnabled: timestampEnabled,
+            licensePlateEnabled: plateEnabled,
+            licensePlate: payload.string("plate_number") ?? WatermarkConfigurationState.defaultValue.licensePlate
+        )
+    }
+
+    private static func devicePreferencesState(
+        from payload: [String: DeviceProtocolValue],
+        fallback: DevicePreferencesState
+    ) -> DevicePreferencesState {
+        var state = fallback
+        if let identity = payload.object("device_identity") {
+            state.deviceName = identity.string("device_name") ?? state.deviceName
+        }
+        if let connectivity = payload.object("connectivity") {
+            state.connectionName = connectivity.string("ssid") ?? state.connectionName
+        }
+        if let software = payload.object("software") {
+            state.firmwareVersion = software.string("firmware_version") ?? state.firmwareVersion
+        }
+        if let localization = payload.object("localization") {
+            state.timeZone = localization.string("time_zone") ?? state.timeZone
+        }
+        if let audio = payload.object("audio") {
+            state.speakerVolume = audio.object("speaker_volume")?.string("current").flatMap(SpeakerVolumeOption.protocolValue(_:)) ?? state.speakerVolume
+            state.statusSoundsEnabled = audio.bool("status_sounds") ?? state.statusSoundsEnabled
+        }
+        return state
     }
 }
 

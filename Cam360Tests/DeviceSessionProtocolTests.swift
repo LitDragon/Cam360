@@ -480,6 +480,95 @@ struct DeviceSessionProtocolTests {
     }
 
     @Test
+    func aggregateReadCommandsSendExpectedTopicsThroughSession() async {
+        let transport = SessionFakeDeviceProtocolTransport()
+        let session = makeSession(transport: transport)
+        transport.responseProvider = { request in
+            makeAggregateTopicResponse(request) ?? makeHandshakeResponse(request)
+        }
+        var completedTopics: [String] = []
+
+        startHandshake(session)
+        #expect(await waitForSessionState { session.state.isConnected })
+
+        session.fetchStateSync(scope: .home) { result in
+            if case .success(let snapshot) = result, snapshot.scope == .home {
+                completedTopics.append("STATE_SYNC")
+            }
+        }
+        session.fetchRecentEvents(query: DeviceRecentEventsQuery(limit: 4)) { result in
+            if case .success(let page) = result, page.items.first?.eventType == "impact" {
+                completedTopics.append("RECENT_EVENTS")
+            }
+        }
+        session.fetchMediaIndex(query: DeviceMediaIndexQuery(eventOnly: true)) { result in
+            if case .success(let index) = result, index.groups.first?.items.first?.eventType == "impact" {
+                completedTopics.append("MEDIA_INDEX")
+            }
+        }
+
+        #expect(await waitForSessionState { completedTopics.count == 3 })
+        let commandMessages = Array(transport.sentMessages.suffix(3))
+        #expect(commandMessages.map(\.topic) == ["STATE_SYNC", "RECENT_EVENTS", "MEDIA_INDEX"])
+        #expect(commandMessages[0].parameters["scope"]?.stringValue == "home")
+        #expect(commandMessages[1].parameters["limit"]?.intValue == 4)
+        #expect(commandMessages[2].parameters["event_only"]?.intValue == 1)
+    }
+
+    @Test
+    func aggregateSettingsCommandsUsePessimisticDeviceResponses() async {
+        let transport = SessionFakeDeviceProtocolTransport()
+        let session = makeSession(transport: transport)
+        transport.responseProvider = { request in
+            makeAggregateTopicResponse(request) ?? makeHandshakeResponse(request)
+        }
+        var completedTopics: [String] = []
+
+        startHandshake(session)
+        #expect(await waitForSessionState { session.state.isConnected })
+
+        session.updateRecordingConfiguration(parameters: ["auto_overwrite": 0]) { result in
+            if case .success(let payload) = result,
+               payload["auto_overwrite"]?.intValue == 0 {
+                completedTopics.append("RECORDING_CONFIG")
+            }
+        }
+        session.updateSafetyConfiguration(parameters: ["event_notifications": 0]) { result in
+            if case .success(let payload) = result,
+               payload.object("notifications")?["event_notifications"]?.intValue == 0 {
+                completedTopics.append("SAFETY_CONFIG")
+            }
+        }
+        session.updateStoragePolicyConfiguration(parameters: ["auto_overwrite": 0]) { result in
+            if case .success(let payload) = result,
+               payload.object("general_policy")?["auto_overwrite"]?.intValue == 0 {
+                completedTopics.append("STORAGE_POLICY_CONFIG")
+            }
+        }
+        session.updateSystemPreferencesConfiguration(parameters: ["device_name": "Road Camera"]) { result in
+            if case .success(let payload) = result,
+               payload.object("device_identity")?["device_name"]?.stringValue == "Road Camera" {
+                completedTopics.append("SYSTEM_PREFERENCES_CONFIG")
+            }
+        }
+        session.updateWatermarkConfiguration(parameters: ["time_enabled": 0]) { result in
+            if case .success(let payload) = result,
+               payload["time_enabled"]?.intValue == 0 {
+                completedTopics.append("WATERMARK_CONFIG")
+            }
+        }
+
+        #expect(await waitForSessionState { completedTopics.count == 5 })
+        #expect(Array(transport.sentMessages.map(\.topic).suffix(5)) == [
+            "RECORDING_CONFIG",
+            "SAFETY_CONFIG",
+            "STORAGE_POLICY_CONFIG",
+            "SYSTEM_PREFERENCES_CONFIG",
+            "WATERMARK_CONFIG"
+        ])
+    }
+
+    @Test
     func apConnectionFailedMovesSessionToFailed() async {
         let session = DeviceSession()
         session.send(.startAPConnection(ssid: "Cam360_AP"))
@@ -587,6 +676,40 @@ struct DeviceSessionProtocolTests {
         #expect(store.lastLoadError == nil)
         #expect(store.isLoading == false)
         #expect(store.message == "当前没有可显示的设备录像或本地媒体。")
+    }
+
+    @Test
+    func eventsStoreLoadsRecentEventsWhenSessionBecomesReady() async {
+        let transport = SessionFakeDeviceProtocolTransport()
+        let session = makeSession(transport: transport)
+        transport.responseProvider = { request in
+            makeAggregateTopicResponse(request) ?? makeHandshakeResponse(request)
+        }
+        let store = EventsStore(deviceSession: session)
+
+        startHandshake(session)
+
+        #expect(await waitForSessionState { store.recentEvents.isEmpty == false })
+        #expect(store.recentEvents.first?.title == "Collision Detected")
+        #expect(store.feedState == .available)
+        #expect(transport.sentMessages.last?.topic == "RECENT_EVENTS")
+    }
+
+    @Test
+    func galleryStoreLoadsMediaIndexWhenSessionBecomesReady() async {
+        let transport = SessionFakeDeviceProtocolTransport()
+        let session = makeSession(transport: transport)
+        transport.responseProvider = { request in
+            makeAggregateTopicResponse(request) ?? makeHandshakeResponse(request)
+        }
+        let store = GalleryStore(deviceSession: session)
+
+        startHandshake(session)
+
+        #expect(await waitForSessionState { store.items.isEmpty == false })
+        #expect(store.items.first?.title == "Collision Detected")
+        #expect(store.items.first?.kind == .event)
+        #expect(transport.sentMessages.last?.topic == "MEDIA_INDEX")
     }
 }
 
@@ -754,6 +877,143 @@ private func makeControlTopicResponse(
     )
 }
 
+private func makeAggregateTopicResponse(_ request: DeviceProtocolMessage) -> DeviceProtocolMessage? {
+    let parameters: [String: DeviceProtocolValue]
+
+    switch request.topic {
+    case "STATE_SYNC":
+        parameters = [
+            "scope": request.parameters["scope"] ?? "initial",
+            "sections": .object([
+                "home": .object([
+                    "recent_events": .array([makeRecentEventObject()])
+                ])
+            ])
+        ]
+    case "RECENT_EVENTS":
+        parameters = [
+            "limit": request.parameters["limit"] ?? 4,
+            "total_recent_count": 1,
+            "items": .array([makeRecentEventObject()])
+        ]
+    case "MEDIA_INDEX":
+        parameters = [
+            "filters": .object(request.parameters),
+            "summary": .object(["total_count": 1, "event_count": 1, "locked_count": 1]),
+            "groups": .array([
+                .object([
+                    "group_key": "2023-06-10",
+                    "items": .array([makeMediaIndexItemObject()])
+                ])
+            ])
+        ]
+    case "RECORDING_CONFIG":
+        parameters = [
+            "resolution": .object(["current": "1080P"]),
+            "quality_priority": .object(["current": "balanced"]),
+            "loop_recording": .object(["current": 3, "unit": "min"]),
+            "auto_overwrite": request.parameters["auto_overwrite"] ?? 1,
+            "start_behavior": "auto",
+            "audio_recording": 1,
+            "hdr_night_recording": 1,
+            "status_indicator": 1,
+            "recording_reminder": 0,
+            "estimated_storage_per_hour_mb": 4200
+        ]
+    case "SAFETY_CONFIG":
+        parameters = [
+            "collision": .object([
+                "g_sensor_sensitivity": .object(["current": "medium"]),
+                "emergency_video_lock": 1
+            ]),
+            "parking": .object([
+                "parking_mode": 1,
+                "motion_detection": 1,
+                "impact_detection": 1
+            ]),
+            "event_recording": .object([
+                "clip_duration_sec": .object(["current": 30])
+            ]),
+            "notifications": .object([
+                "event_notifications": request.parameters["event_notifications"] ?? 1
+            ])
+        ]
+    case "STORAGE_POLICY_CONFIG":
+        parameters = [
+            "sd": .object(["online": 1, "status": "normal", "policy_editable": 1]),
+            "tf": .object(["used_gb": 74.2, "total_gb": 128.0, "usage_percent": 58]),
+            "maintenance": .object([
+                "estimated_remaining_recording_hours": 5.5,
+                "auto_cleanup": .object(["enabled": 0, "retention_days": 30])
+            ]),
+            "general_policy": .object([
+                "auto_overwrite": request.parameters["auto_overwrite"] ?? 1,
+                "locked_event_retention": "forever"
+            ]),
+            "storage_allocation": .object(["reserved_space_for_events_percent": 20])
+        ]
+    case "SYSTEM_PREFERENCES_CONFIG":
+        parameters = [
+            "device_identity": .object([
+                "device_name": request.parameters["device_name"] ?? "Road Camera",
+                "device_name_editable": 1
+            ]),
+            "connectivity": .object(["ssid": "Cam360_AP", "status": "connected"]),
+            "software": .object(["firmware_version": "v1.0.1"]),
+            "localization": .object(["time_zone": "UTC+8", "language": "zh-CN", "date_time_auto_sync": 1]),
+            "audio": .object(["speaker_volume": .object(["current": "medium"]), "status_sounds": 1])
+        ]
+    case "WATERMARK_CONFIG":
+        parameters = [
+            "time_enabled": request.parameters["time_enabled"] ?? 1,
+            "plate_enabled": 1,
+            "plate_number": "AB-123-CD",
+            "position": "bottom_right"
+        ]
+    default:
+        return nil
+    }
+
+    return DeviceProtocolMessage(
+        topic: request.topic,
+        operation: .notify,
+        messageID: "dev-\(request.messageID)",
+        notifyType: .response,
+        replyTo: request.messageID,
+        errno: 0,
+        parameters: parameters
+    )
+}
+
+private func makeRecentEventObject() -> DeviceProtocolValue {
+    .object([
+        "event_id": "evt-1",
+        "path": "/DCIMA/REC00001.AVI",
+        "event_type": "impact",
+        "title_key": "event.collision_detected",
+        "title": "Collision Detected",
+        "create_time": "20230610191512",
+        "duration": 30,
+        "locked": 1
+    ])
+}
+
+private func makeMediaIndexItemObject() -> DeviceProtocolValue {
+    .object([
+        "path": "/DCIMA/REC00001.AVI",
+        "name": "REC00001.AVI",
+        "event_type": "impact",
+        "record_type": "impact",
+        "title": "Collision Detected",
+        "create_time": "20230610191512",
+        "duration": 30,
+        "resolution": "1080P",
+        "size": 1024,
+        "locked": 1,
+        "has_thumbnail": 1
+    ])
+}
+
 private func makeDeviceFileItemParameters() -> DeviceProtocolValue {
     .object([
         "name": "REC00001.AVI",
@@ -818,6 +1078,12 @@ private extension Result where Failure == DeviceSessionCommandError {
             return error.message
         }
         return nil
+    }
+}
+
+private extension Dictionary where Key == String, Value == DeviceProtocolValue {
+    func object(_ key: String) -> [String: DeviceProtocolValue]? {
+        self[key]?.objectValue
     }
 }
 

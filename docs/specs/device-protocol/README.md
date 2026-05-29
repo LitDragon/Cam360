@@ -87,8 +87,9 @@ hardware_required: true
 4. 设备响应 `APP_ACCESS`，可能返回 `heartbeat_interval` 和 `heartbeat_timeout`。
 5. APP 可发送 `PROTOCOL_VERSION` 检查协议版本。
 6. APP 发送 `CTP_CMD_OPENAPP`，告知设备前台会话已打开。
-7. 设备开始推送 `SD_STATUS`、`BAT_STATUS`、`VIDEO_CTRL` 等状态事件。
-8. APP 拉取首页和设置页所需基础信息，例如 `UUID`、`FW_VERSION`、`TF_CAP`、`CAMERA_CAPABILITY`。
+7. APP 按 `heartbeat_interval` 周期发送 `HEARTBEAT`；任一 APP 合法请求可刷新设备会话活跃时间，但设备事件和长任务进度不替代心跳 ACK。
+8. 设备开始推送 `SD_STATUS`、`BAT_STATUS`、`VIDEO_CTRL` 等状态事件。
+9. APP 拉取首页和设置页所需基础信息，例如 `UUID`、`FW_VERSION`、`TF_CAP`、`CAMERA_CAPABILITY`。
 
 断开流程：
 
@@ -98,8 +99,8 @@ hardware_required: true
 ## 超时与重连
 
 - 默认单请求超时按 `10s` 处理。
-- 心跳参考值为间隔 `30s`、超时 `90s`。
-- 协议未定义独立心跳命令时，优先用被动保活；若一段时间无任何响应或事件，可用只读 Topic 做主动探活。
+- `HEARTBEAT` 为正式会话保活 Topic；默认间隔 `30s`、超时 `90s`，以 `APP_ACCESS` 返回值为准。
+- 长任务期间仍需继续发送 `HEARTBEAT`；连续两次无 ACK 或超过 `heartbeat_timeout` 时，APP 应断开并进入重连策略。
 - 重连退避可按 `1s -> 2s -> 4s -> 8s -> 16s -> 30s`，并限制最大间隔。
 - Wi-Fi 已切走、版本不兼容、用户主动退出等场景不应无限重连。
 - 重连成功后必须重新执行握手和状态同步。
@@ -121,23 +122,33 @@ hardware_required: true
 
 首批真实链路优先覆盖：
 
-- 会话与设备信息：`APP_ACCESS`、`CTP_CMD_OPENAPP`、`CTP_CMD_EXITAPP`、`PROTOCOL_VERSION`、`UUID`、`FW_VERSION`、`DATE_TIME`、`SD_STATUS`、`BAT_STATUS`、`TF_CAP`、`CAMERA_CAPABILITY`
-- 录像与常用设置：`VIDEO_CTRL`、`VIDEO_SIZE`、`VIDEO_LOOP`、`VIDEO_MIC`、`VIDEO_WDR`、`VIDEO_EXP`、`VIDEO_DATE`、`MOVE_CHECK`、`GRA_SEN`、`MONITOR_MODE`、`MONITOR_TIME`、`VOLTAGE_PRO`、`MIRROR_HOR`、`FLIP_VER`、`AUTO_SHUTDOWN`、`SCREEN_PRO`、`AP_SSID_INFO`、`SYSTEM_DEFAULT`
+- 会话与设备信息：`APP_ACCESS`、`CTP_CMD_OPENAPP`、`CTP_CMD_EXITAPP`、`HEARTBEAT`、`PROTOCOL_VERSION`、`UUID`、`FW_VERSION`、`DATE_TIME`、`SD_STATUS`、`BAT_STATUS`、`TF_CAP`、`CAMERA_CAPABILITY`
+- 聚合状态与索引：`STATE_SYNC`、`MEDIA_INDEX`、`RECENT_EVENTS`
+- 录像与常用设置：`VIDEO_CTRL`、`RECORDING_CONFIG`、`SAFETY_CONFIG`、`STORAGE_POLICY_CONFIG`、`SYSTEM_PREFERENCES_CONFIG`、`WATERMARK_CONFIG`、`VIDEO_SIZE`、`VIDEO_LOOP`、`VIDEO_MIC`、`VIDEO_WDR`、`VIDEO_EXP`、`VIDEO_DATE`、`MOVE_CHECK`、`GRA_SEN`、`MONITOR_MODE`、`MONITOR_TIME`、`VOLTAGE_PRO`、`MIRROR_HOR`、`FLIP_VER`、`AUTO_SHUTDOWN`、`SCREEN_PRO`、`AP_SSID_INFO`、`SYSTEM_DEFAULT`
 - 文件与截图：`FILE_LIST`、`FILE_INFO`、`FILE_DELETE`、`FILE_DOWNLOAD_URL`、`THUMB_LIST`、`THUMB_GET`、`FILE_LOCK`、`SNAPSHOT_CTRL`、`SNAPSHOT_DATA`、`FORMAT`
 - 主动推送：`SD_STATUS`、`BAT_STATUS`、`VIDEO_CTRL`、`FORMAT_PROGRESS`、`UPGRADE_PROGRESS`、`DOWNLOAD_PROGRESS`
 
 当前 iOS 接入状态：
 
 - 已接入控制通道基础层：JSON 编解码、`\n` 分帧、`reply_to` 响应匹配、主动事件分流、请求超时和 Network.framework TCP transport。
-- 已接入会话与只读/控制命令模型：握手基础 Topic、`FILE_LIST`、`FILE_INFO`、`FILE_DOWNLOAD_URL`、`THUMB_LIST`、`THUMB_GET`、`VIDEO_CTRL`、`SNAPSHOT_CTRL`、`SNAPSHOT_DATA`、`FILE_DELETE`、`FILE_LOCK`、`AP_SSID_INFO`、`FORMAT`、`SYSTEM_DEFAULT`。
+- 已接入会话与只读/控制命令模型：握手基础 Topic、`HEARTBEAT`、`STATE_SYNC`、`MEDIA_INDEX`、`RECENT_EVENTS`、聚合配置 Topic、`FILE_LIST`、`FILE_INFO`、`FILE_DOWNLOAD_URL`、`THUMB_LIST`、`THUMB_GET`、`VIDEO_CTRL`、`SNAPSHOT_CTRL`、`SNAPSHOT_DATA`、`FILE_DELETE`、`FILE_LOCK`、`AP_SSID_INFO`、`FORMAT`、`SYSTEM_DEFAULT`。
+- `DeviceSession` 已提供聚合读取与聚合配置 GET/POST 封装；`HEARTBEAT` 尚未接入自动调度。
 - 握手返回目前只派生设备 ID、固件版本和能力集；SD、电量、容量、录像状态等主动推送尚未形成完整业务状态源。
-- 尚未接入普通设置写操作、进度推送消费、真实下载任务和本地资源保存；危险命令仅有模型和离线测试，不从 UI 直接触发。
+- 尚未接入进度推送消费、真实下载任务和本地资源保存；危险命令仅有模型和离线测试，不从 UI 直接触发。
 
 ## 文件、缩略图与截图
 
 - `THUMB_LIST` 使用 `paths[]` 请求，联调模拟器限制单次不超过 20 个路径、总原始缩略图大小不超过 `512KB`。
 - `SNAPSHOT_CTRL` 使用 `POST mode=preview` 触发截图，响应 `snapshot_id` 后再用 `SNAPSHOT_DATA` 获取截图资源。
 - `VIDEO_CTRL` 使用 `GET` 查询录像状态，使用 `POST status=0/1` 停止或开始录像，成功后以设备响应或推送作为最终状态。
+- 普通控制帧按 `64 KiB` 上限处理；允许 Base64 媒体文本的扩展响应帧按 `768 KiB` 上限处理。接收端缓存超过上限或半包超过 `5s` 未闭合时，应关闭连接。
+- `STATE_SYNC(scope=initial)` 只承载首屏必要快照；媒体长列表和完整事件列表必须通过 `MEDIA_INDEX` 或 `RECENT_EVENTS` 分页读取。
+
+## 聚合配置
+
+- `RECORDING_CONFIG`、`SAFETY_CONFIG`、`STORAGE_POLICY_CONFIG`、`SYSTEM_PREFERENCES_CONFIG`、`WATERMARK_CONFIG` 使用 GET 读取完整快照，POST 提交变化字段。
+- 聚合配置 POST 必须按事务处理：未知字段、类型错误、枚举不支持、只读字段或任一字段失败时整体回滚并返回错误；成功响应返回应用后的完整最终配置。
+- `STATE_SYNC(scope=recording/storage/safety/system_preferences/watermark)` 应与对应配置 GET 返回结构保持一致。
 
 ## 后续接入约束
 
@@ -145,7 +156,7 @@ hardware_required: true
 - `DeviceSession` 负责连接生命周期和状态流，Feature 只消费状态和能力。
 - 设置类操作优先采用提交成功后再更新最终状态的悲观更新策略。
 - HTTP 资源、预览流、播放器、本地保存和下载任务应作为独立能力接入，不混入 TCP 控制通道。
-- 真实预览协议仍需硬件确认；在确认前只保留抽象入口和占位链路。
+- 真实预览取流仍缺正式流地址、会话参数、鉴权、保活与重连规则；下载管理仍缺开始、暂停、继续、取消控制 Topic。在协议补齐前不实现真机运行路径。
 
 ## 原始资料来源
 

@@ -26,7 +26,7 @@ struct HomeView: View {
                                 .padding(.top, AppSpacing.xl)
 
                             HomeRecentEventsSection(
-                                events: Self.recentEvents,
+                                events: store.recentEvents,
                                 onViewAll: onOpenEvents
                             )
                             .padding(.horizontal, AppSpacing.xxxl)
@@ -107,25 +107,6 @@ struct HomeView: View {
         store.dismissFeatureSheet()
     }
 
-    private static let recentEvents = [
-        HomeRecentEvent(
-            title: "Braking Detected",
-            detail: "Today, 11:42 AM",
-            imageName: "HomeEventBraking"
-        ),
-        HomeRecentEvent(
-            title: "Parking Sentry",
-            detail: "Yesterday, 09:15 PM",
-            imageName: "HomeEventParking"
-        )
-    ]
-}
-
-private struct HomeRecentEvent: Identifiable {
-    let id = UUID()
-    let title: String
-    let detail: String
-    let imageName: String
 }
 
 private struct HomeHeroCard: View {
@@ -181,7 +162,7 @@ private struct HomeEmptyDeviceState: View {
 }
 
 private struct HomeRecentEventsSection: View {
-    let events: [HomeRecentEvent]
+    let events: [RecordingRecentEvent]
     let onViewAll: () -> Void
 
     var body: some View {
@@ -211,13 +192,13 @@ private struct HomeRecentEventsSection: View {
 }
 
 private struct HomeRecentEventRow: View {
-    let event: HomeRecentEvent
+    let event: RecordingRecentEvent
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: AppSpacing.lg) {
-                Image(event.imageName)
+                Image(imageName)
                     .resizable()
                     .scaledToFill()
                     .frame(width: 56, height: 56)
@@ -243,5 +224,14 @@ private struct HomeRecentEventRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(PlainButtonStyle())
+    }
+
+    private var imageName: String {
+        switch event.artwork {
+        case .parking:
+            return "HomeEventParking"
+        default:
+            return "HomeEventBraking"
+        }
     }
 }

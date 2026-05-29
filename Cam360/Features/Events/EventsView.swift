@@ -58,6 +58,21 @@ struct EventsView: View {
                         }
                     }
 
+                    if store.recentEvents.isEmpty == false {
+                        SectionCard(title: "最近事件") {
+                            VStack(spacing: AppSpacing.md) {
+                                ForEach(store.recentEvents) { event in
+                                    EventsStatusRow(
+                                        iconName: iconName(for: event.eventType),
+                                        title: event.title,
+                                        message: event.createTime ?? event.path ?? "Recent event",
+                                        tone: tone(for: event.eventType)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                     EmptyStateView(
                         iconName: "bell.slash",
                         title: store.emptyTitle,
@@ -78,8 +93,34 @@ struct EventsView: View {
             return .neutral
         case .refreshing:
             return .accent
+        case .available:
+            return .success
         case .unavailable:
             return .warning
+        }
+    }
+
+    private func iconName(for eventType: String) -> String {
+        switch eventType {
+        case "impact", "emergency":
+            return "exclamationmark.octagon.fill"
+        case "parking":
+            return "parkingsign.circle.fill"
+        case "manual":
+            return "bookmark.fill"
+        default:
+            return "bell.fill"
+        }
+    }
+
+    private func tone(for eventType: String) -> StatusTagTone {
+        switch eventType {
+        case "impact", "emergency":
+            return .danger
+        case "parking", "motion":
+            return .accent
+        default:
+            return .neutral
         }
     }
 }

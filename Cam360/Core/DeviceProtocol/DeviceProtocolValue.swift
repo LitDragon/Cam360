@@ -50,14 +50,14 @@ enum DeviceProtocolValue: Codable, Equatable {
         }
     }
 
-    var stringValue: String? {
+    nonisolated var stringValue: String? {
         if case .string(let value) = self {
             return value
         }
         return nil
     }
 
-    var intValue: Int? {
+    nonisolated var intValue: Int? {
         switch self {
         case .int(let value):
             return value
@@ -72,7 +72,7 @@ enum DeviceProtocolValue: Codable, Equatable {
         }
     }
 
-    var boolValue: Bool? {
+    nonisolated var boolValue: Bool? {
         switch self {
         case .bool(let value):
             return value

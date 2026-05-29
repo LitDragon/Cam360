@@ -11,7 +11,8 @@ hardware_required: true
 
 - `DeviceSession` 可通过注入的控制通道 endpoint 建立 TCP 协议会话；真实 AP 连接成功仍由 onboarding 事件推进。
 - 握手链路已编排 `APP_ACCESS`、`PROTOCOL_VERSION`、`CTP_CMD_OPENAPP`、`UUID`、`FW_VERSION`、`SD_STATUS`、`BAT_STATUS`、`TF_CAP`、`CAMERA_CAPABILITY`。
-- ready 会话可发送文件列表、文件信息、回放资源、缩略图、录像状态/开关、截图、文件删除、文件加锁、热点信息、格式化和恢复出厂命令；命令结果带 ready 守卫和过期会话失效处理。
+- ready 会话可发送 `STATE_SYNC`、`MEDIA_INDEX`、`RECENT_EVENTS`、聚合配置 GET/POST、文件列表、文件信息、回放资源、缩略图、录像状态/开关、截图、文件删除、文件加锁、热点信息、格式化和恢复出厂命令；命令结果带 ready 守卫和过期会话失效处理。
+- `HEARTBEAT` 已有命令模型，自动心跳调度仍未接入 `DeviceSession`。
 - `ready` / `busy` 会话主动断开或重置时，先发送 `CTP_CMD_EXITAPP`，再关闭控制连接；握手未完成或失败态只关闭本地连接。
 - 设备返回的已知 `errno` 按 `device-protocol` 错误码口径映射为可读失败原因；未知错误码保留原始 `errno` 和 Topic。
 
@@ -63,7 +64,7 @@ failed(DeviceError) --disconnect--> disconnected
 
 ## 当前范围外
 
-- 真实 AP 连接、endpoint 自动发现、录像页/Settings 写操作和完整业务状态同步
+- 真实 AP 连接、endpoint 自动发现、自动心跳调度和完整主动推送状态源
 - 真实预览流、播放器控制、下载任务、本地文件保存和截图保存
 - 文件删除、文件加锁、格式化、恢复出厂设置等危险操作的 UI 触发和真机结果确认
 - 自动重试与会话级超时调度

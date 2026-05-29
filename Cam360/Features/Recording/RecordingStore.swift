@@ -98,6 +98,7 @@ final class RecordingStore: ObservableObject {
     @Published private(set) var selectedDeviceID: RecordingDeviceItem.ID?
     @Published private(set) var shouldShowFeatureSheet: Bool
     @Published private(set) var recordingStatesByDeviceID: [RecordingDeviceItem.ID: Bool]
+    @Published private(set) var deviceRecentEvents: [RecordingRecentEvent]
 
     private let knownDeviceRepository: KnownDeviceRepository
     private let appPreferenceStore: AppPreferenceStore
@@ -105,6 +106,7 @@ final class RecordingStore: ObservableObject {
     private let deviceSession: DeviceSession?
     private var deviceSessionState: DeviceSessionState = .idle
     private var lastSessionDeviceID: KnownDeviceSummary.ID?
+    private var recentEventsGeneration = 0
     private var cancellables = Set<AnyCancellable>()
 
     init(
@@ -121,6 +123,7 @@ final class RecordingStore: ObservableObject {
         selectedDeviceID = nil
         shouldShowFeatureSheet = false
         recordingStatesByDeviceID = [:]
+        deviceRecentEvents = []
         deviceSessionState = deviceSession?.state ?? .idle
         updateLastSessionDeviceID(from: deviceSessionState)
         bindDeviceSession()
@@ -140,7 +143,7 @@ final class RecordingStore: ObservableObject {
     }
 
     var recentEvents: [RecordingRecentEvent] {
-        selectedScenario?.events ?? []
+        deviceRecentEvents.isEmpty ? (selectedScenario?.events ?? []) : deviceRecentEvents
     }
 
     var previewState: RecordingPreviewState {
@@ -237,6 +240,7 @@ final class RecordingStore: ObservableObject {
                 self?.deviceSessionState = state
                 self?.updateLastSessionDeviceID(from: state)
                 self?.refresh()
+                self?.loadRecentEventsIfNeeded(from: state)
             }
             .store(in: &cancellables)
     }
@@ -259,6 +263,31 @@ final class RecordingStore: ObservableObject {
         return devices.first?.id
     }
 
+    private func loadRecentEventsIfNeeded(from state: DeviceSessionState) {
+        guard case .ready = state, let deviceSession else {
+            if state.canSendDeviceCommand == false {
+                recentEventsGeneration += 1
+                deviceRecentEvents = []
+            }
+            return
+        }
+
+        let generation = nextRecentEventsGeneration()
+        deviceSession.fetchRecentEvents(query: DeviceRecentEventsQuery(limit: 4)) { [weak self] result in
+            guard let self, self.recentEventsGeneration == generation else {
+                return
+            }
+            if case .success(let page) = result {
+                self.deviceRecentEvents = page.items.map(Self.recordingEvent(from:))
+            }
+        }
+    }
+
+    private func nextRecentEventsGeneration() -> Int {
+        recentEventsGeneration += 1
+        return recentEventsGeneration
+    }
+
     private func status(
         for device: KnownDeviceSummary,
         selectedDeviceID: KnownDeviceSummary.ID?
@@ -278,6 +307,45 @@ final class RecordingStore: ObservableObject {
         }
 
         return .disconnected
+    }
+
+    nonisolated private static func recordingEvent(from item: DeviceRecentEventItem) -> RecordingRecentEvent {
+        RecordingRecentEvent(
+            id: item.id,
+            title: item.title,
+            detail: item.createTime ?? "Recent event",
+            badgeTitle: badgeTitle(for: item.eventType),
+            badgeTone: item.eventType == "impact" || item.eventType == "emergency" ? .danger : .accent,
+            artwork: artwork(for: item.eventType)
+        )
+    }
+
+    nonisolated private static func badgeTitle(for eventType: String) -> String {
+        switch eventType {
+        case "impact":
+            return "IMPACT"
+        case "motion":
+            return "MOTION"
+        case "manual":
+            return "MANUAL"
+        case "parking":
+            return "PARKING"
+        default:
+            return "EVENT"
+        }
+    }
+
+    nonisolated private static func artwork(for eventType: String) -> RecordingEventArtwork {
+        switch eventType {
+        case "parking":
+            return .parking
+        case "motion":
+            return .nightDrive
+        case "manual":
+            return .landscape
+        default:
+            return .vehicle
+        }
     }
 }
 

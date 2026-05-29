@@ -65,6 +65,51 @@ extension DeviceProtocolCommand {
         DeviceProtocolCommand(topic: "CTP_CMD_EXITAPP", operation: .post, parameters: ["page": .string(page)])
     }
 
+    static func heartbeat(seq: Int? = nil, clientTime: String? = nil) -> DeviceProtocolCommand {
+        var parameters: [String: DeviceProtocolValue] = [:]
+        if let seq {
+            parameters["seq"] = .int(seq)
+        }
+        if let clientTime {
+            parameters["client_time"] = .string(clientTime)
+        }
+        return DeviceProtocolCommand(topic: "HEARTBEAT", operation: .post, parameters: parameters)
+    }
+
+    static func stateSync(scope: DeviceStateSyncScope) -> DeviceProtocolCommand {
+        DeviceProtocolCommand(
+            topic: "STATE_SYNC",
+            operation: .get,
+            parameters: ["scope": .string(scope.rawValue)]
+        )
+    }
+
+    static func mediaIndex(query: DeviceMediaIndexQuery) -> DeviceProtocolCommand {
+        DeviceProtocolCommand(
+            topic: "MEDIA_INDEX",
+            operation: .get,
+            parameters: [
+                "media_type": .string(query.mediaType.rawValue),
+                "group_by": .string(query.groupBy.rawValue),
+                "event_only": .int(query.eventOnly ? 1 : 0),
+                "page_no": .int(query.pageNo),
+                "page_size": .int(query.pageSize)
+            ]
+        )
+    }
+
+    static func recentEvents(query: DeviceRecentEventsQuery) -> DeviceProtocolCommand {
+        DeviceProtocolCommand(
+            topic: "RECENT_EVENTS",
+            operation: .get,
+            parameters: [
+                "limit": .int(query.limit),
+                "event_type": .string(query.eventType),
+                "include_locked_only": .int(query.includeLockedOnly ? 1 : 0)
+            ]
+        )
+    }
+
     static func fileList(query: DeviceFileListQuery) -> DeviceProtocolCommand {
         DeviceProtocolCommand(
             topic: "FILE_LIST",
@@ -131,6 +176,32 @@ extension DeviceProtocolCommand {
     }
 
     static let recordingState = DeviceProtocolCommand(topic: "VIDEO_CTRL", operation: .get)
+
+    static let recordingConfiguration = DeviceProtocolCommand(topic: "RECORDING_CONFIG", operation: .get)
+    static let safetyConfiguration = DeviceProtocolCommand(topic: "SAFETY_CONFIG", operation: .get)
+    static let storagePolicyConfiguration = DeviceProtocolCommand(topic: "STORAGE_POLICY_CONFIG", operation: .get)
+    static let systemPreferencesConfiguration = DeviceProtocolCommand(topic: "SYSTEM_PREFERENCES_CONFIG", operation: .get)
+    static let watermarkConfiguration = DeviceProtocolCommand(topic: "WATERMARK_CONFIG", operation: .get)
+
+    static func updateRecordingConfiguration(parameters: [String: DeviceProtocolValue]) -> DeviceProtocolCommand {
+        DeviceProtocolCommand(topic: "RECORDING_CONFIG", operation: .post, parameters: parameters)
+    }
+
+    static func updateSafetyConfiguration(parameters: [String: DeviceProtocolValue]) -> DeviceProtocolCommand {
+        DeviceProtocolCommand(topic: "SAFETY_CONFIG", operation: .post, parameters: parameters)
+    }
+
+    static func updateStoragePolicyConfiguration(parameters: [String: DeviceProtocolValue]) -> DeviceProtocolCommand {
+        DeviceProtocolCommand(topic: "STORAGE_POLICY_CONFIG", operation: .post, parameters: parameters)
+    }
+
+    static func updateSystemPreferencesConfiguration(parameters: [String: DeviceProtocolValue]) -> DeviceProtocolCommand {
+        DeviceProtocolCommand(topic: "SYSTEM_PREFERENCES_CONFIG", operation: .post, parameters: parameters)
+    }
+
+    static func updateWatermarkConfiguration(parameters: [String: DeviceProtocolValue]) -> DeviceProtocolCommand {
+        DeviceProtocolCommand(topic: "WATERMARK_CONFIG", operation: .post, parameters: parameters)
+    }
 
     static let accessPointIdentity = DeviceProtocolCommand(topic: "AP_SSID_INFO", operation: .get)
 

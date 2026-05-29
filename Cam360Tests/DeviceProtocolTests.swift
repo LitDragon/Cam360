@@ -537,6 +537,47 @@ struct DeviceProtocolTests {
         #expect(DeviceProtocolCommand.restoreDefaultConfiguration.operation == .post)
         #expect(DeviceProtocolCommand.restoreDefaultConfiguration.parameters["def"]?.intValue == 1)
     }
+
+    @Test
+    func aggregateCommandsUseConfirmedTopicsAndParameters() {
+        let heartbeat = DeviceProtocolCommand.heartbeat(seq: 7, clientTime: "20260525103056")
+        let stateSync = DeviceProtocolCommand.stateSync(scope: .initial)
+        let mediaIndex = DeviceProtocolCommand.mediaIndex(
+            query: DeviceMediaIndexQuery(mediaType: .video, groupBy: .date, eventOnly: true, pageNo: 2, pageSize: 8)
+        )
+        let recentEvents = DeviceProtocolCommand.recentEvents(
+            query: DeviceRecentEventsQuery(limit: 4, eventType: "impact", includeLockedOnly: false)
+        )
+
+        #expect(heartbeat.topic == "HEARTBEAT")
+        #expect(heartbeat.operation == .post)
+        #expect(heartbeat.parameters["seq"]?.intValue == 7)
+        #expect(heartbeat.parameters["client_time"]?.stringValue == "20260525103056")
+
+        #expect(stateSync.topic == "STATE_SYNC")
+        #expect(stateSync.operation == .get)
+        #expect(stateSync.parameters["scope"]?.stringValue == "initial")
+
+        #expect(mediaIndex.topic == "MEDIA_INDEX")
+        #expect(mediaIndex.operation == .get)
+        #expect(mediaIndex.parameters["media_type"]?.stringValue == "video")
+        #expect(mediaIndex.parameters["group_by"]?.stringValue == "date")
+        #expect(mediaIndex.parameters["event_only"]?.intValue == 1)
+        #expect(mediaIndex.parameters["page_no"]?.intValue == 2)
+        #expect(mediaIndex.parameters["page_size"]?.intValue == 8)
+
+        #expect(recentEvents.topic == "RECENT_EVENTS")
+        #expect(recentEvents.operation == .get)
+        #expect(recentEvents.parameters["limit"]?.intValue == 4)
+        #expect(recentEvents.parameters["event_type"]?.stringValue == "impact")
+        #expect(recentEvents.parameters["include_locked_only"]?.intValue == 0)
+
+        #expect(DeviceProtocolCommand.recordingConfiguration.topic == "RECORDING_CONFIG")
+        #expect(DeviceProtocolCommand.safetyConfiguration.topic == "SAFETY_CONFIG")
+        #expect(DeviceProtocolCommand.storagePolicyConfiguration.topic == "STORAGE_POLICY_CONFIG")
+        #expect(DeviceProtocolCommand.systemPreferencesConfiguration.topic == "SYSTEM_PREFERENCES_CONFIG")
+        #expect(DeviceProtocolCommand.watermarkConfiguration.topic == "WATERMARK_CONFIG")
+    }
 }
 
 private final class FakeDeviceProtocolTransport: DeviceProtocolTransport {
