@@ -19,7 +19,7 @@ struct SafetySettingsView: View {
                             SafetySegmentedRow(
                                 title: "G-Sensor Sensitivity",
                                 footnote: "Recommended for most urban driving conditions.",
-                                options: SafetySensitivityOption.allCases,
+                                options: store.safetySettings.gSensorSensitivityOptions,
                                 selection: binding(for: \.gSensorSensitivity),
                                 titleForOption: { $0.rawValue }
                             )
@@ -66,7 +66,7 @@ struct SafetySettingsView: View {
                         SettingsGroupCard {
                             SettingsSegmentedRow(
                                 title: "Clip Duration",
-                                options: EventClipDurationOption.allCases,
+                                options: store.safetySettings.eventClipDurationOptions,
                                 selection: binding(for: \.eventClipDuration),
                                 titleForOption: { $0.rawValue },
                                 showsDivider: false

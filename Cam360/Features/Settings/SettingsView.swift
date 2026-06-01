@@ -7,17 +7,20 @@ enum SettingsRoot {
 
 struct SettingsView: View {
     @ObservedObject var store: SettingsStore
+    @ObservedObject var statisticsStore: StatisticsStore
     let root: SettingsRoot
     let embedsNavigationView: Bool
     let onClose: (() -> Void)?
 
     init(
         store: SettingsStore,
+        statisticsStore: StatisticsStore,
         root: SettingsRoot = .deviceSettings,
         embedsNavigationView: Bool = true,
         onClose: (() -> Void)? = nil
     ) {
         self.store = store
+        self.statisticsStore = statisticsStore
         self.root = root
         self.embedsNavigationView = embedsNavigationView
         self.onClose = onClose
@@ -76,6 +79,10 @@ struct SettingsView: View {
         Group {
             navigationLink(tag: .systemPreferences) {
                 SystemPreferencesView(store: store, dismiss: store.dismissRoute)
+            }
+
+            navigationLink(tag: .statistics) {
+                StatisticsView(store: statisticsStore, onClose: store.dismissRoute)
             }
 
             navigationLink(tag: .recordingSettings) {

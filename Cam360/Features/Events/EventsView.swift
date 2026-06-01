@@ -1,3 +1,4 @@
+import Foundation
 import SwiftUI
 
 struct EventsView: View {
@@ -58,14 +59,14 @@ struct EventsView: View {
                         }
                     }
 
-                    if store.recentEvents.isEmpty == false {
-                        SectionCard(title: "最近事件") {
+                    if store.visibleEvents.isEmpty == false {
+                        SectionCard(title: "事件列表") {
                             VStack(spacing: AppSpacing.md) {
-                                ForEach(store.recentEvents) { event in
-                                    EventsStatusRow(
+                                ForEach(Array(store.visibleEvents.enumerated()), id: \.element.id) { index, event in
+                                    EventTimelineRow(
+                                        event: event,
+                                        isActive: index == 0,
                                         iconName: iconName(for: event.eventType),
-                                        title: event.title,
-                                        message: event.createTime ?? event.path ?? "Recent event",
                                         tone: tone(for: event.eventType)
                                     )
                                 }
@@ -73,11 +74,13 @@ struct EventsView: View {
                         }
                     }
 
-                    EmptyStateView(
-                        iconName: "bell.slash",
-                        title: store.emptyTitle,
-                        message: store.emptyMessage
-                    )
+                    if store.visibleEvents.isEmpty {
+                        EmptyStateView(
+                            iconName: "bell.slash",
+                            title: store.emptyTitle,
+                            message: store.emptyMessage
+                        )
+                    }
                 }
                 .padding(AppSpacing.lg)
             }
@@ -121,6 +124,174 @@ struct EventsView: View {
             return .accent
         default:
             return .neutral
+        }
+    }
+}
+
+private struct EventTimelineRow: View {
+    let event: DeviceRecentEventItem
+    let isActive: Bool
+    let iconName: String
+    let tone: StatusTagTone
+
+    var body: some View {
+        HStack(alignment: .top, spacing: AppSpacing.md) {
+            EventThumbnailView(
+                iconName: iconName,
+                tone: tone,
+                isActive: isActive,
+                isLocked: event.locked,
+                thumbReady: event.thumbReady
+            )
+
+            VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                HStack(alignment: .firstTextBaseline, spacing: AppSpacing.sm) {
+                    Text(event.title)
+                        .font(AppTypography.bodyStrong)
+                        .foregroundColor(AppColor.textPrimary)
+                        .lineLimit(1)
+
+                    if isActive {
+                        StatusTag(title: "ACTIVE", tone: .accent, size: .compact)
+                    }
+                }
+
+                Text(event.createTime ?? event.path ?? "Event media")
+                    .font(AppTypography.caption)
+                    .foregroundColor(AppColor.textSecondary)
+                    .lineLimit(1)
+
+                HStack(spacing: AppSpacing.sm) {
+                    if let duration = event.duration {
+                        Text(Self.durationText(duration))
+                    }
+
+                    if let size = event.size {
+                        Text(Self.sizeText(size))
+                    }
+
+                    if event.locked {
+                        Text("Locked")
+                    }
+                }
+                .font(AppTypography.caption)
+                .foregroundColor(AppColor.textSecondary)
+            }
+
+            Spacer(minLength: 0)
+
+            Button(action: {}) {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(AppColor.textSecondary)
+                    .frame(width: 32, height: 32)
+                    .background(AppColor.surface)
+                    .cornerRadius(AppRadius.small)
+            }
+            .buttonStyle(PlainButtonStyle())
+            .disabled(true)
+        }
+        .padding(AppSpacing.md)
+        .background(isActive ? AppColor.accentSurface : AppColor.surfaceMuted)
+        .cornerRadius(AppRadius.medium)
+        .overlay(
+            RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous)
+                .stroke(isActive ? AppColor.brand.opacity(0.28) : Color.clear, lineWidth: 1)
+        )
+    }
+
+    private static func durationText(_ seconds: Int) -> String {
+        let minutes = seconds / 60
+        let remainingSeconds = seconds % 60
+        return String(format: "%02d:%02d", minutes, remainingSeconds)
+    }
+
+    private static func sizeText(_ bytes: Int) -> String {
+        let formatter = ByteCountFormatter()
+        formatter.allowedUnits = [.useKB, .useMB, .useGB]
+        formatter.countStyle = .file
+        return formatter.string(fromByteCount: Int64(bytes))
+    }
+}
+
+private struct EventThumbnailView: View {
+    let iconName: String
+    let tone: StatusTagTone
+    let isActive: Bool
+    let isLocked: Bool
+    let thumbReady: Bool
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            LinearGradient(
+                gradient: Gradient(colors: backgroundColors),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            Image(systemName: iconName)
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundColor(.white.opacity(0.9))
+
+            VStack {
+                Spacer(minLength: 0)
+
+                HStack {
+                    Spacer(minLength: 0)
+
+                    Text(thumbReady ? "THUMB" : "INDEX")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2)
+                        .background(Color.black.opacity(0.42))
+                        .cornerRadius(3)
+                        .padding(4)
+                }
+            }
+
+            if isLocked {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(6)
+            }
+        }
+        .frame(width: 78, height: 58)
+        .clipShape(RoundedRectangle(cornerRadius: AppRadius.small, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppRadius.small, style: .continuous)
+                .stroke(isActive ? Color.white.opacity(0.7) : Color.clear, lineWidth: 1)
+        )
+    }
+
+    private var backgroundColors: [Color] {
+        switch tone {
+        case .danger:
+            return [
+                Color(red: 0.76, green: 0.2, blue: 0.18),
+                Color(red: 0.36, green: 0.08, blue: 0.12)
+            ]
+        case .accent:
+            return [
+                Color(red: 0.12, green: 0.48, blue: 0.78),
+                Color(red: 0.08, green: 0.22, blue: 0.42)
+            ]
+        case .success:
+            return [
+                Color(red: 0.22, green: 0.58, blue: 0.34),
+                Color(red: 0.1, green: 0.28, blue: 0.18)
+            ]
+        case .warning:
+            return [
+                Color(red: 0.82, green: 0.55, blue: 0.2),
+                Color(red: 0.42, green: 0.24, blue: 0.1)
+            ]
+        case .neutral:
+            return [
+                Color(red: 0.45, green: 0.48, blue: 0.56),
+                Color(red: 0.18, green: 0.2, blue: 0.26)
+            ]
         }
     }
 }

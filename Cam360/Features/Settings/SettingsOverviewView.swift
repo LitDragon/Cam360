@@ -24,6 +24,7 @@ struct SettingsOverviewView: View {
                         DeviceSettingsNavigationRow(
                             title: "Recording Settings",
                             subtitle: "Resolution, Loop, Overwrite",
+                            isEnabled: store.isSettingsHomeCategorySupported(.recording),
                             action: {
                                 store.show(.recordingSettings)
                             }
@@ -32,6 +33,7 @@ struct SettingsOverviewView: View {
                         DeviceSettingsNavigationRow(
                             title: "Safety Settings",
                             subtitle: "G-Sensor, Parking Mode",
+                            isEnabled: store.isSettingsHomeCategorySupported(.safety),
                             action: {
                                 store.show(.safetySettings)
                             }
@@ -40,6 +42,7 @@ struct SettingsOverviewView: View {
                         DeviceSettingsNavigationRow(
                             title: "Storage Policy",
                             subtitle: "Retention, Auto-cleanup",
+                            isEnabled: store.isSettingsHomeCategorySupported(.storage),
                             action: {
                                 store.show(.storagePolicy)
                             }
@@ -48,6 +51,7 @@ struct SettingsOverviewView: View {
                         DeviceSettingsNavigationRow(
                             title: "Watermark Config",
                             subtitle: "Timestamp, Plate No",
+                            isEnabled: store.isSettingsHomeCategorySupported(.watermark),
                             showsDivider: false,
                             action: {
                                 store.show(.watermarkConfiguration)
@@ -59,8 +63,17 @@ struct SettingsOverviewView: View {
                         DeviceSettingsNavigationRow(
                             title: "System Preferences",
                             subtitle: "Volume, Sounds, Language",
+                            isEnabled: store.isSettingsHomeCategorySupported(.systemPreferences),
                             action: {
                                 store.show(.systemPreferences)
+                            }
+                        )
+
+                        DeviceSettingsNavigationRow(
+                            title: "Statistics",
+                            subtitle: "Storage, files, usage",
+                            action: {
+                                store.show(.statistics)
                             }
                         )
 
@@ -74,6 +87,8 @@ struct SettingsOverviewView: View {
 
                         DeviceSettingsNavigationRow(
                             title: "Rename Device",
+                            subtitle: store.devicePreferences.deviceNameEditable ? nil : "Not supported by device",
+                            isEnabled: store.devicePreferences.deviceNameEditable,
                             showsDivider: false,
                             action: {
                                 store.show(.renameDevice)
@@ -192,6 +207,7 @@ private struct DeviceSettingsSection<Content: View>: View {
 private struct DeviceSettingsNavigationRow: View {
     let title: String
     var subtitle: String? = nil
+    var isEnabled: Bool = true
     var showsDivider: Bool = true
     let action: () -> Void
 
@@ -201,6 +217,8 @@ private struct DeviceSettingsNavigationRow: View {
                 rowContent
             }
             .buttonStyle(PlainButtonStyle())
+            .disabled(isEnabled == false)
+            .opacity(isEnabled ? 1 : 0.42)
         }
     }
 

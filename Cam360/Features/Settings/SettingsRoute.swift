@@ -1,5 +1,6 @@
 enum SettingsRoute: Equatable {
     case systemPreferences
+    case statistics
     case recordingSettings
     case storagePolicy
     case watermarkConfiguration

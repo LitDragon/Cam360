@@ -2,6 +2,8 @@ import Combine
 import Foundation
 
 final class GalleryStore: ObservableObject {
+    private static let thumbnailListBatchSize = 20
+
     @Published private(set) var selectedFilter: GalleryFilter
     @Published private(set) var isSelectionMode: Bool
     @Published private(set) var selectedIDs: Set<GalleryItem.ID>
@@ -198,7 +200,7 @@ final class GalleryStore: ObservableObject {
     }
 
     private func loadDeviceFiles() {
-        guard let deviceSession else {
+        guard deviceSession != nil else {
             return
         }
 
@@ -206,7 +208,28 @@ final class GalleryStore: ObservableObject {
         isLoadingItems = true
         lastLoadError = nil
 
-        deviceSession.fetchMediaIndex(query: DeviceMediaIndexQuery(mediaType: .video, groupBy: .date, pageSize: 20)) { [weak self] result in
+        loadMediaIndexes(
+            mediaTypes: ArraySlice([DeviceFileType.video, .photo]),
+            generation: generation,
+            collectedFiles: []
+        )
+    }
+
+    private func loadMediaIndexes(
+        mediaTypes: ArraySlice<DeviceFileType>,
+        generation: Int,
+        collectedFiles: [DeviceMediaIndexItem]
+    ) {
+        guard let deviceSession else {
+            return
+        }
+
+        guard let mediaType = mediaTypes.first else {
+            applyLoadedDeviceFiles(collectedFiles, generation: generation)
+            return
+        }
+
+        deviceSession.fetchMediaIndex(query: DeviceMediaIndexQuery(mediaType: mediaType, groupBy: .date, pageSize: 20)) { [weak self] result in
             guard let self, self.isCurrentLoad(generation) else {
                 return
             }
@@ -214,29 +237,77 @@ final class GalleryStore: ObservableObject {
             switch result {
             case .success(let index):
                 let files = index.groups.flatMap(\.items)
-                self.items = files.map(Self.galleryItem(from:))
-                self.isLoadingItems = false
-                self.lastLoadError = nil
-                self.loadThumbnails(for: files, generation: generation)
+                self.loadMediaIndexes(
+                    mediaTypes: mediaTypes.dropFirst(),
+                    generation: generation,
+                    collectedFiles: collectedFiles + files
+                )
             case .failure(.staleSession):
                 break
             case .failure(let error):
-                self.items = []
-                self.thumbnailsByPath = [:]
-                self.isLoadingItems = false
-                self.lastLoadError = error.message
+                if collectedFiles.isEmpty {
+                    self.items = []
+                    self.thumbnailsByPath = [:]
+                    self.isLoadingItems = false
+                    self.lastLoadError = error.message
+                } else {
+                    self.applyLoadedDeviceFiles(
+                        collectedFiles,
+                        generation: generation,
+                        lastLoadError: error.message
+                    )
+                }
             }
         }
     }
 
+    private func applyLoadedDeviceFiles(
+        _ files: [DeviceMediaIndexItem],
+        generation: Int,
+        lastLoadError: String? = nil
+    ) {
+        let uniqueFiles = uniqueMediaIndexItems(files)
+        items = uniqueFiles.map(Self.galleryItem(from:))
+        isLoadingItems = false
+        self.lastLoadError = lastLoadError
+        loadThumbnails(for: uniqueFiles, generation: generation)
+    }
+
+    private func uniqueMediaIndexItems(_ files: [DeviceMediaIndexItem]) -> [DeviceMediaIndexItem] {
+        var seenPaths: Set<String> = []
+        return files.filter { file in
+            seenPaths.insert(file.path).inserted
+        }
+    }
+
     private func loadThumbnails(for files: [DeviceMediaIndexItem], generation: Int) {
-        guard let deviceSession else {
+        let paths = files.filter(\.hasThumbnail).map(\.path)
+        guard paths.isEmpty == false else {
+            thumbnailsByPath = [:]
             return
         }
 
-        let paths = Array(files.filter(\.hasThumbnail).map(\.path).prefix(20))
-        guard paths.isEmpty == false else {
-            thumbnailsByPath = [:]
+        thumbnailsByPath = [:]
+        loadThumbnailBatches(ArraySlice(Self.thumbnailPathBatches(from: paths)), generation: generation)
+    }
+
+    private func loadThumbnailBatches(_ batches: ArraySlice<[String]>, generation: Int) {
+        guard let paths = batches.first else {
+            return
+        }
+
+        loadThumbnailBatch(paths, generation: generation) { [weak self] in
+            self?.loadThumbnailBatches(batches.dropFirst(), generation: generation)
+        }
+    }
+
+    private func loadThumbnailBatch(
+        _ paths: [String],
+        generation: Int,
+        completion: @escaping () -> Void
+    ) {
+        guard let deviceSession else {
+            completion()
             return
         }
 
@@ -245,9 +316,74 @@ final class GalleryStore: ObservableObject {
                 return
             }
 
-            if case .success(let thumbnails) = result {
-                self.thumbnailsByPath = Dictionary(uniqueKeysWithValues: thumbnails.map { ($0.path, $0) })
+            switch result {
+            case .success(let thumbnails):
+                self.applyThumbnails(thumbnails)
+
+                let loadedPaths = Set(thumbnails.map(\.path))
+                let missingPaths = paths.filter { loadedPaths.contains($0) == false }
+                missingPaths.forEach { path in
+                    deviceSession.fetchThumbnail(path: path) { [weak self] result in
+                        guard let self, self.isCurrentLoad(generation),
+                              case .success(let thumbnail) = result else {
+                            return
+                        }
+
+                        self.applyThumbnails([thumbnail])
+                    }
+                }
+                completion()
+            case .failure(let error):
+                guard Self.shouldReduceThumbnailBatch(for: error, pathCount: paths.count) else {
+                    completion()
+                    return
+                }
+
+                self.loadReducedThumbnailBatch(paths, generation: generation, completion: completion)
             }
+        }
+    }
+
+    private func loadReducedThumbnailBatch(
+        _ paths: [String],
+        generation: Int,
+        completion: @escaping () -> Void
+    ) {
+        let splitIndex = max(1, paths.count / 2)
+        let firstBatch = Array(paths.prefix(splitIndex))
+        let secondBatch = Array(paths.dropFirst(splitIndex))
+
+        loadThumbnailBatch(firstBatch, generation: generation) { [weak self] in
+            self?.loadThumbnailBatch(secondBatch, generation: generation, completion: completion)
+        }
+    }
+
+    private func applyThumbnails(_ thumbnails: [DeviceFileThumbnail]) {
+        thumbnails.forEach { thumbnail in
+            thumbnailsByPath[thumbnail.path] = thumbnail
+        }
+        items = items.map { item in
+            guard let devicePath = item.devicePath,
+                  let thumbnail = thumbnailsByPath[devicePath] else {
+                return item
+            }
+            return item.withThumbnailImageBase64(thumbnail.imageBase64)
+        }
+    }
+
+    private static func shouldReduceThumbnailBatch(for error: DeviceSessionReadOnlyError, pathCount: Int) -> Bool {
+        guard pathCount > 1,
+              case .protocolFailure(.deviceError(let errno, let topic, _)) = error else {
+            return false
+        }
+
+        return errno == -7 && topic == "THUMB_LIST"
+    }
+
+    private static func thumbnailPathBatches(from paths: [String]) -> [[String]] {
+        stride(from: 0, to: paths.count, by: thumbnailListBatchSize).map { startIndex in
+            let endIndex = min(startIndex + thumbnailListBatchSize, paths.count)
+            return Array(paths[startIndex..<endIndex])
         }
     }
 
@@ -275,6 +411,7 @@ final class GalleryStore: ObservableObject {
         let kind = mediaKind(for: file)
 
         return GalleryItem(
+            devicePath: file.path,
             title: file.name,
             subtitle: subtitle(for: file),
             detail: detail(for: file),
@@ -290,6 +427,7 @@ final class GalleryStore: ObservableObject {
         let kind = mediaKind(for: file)
 
         return GalleryItem(
+            devicePath: file.path,
             title: file.title ?? file.name,
             subtitle: subtitle(for: file.createTime),
             detail: detail(for: file),
@@ -317,6 +455,10 @@ final class GalleryStore: ObservableObject {
     }
 
     nonisolated private static func mediaKind(for file: DeviceMediaIndexItem) -> GalleryMediaKind {
+        if file.mediaType == .photo {
+            return .photo
+        }
+
         if let eventType = file.eventType, eventType != "normal" {
             return .event
         }

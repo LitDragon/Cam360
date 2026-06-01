@@ -31,6 +31,7 @@ python3 scripts/prompt_validator.py --format text
 
 - 文档/脚本改动跑 `python3 scripts/session_verifier.py --scope unstaged --skip-xcodebuild --format text` 和文档链接检查。
 - 行为改动跑 `python3 scripts/session_verifier.py --scope unstaged --format text`；它会按实际 Swift 改动选择 `xcodebuild build` 或 `xcodebuild test`。
+- 外部设备端模拟器依赖可用时，可跑 `python3 scripts/device_simulator_smoke.py` 验证 strict 生命周期和本地 TCP 协议前置流程；它不代表真设备、真实 AP、真实预览流或下载链路。
 - CI 中的测试使用 `-enableCodeCoverage YES` 生成 `.xcresult`，再由 `test_coverage_checker.py --xcresult ... --check-coverage` 解析 xccov 覆盖率。
 
 ## 文档口径

@@ -49,7 +49,8 @@ struct WatermarkConfigurationView: View {
                 WatermarkPreview(
                     timestampEnabled: store.watermarkConfiguration.timestampEnabled,
                     licensePlateEnabled: store.watermarkConfiguration.licensePlateEnabled,
-                    licensePlate: store.watermarkConfiguration.licensePlate
+                    licensePlate: store.watermarkConfiguration.licensePlate,
+                    position: store.watermarkConfiguration.position
                 )
             }
 
@@ -97,6 +98,15 @@ struct WatermarkConfigurationView: View {
                 text: binding(for: \.licensePlate),
                 isEnabled: store.watermarkConfiguration.licensePlateEnabled
             )
+
+            SettingsSegmentedRow(
+                title: "Position",
+                subtitle: "Overlay anchor on recorded footage",
+                options: WatermarkPositionOption.allCases,
+                selection: binding(for: \.position),
+                titleForOption: { $0.controlTitle },
+                showsDivider: false
+            )
         }
         .padding(.vertical, AppSpacing.sm)
         .background(AppColor.surface)
@@ -122,6 +132,7 @@ private struct WatermarkPreview: View {
     let timestampEnabled: Bool
     let licensePlateEnabled: Bool
     let licensePlate: String
+    let position: WatermarkPositionOption
 
     var body: some View {
         ZStack {
@@ -129,9 +140,11 @@ private struct WatermarkPreview: View {
                 .resizable()
                 .scaledToFill()
 
-            if timestampEnabled {
-                VStack {
-                    HStack {
+            WatermarkPlaybackControls()
+
+            if timestampEnabled || licensePlateEnabled {
+                VStack(alignment: position.horizontalAlignment, spacing: 4) {
+                    if timestampEnabled {
                         Text("2024-05-24 14:32:15")
                             .font(.system(size: 6, weight: .medium, design: .default))
                             .foregroundColor(.white.opacity(0.85))
@@ -139,25 +152,9 @@ private struct WatermarkPreview: View {
                             .padding(.vertical, 3)
                             .background(Color.black.opacity(0.34))
                             .cornerRadius(4)
-
-                        Spacer(minLength: 0)
                     }
-                    .padding(.leading, AppSpacing.lg)
-                    .padding(.top, AppSpacing.lg)
 
-                    Spacer(minLength: 0)
-                }
-            }
-
-            WatermarkPlaybackControls()
-
-            if licensePlateEnabled {
-                VStack {
-                    Spacer(minLength: 0)
-
-                    HStack {
-                        Spacer(minLength: 0)
-
+                    if licensePlateEnabled {
                         Text("LPN: \(licensePlate)")
                             .font(.system(size: 6, weight: .bold, design: .default))
                             .foregroundColor(.white)
@@ -166,9 +163,9 @@ private struct WatermarkPreview: View {
                             .background(AppColor.brand)
                             .cornerRadius(4)
                     }
-                    .padding(.trailing, AppSpacing.sm)
-                    .padding(.bottom, AppSpacing.sm)
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: position.previewAlignment)
+                .padding(AppSpacing.sm)
             }
         }
         .aspectRatio(342.0 / 193.0, contentMode: .fit)
@@ -178,6 +175,43 @@ private struct WatermarkPreview: View {
                 .stroke(Color.white.opacity(0.18), lineWidth: 1)
         )
         .shadow(color: Color.black.opacity(0.14), radius: 12, x: 0, y: 8)
+    }
+}
+
+private extension WatermarkPositionOption {
+    var controlTitle: String {
+        switch self {
+        case .topLeft:
+            return "Top L"
+        case .topRight:
+            return "Top R"
+        case .bottomLeft:
+            return "Bottom L"
+        case .bottomRight:
+            return "Bottom R"
+        }
+    }
+
+    var previewAlignment: Alignment {
+        switch self {
+        case .topLeft:
+            return .topLeading
+        case .topRight:
+            return .topTrailing
+        case .bottomLeft:
+            return .bottomLeading
+        case .bottomRight:
+            return .bottomTrailing
+        }
+    }
+
+    var horizontalAlignment: HorizontalAlignment {
+        switch self {
+        case .topLeft, .bottomLeft:
+            return .leading
+        case .topRight, .bottomRight:
+            return .trailing
+        }
     }
 }
 
@@ -257,7 +291,7 @@ private struct WatermarkPlateInput: View {
 
             ZStack(alignment: .leading) {
                 if text.isEmpty {
-                    Text("AB-123-CD")
+                    Text("AB1234CD")
                         .font(.system(size: 16, weight: .semibold, design: .default))
                         .foregroundColor(AppColor.textSecondary)
                 }

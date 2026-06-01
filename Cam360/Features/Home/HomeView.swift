@@ -4,6 +4,7 @@ struct HomeView: View {
     @ObservedObject var store: RecordingStore
     let onAddDevice: () -> Void
     let onOpenRecordingPage: () -> Void
+    let onOpenDeviceList: () -> Void
     let onOpenEvents: () -> Void
 
     @State private var isDrawerPresented = false
@@ -49,6 +50,7 @@ struct HomeView: View {
                     selectedDeviceID: store.selectedDeviceID,
                     onClose: closeDrawer,
                     onSelectDevice: selectDevice(_:),
+                    onOpenDeviceList: openDeviceList,
                     onAddDevice: addDevice
                 )
             }
@@ -96,6 +98,11 @@ struct HomeView: View {
     private func addDevice() {
         closeDrawer()
         onAddDevice()
+    }
+
+    private func openDeviceList() {
+        closeDrawer()
+        onOpenDeviceList()
     }
 
     private func dismissFeatureSheet() {

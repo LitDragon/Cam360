@@ -28,17 +28,17 @@ struct StoragePolicyView: View {
                     statusContent
 
                     if showsPolicySections {
-                        StoragePolicySectionHeader(title: "General Policy", isEnabled: isStorageReady)
+                        StoragePolicySectionHeader(title: "General Policy", isEnabled: canEditPolicies)
                         StoragePolicyGeneralCard(
                             autoOverwriteEnabled: binding(for: \.autoOverwriteEnabled),
                             lockedEventRetention: store.storagePolicy.lockedEventRetention.rawValue,
-                            isEnabled: isStorageReady
+                            isEnabled: canEditPolicies
                         )
 
-                        StoragePolicySectionHeader(title: "Storage Allocation", isEnabled: isStorageReady)
+                        StoragePolicySectionHeader(title: "Storage Allocation", isEnabled: canEditPolicies)
                         StoragePolicyAllocationCard(
                             reservedEventSpacePercent: store.storagePolicy.reservedEventSpacePercent,
-                            isEnabled: isStorageReady
+                            isEnabled: canEditPolicies
                         )
                     }
                 }
@@ -52,8 +52,8 @@ struct StoragePolicyView: View {
         .accessibility(identifier: "screen-settings-storage-policy")
     }
 
-    private var isStorageReady: Bool {
-        store.storagePolicy.cardStatus == .ready
+    private var canEditPolicies: Bool {
+        store.storagePolicy.canEditPolicies
     }
 
     private var showsPolicySections: Bool {
@@ -70,7 +70,12 @@ struct StoragePolicyView: View {
                 usedSpaceText: store.storagePolicy.usedSpaceText,
                 totalSpaceText: formattedCapacity(store.storagePolicy.totalSpaceGB),
                 estimatedHoursRemaining: store.storagePolicy.estimatedHoursRemaining,
+                errorDescription: store.storagePolicy.cardErrorDescription,
+                autoCleanupRetentionDays: store.storagePolicy.autoCleanupRetentionDays,
                 autoCleanupEnabled: binding(for: \.autoCleanupEnabled),
+                formatStage: store.storagePolicy.formatStage,
+                canFormat: store.storagePolicy.canFormat,
+                canEditPolicies: store.storagePolicy.canEditPolicies,
                 formatAction: store.formatStorageCard
             )
         case .noCard:
@@ -84,7 +89,12 @@ struct StoragePolicyView: View {
                 usedSpaceText: store.storagePolicy.usedSpaceText,
                 totalSpaceText: formattedCapacity(store.storagePolicy.totalSpaceGB),
                 estimatedHoursRemaining: store.storagePolicy.estimatedHoursRemaining,
+                errorDescription: store.storagePolicy.cardErrorDescription,
+                autoCleanupRetentionDays: store.storagePolicy.autoCleanupRetentionDays,
                 autoCleanupEnabled: binding(for: \.autoCleanupEnabled),
+                formatStage: store.storagePolicy.formatStage,
+                canFormat: store.storagePolicy.canFormat,
+                canEditPolicies: store.storagePolicy.canEditPolicies,
                 formatAction: store.formatStorageCard
             )
         }
@@ -131,7 +141,12 @@ private struct StorageMaintenanceCard: View {
     let usedSpaceText: String
     let totalSpaceText: String
     let estimatedHoursRemaining: String
+    let errorDescription: String
+    let autoCleanupRetentionDays: Int
     @Binding var autoCleanupEnabled: Bool
+    let formatStage: StorageFormatStage
+    let canFormat: Bool
+    let canEditPolicies: Bool
     let formatAction: () -> Void
 
     private var isReady: Bool {
@@ -143,7 +158,7 @@ private struct StorageMaintenanceCard: View {
             VStack(alignment: .leading, spacing: AppSpacing.xxl) {
                 topContent
 
-                StorageFormatButton(action: formatAction)
+                StorageFormatButton(stage: formatStage, isEnabled: canFormat, action: formatAction)
             }
             .padding(.horizontal, AppSpacing.xl)
             .padding(.vertical, AppSpacing.xl)
@@ -152,9 +167,9 @@ private struct StorageMaintenanceCard: View {
 
             StoragePolicyTogglePanel(
                 title: "Auto Cleanup",
-                subtitle: "Delete events older than 30 days",
+                subtitle: "Delete events older than \(autoCleanupRetentionDays) days",
                 isOn: $autoCleanupEnabled,
-                isEnabled: isReady
+                isEnabled: isReady && canEditPolicies
             )
         }
         .padding(AppSpacing.sm)
@@ -231,7 +246,7 @@ private struct StorageMaintenanceCard: View {
                     subtitle: "Status"
                 )
 
-                Text("The inserted SD card is unreadable or has a file system error. Formatting is required to use this card for recording.")
+                Text(errorDescription)
                     .font(.system(size: 14, weight: .regular, design: .default))
                     .foregroundColor(AppColor.textPrimary)
                     .lineSpacing(4)
@@ -329,11 +344,33 @@ private struct RingSegment: Hashable {
 }
 
 private struct StorageFormatButton: View {
+    let stage: StorageFormatStage
+    let isEnabled: Bool
     let action: () -> Void
+
+    private var title: String {
+        switch stage {
+        case .idle:
+            return "Format Card"
+        case .inProgress(let progress):
+            return "Formatting \(Int((progress * 100).rounded()))%"
+        case .completed:
+            return "Format Complete"
+        case .failed:
+            return "Retry Format"
+        }
+    }
+
+    private var isFormatting: Bool {
+        if case .inProgress = stage {
+            return true
+        }
+        return false
+    }
 
     var body: some View {
         Button(action: action) {
-            Text("Format Card")
+            Text(title)
                 .font(.system(size: 16, weight: .semibold, design: .default))
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
@@ -342,6 +379,8 @@ private struct StorageFormatButton: View {
                 .cornerRadius(AppRadius.small)
         }
         .buttonStyle(PlainButtonStyle())
+        .disabled(isFormatting || isEnabled == false)
+        .opacity(isEnabled ? 1 : 0.42)
     }
 }
 

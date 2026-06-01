@@ -92,23 +92,83 @@ struct DeviceProtocolMessage: Codable, Equatable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        topic = try container.decode(String.self, forKey: .topic)
-        operation = try container.decode(DeviceProtocolOperation.self, forKey: .operation)
-        messageID = try container.decode(String.self, forKey: .messageID)
-        notifyType = try container.decodeIfPresent(DeviceProtocolNotifyType.self, forKey: .notifyType)
-        replyTo = try container.decodeIfPresent(String.self, forKey: .replyTo)
-        parameters = try container.decodeIfPresent(
-            [String: DeviceProtocolValue].self,
-            forKey: .parameters
-        ) ?? [:]
 
-        if let errno = try? container.decodeIfPresent(Int.self, forKey: .errno) {
-            self.errno = errno
-        } else if let errnoText = try? container.decodeIfPresent(String.self, forKey: .errno) {
-            errno = Int(errnoText)
-        } else {
-            errno = nil
+        let decodedTopic = try container.decode(String.self, forKey: .topic)
+        guard Self.isNonEmptyProtocolHeader(decodedTopic) else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .topic,
+                in: container,
+                debugDescription: "topic must not be blank"
+            )
         }
+        topic = decodedTopic
+
+        operation = try container.decode(DeviceProtocolOperation.self, forKey: .operation)
+
+        let decodedMessageID = try container.decode(String.self, forKey: .messageID)
+        guard Self.isNonEmptyProtocolHeader(decodedMessageID) else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .messageID,
+                in: container,
+                debugDescription: "msg_id must not be blank"
+            )
+        }
+        messageID = decodedMessageID
+
+        notifyType = try container.decodeIfPresent(DeviceProtocolNotifyType.self, forKey: .notifyType)
+        if operation == .notify, notifyType == nil {
+            throw DecodingError.dataCorruptedError(
+                forKey: .notifyType,
+                in: container,
+                debugDescription: "notify_type is required for NOTIFY messages"
+            )
+        }
+
+        let decodedReplyTo = try container.decodeIfPresent(String.self, forKey: .replyTo)
+        if notifyType == .response,
+           Self.isNonEmptyProtocolHeader(decodedReplyTo) == false {
+            throw DecodingError.dataCorruptedError(
+                forKey: .replyTo,
+                in: container,
+                debugDescription: "reply_to must not be blank for response messages"
+            )
+        }
+        replyTo = decodedReplyTo
+
+        parameters = try container.decode([String: DeviceProtocolValue].self, forKey: .parameters)
+
+        let decodedErrno: Int?
+        if (try? container.decodeIfPresent(Bool.self, forKey: .errno)) != nil {
+            throw DecodingError.dataCorruptedError(
+                forKey: .errno,
+                in: container,
+                debugDescription: "errno must not be boolean"
+            )
+        } else if let errno = try? container.decodeIfPresent(Int.self, forKey: .errno) {
+            decodedErrno = errno
+        } else if let errnoText = try? container.decodeIfPresent(String.self, forKey: .errno) {
+            decodedErrno = Int(errnoText)
+        } else {
+            decodedErrno = nil
+        }
+
+        if (notifyType == .response || notifyType == .event), decodedErrno == nil {
+            throw DecodingError.dataCorruptedError(
+                forKey: .errno,
+                in: container,
+                debugDescription: "errno is required for device messages"
+            )
+        }
+
+        errno = decodedErrno
+    }
+
+    private static func isNonEmptyProtocolHeader(_ value: String?) -> Bool {
+        guard let value else {
+            return false
+        }
+
+        return value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
     }
 
     func encode(to encoder: Encoder) throws {

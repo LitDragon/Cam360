@@ -36,14 +36,19 @@ def run_command(command: List[str]) -> Dict:
     }
 
 
+def python_files() -> List[pathlib.Path]:
+    return sorted((ROOT / "scripts").glob("*.py")) + sorted((ROOT / "scripts" / "tests").glob("*.py"))
+
+
 def base_commands() -> List[List[str]]:
     return [
         [
             "python3",
             "-m",
             "py_compile",
-            *[path.relative_to(ROOT).as_posix() for path in sorted((ROOT / "scripts").glob("*.py"))],
+            *[path.relative_to(ROOT).as_posix() for path in python_files()],
         ],
+        ["python3", "-m", "unittest", "discover", "-s", "scripts/tests"],
         ["./scripts/context.sh"],
         ["python3", "scripts/api_validator.py", "--format", "text", "--check-hallucinations"],
         ["python3", "scripts/dependency_checker.py", "--format", "text", "--check-circular"],

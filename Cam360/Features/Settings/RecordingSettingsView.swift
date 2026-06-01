@@ -18,14 +18,14 @@ struct RecordingSettingsView: View {
                             VStack(alignment: .leading, spacing: 26) {
                                 RecordingSegmentedRow(
                                     title: "Resolution",
-                                    options: RecordingResolutionOption.allCases,
+                                    options: store.recordingSettings.resolutionOptions,
                                     selection: binding(for: \.resolution),
                                     titleForOption: { $0.rawValue }
                                 )
 
                                 RecordingSegmentedRow(
                                     title: "Recording Quality Priority",
-                                    options: RecordingQualityPriorityOption.allCases,
+                                    options: store.recordingSettings.qualityPriorityOptions,
                                     selection: binding(for: \.qualityPriority),
                                     titleForOption: { $0.rawValue }
                                 )
@@ -40,7 +40,7 @@ struct RecordingSettingsView: View {
                             VStack(alignment: .leading, spacing: 26) {
                                 RecordingSegmentedRow(
                                     title: "Loop Recording",
-                                    options: LoopRecordingDurationOption.allCases,
+                                    options: store.recordingSettings.loopDurationOptions,
                                     selection: binding(for: \.loopDuration),
                                     titleForOption: { $0.rawValue }
                                 )
@@ -92,7 +92,7 @@ struct RecordingSettingsView: View {
                         }
                     }
 
-                    RecordingStorageEstimateView(text: "Estimated storage per hour: ~4.2 GB")
+                    RecordingStorageEstimateView(text: store.recordingSettings.estimatedStoragePerHour)
                 }
                 .padding(.horizontal, AppSpacing.xxl)
                 .padding(.top, 40)

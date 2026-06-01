@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct GallerySectionsList: View {
     let sections: [GallerySectionModel]
@@ -172,13 +173,24 @@ struct GalleryThumbnail: View {
                     height: AppLayout.galleryThumbnailSize.height
                 )
 
-            Image(systemName: item.thumbnailSymbol)
-                .font(.system(size: 28, weight: .semibold))
-                .foregroundColor(.white.opacity(0.88))
-                .frame(
-                    width: AppLayout.galleryThumbnailSize.width,
-                    height: AppLayout.galleryThumbnailSize.height
-                )
+            if let thumbnailImage {
+                Image(uiImage: thumbnailImage)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(
+                        width: AppLayout.galleryThumbnailSize.width,
+                        height: AppLayout.galleryThumbnailSize.height
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: AppRadius.small, style: .continuous))
+            } else {
+                Image(systemName: item.thumbnailSymbol)
+                    .font(.system(size: 28, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.88))
+                    .frame(
+                        width: AppLayout.galleryThumbnailSize.width,
+                        height: AppLayout.galleryThumbnailSize.height
+                    )
+            }
 
             if let badgeTitle = item.badgeTitle {
                 StatusTag(title: badgeTitle, tone: item.badgeTone)
@@ -212,6 +224,14 @@ struct GalleryThumbnail: View {
                 }
             }
         }
+    }
+
+    private var thumbnailImage: UIImage? {
+        guard let imageBase64 = item.thumbnailImageBase64,
+              let data = Data(base64Encoded: imageBase64) else {
+            return nil
+        }
+        return UIImage(data: data)
     }
 }
 

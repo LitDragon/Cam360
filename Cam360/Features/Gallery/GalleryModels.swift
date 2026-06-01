@@ -87,6 +87,7 @@ struct GallerySectionModel: Identifiable {
 
 struct GalleryItem: Identifiable {
     let id: UUID
+    let devicePath: String?
     let title: String
     let subtitle: String
     let detail: String
@@ -95,9 +96,11 @@ struct GalleryItem: Identifiable {
     let section: GallerySectionKind
     let thumbnailSymbol: String
     let thumbnailStyle: GalleryArtworkStyle
+    let thumbnailImageBase64: String?
 
     nonisolated init(
         id: UUID = UUID(),
+        devicePath: String? = nil,
         title: String,
         subtitle: String,
         detail: String,
@@ -105,9 +108,11 @@ struct GalleryItem: Identifiable {
         kind: GalleryMediaKind,
         section: GallerySectionKind,
         thumbnailSymbol: String,
-        thumbnailStyle: GalleryArtworkStyle
+        thumbnailStyle: GalleryArtworkStyle,
+        thumbnailImageBase64: String? = nil
     ) {
         self.id = id
+        self.devicePath = devicePath
         self.title = title
         self.subtitle = subtitle
         self.detail = detail
@@ -116,6 +121,7 @@ struct GalleryItem: Identifiable {
         self.section = section
         self.thumbnailSymbol = thumbnailSymbol
         self.thumbnailStyle = thumbnailStyle
+        self.thumbnailImageBase64 = thumbnailImageBase64
     }
 
     var badgeTitle: String? {
@@ -131,6 +137,22 @@ struct GalleryItem: Identifiable {
         return title.lowercased().contains(normalizedKeyword) ||
             subtitle.lowercased().contains(normalizedKeyword) ||
             detail.lowercased().contains(normalizedKeyword)
+    }
+
+    func withThumbnailImageBase64(_ imageBase64: String?) -> GalleryItem {
+        GalleryItem(
+            id: id,
+            devicePath: devicePath,
+            title: title,
+            subtitle: subtitle,
+            detail: detail,
+            duration: duration,
+            kind: kind,
+            section: section,
+            thumbnailSymbol: thumbnailSymbol,
+            thumbnailStyle: thumbnailStyle,
+            thumbnailImageBase64: imageBase64
+        )
     }
 }
 

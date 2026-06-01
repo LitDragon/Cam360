@@ -2,6 +2,7 @@ import SwiftUI
 
 private enum HomeNavigationRoute: Hashable {
     case recording
+    case devices
     case events
 }
 
@@ -12,12 +13,15 @@ private enum GalleryNavigationRoute: Hashable {
 
 struct MainTabView: View {
     @ObservedObject var recordingStore: RecordingStore
+    @ObservedObject var deviceListStore: DeviceListStore
     @ObservedObject var galleryStore: GalleryStore
     @ObservedObject var settingsStore: SettingsStore
     @ObservedObject var livePreviewStore: LivePreviewStore
     @ObservedObject var playbackStore: PlaybackStore
     @ObservedObject var downloadsStore: DownloadsStore
+    @ObservedObject var localVideosStore: LocalVideosStore
     @ObservedObject var eventsStore: EventsStore
+    @ObservedObject var statisticsStore: StatisticsStore
     let onAddDevice: () -> Void
 
     @State private var selectedTab: MainTab
@@ -27,22 +31,28 @@ struct MainTabView: View {
     init(
         initialSelectedTab: MainTab = .home,
         recordingStore: RecordingStore,
+        deviceListStore: DeviceListStore,
         galleryStore: GalleryStore,
         settingsStore: SettingsStore,
         livePreviewStore: LivePreviewStore,
         playbackStore: PlaybackStore,
         downloadsStore: DownloadsStore,
+        localVideosStore: LocalVideosStore,
         eventsStore: EventsStore,
+        statisticsStore: StatisticsStore,
         onAddDevice: @escaping () -> Void
     ) {
         _selectedTab = State(initialValue: initialSelectedTab)
         self.recordingStore = recordingStore
+        self.deviceListStore = deviceListStore
         self.galleryStore = galleryStore
         self.settingsStore = settingsStore
         self.livePreviewStore = livePreviewStore
         self.playbackStore = playbackStore
         self.downloadsStore = downloadsStore
+        self.localVideosStore = localVideosStore
         self.eventsStore = eventsStore
+        self.statisticsStore = statisticsStore
         self.onAddDevice = onAddDevice
     }
 
@@ -72,7 +82,7 @@ struct MainTabView: View {
         case .gallery:
             galleryScreen
         case .settings:
-            SettingsView(store: settingsStore, root: .more)
+            SettingsView(store: settingsStore, statisticsStore: statisticsStore, root: .more)
         }
     }
 
@@ -83,6 +93,9 @@ struct MainTabView: View {
                 onAddDevice: onAddDevice,
                 onOpenRecordingPage: {
                     homeRoute = .recording
+                },
+                onOpenDeviceList: {
+                    homeRoute = .devices
                 },
                 onOpenEvents: {
                     homeRoute = .events
@@ -120,12 +133,23 @@ struct MainTabView: View {
                     livePreviewStore: livePreviewStore,
                     playbackStore: playbackStore,
                     downloadsStore: downloadsStore,
+                    localVideosStore: localVideosStore,
                     eventsStore: eventsStore,
+                    statisticsStore: statisticsStore,
                     onAddDevice: onAddDevice,
                     onOpenGallery: {
                         homeRoute = nil
                         selectedTab = .gallery
                     },
+                    onClose: {
+                        homeRoute = nil
+                    }
+                )
+            }
+
+            homeNavigationLink(tag: .devices) {
+                DeviceListView(
+                    store: deviceListStore,
                     onClose: {
                         homeRoute = nil
                     }
@@ -162,6 +186,7 @@ struct MainTabView: View {
             galleryNavigationLink(tag: .downloads) {
                 DownloadsView(
                     store: downloadsStore,
+                    localVideosStore: localVideosStore,
                     onClose: {
                         galleryRoute = nil
                     }

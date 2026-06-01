@@ -13,17 +13,19 @@ final class SettingsStore: ObservableObject {
     @Published private(set) var networkIdentity = NetworkIdentityState.defaultValue(
         networkName: SettingsPlaceholder.connectionName
     )
+    @Published private(set) var networkIdentityValidationMessage: String?
     @Published private(set) var devicePreferences = DevicePreferencesState.defaultValue(
         deviceName: SettingsPlaceholder.deviceName,
         connectionName: SettingsPlaceholder.connectionName
     )
     @Published private(set) var safetySettings = SafetySettingsState.defaultValue
-    @Published private(set) var firmwareUpdateStage: FirmwareUpdateStage = .available
+    @Published private(set) var firmwareUpdateStage: FirmwareUpdateStage = SettingsPlaceholder.firmwareCandidateUnavailableStage
     @Published private(set) var renameDeviceDraft = SettingsPlaceholder.deviceName
     @Published private(set) var deviceConnectionStatusTitle = "OFFLINE"
     @Published private(set) var deviceConnectionStatusText = "Not connected"
     @Published private(set) var deviceConnectionStatusTone: StatusTagTone = .neutral
     @Published private(set) var deviceCapabilities: Set<DeviceCapability> = []
+    @Published private(set) var settingsHomeCategorySupport: [SettingsHomeCategory: Bool] = [:]
 
     private let knownDeviceRepository: KnownDeviceRepository
     private let appPreferenceStore: AppPreferenceStore
@@ -65,6 +67,10 @@ final class SettingsStore: ObservableObject {
         SettingsPlaceholder.connectionName
     }
 
+    var canCommitNetworkIdentityChanges: Bool {
+        Self.networkIdentityValidationMessage(for: networkIdentity) == nil
+    }
+
     func resetShell() {
         knownDeviceRepository.clear()
         appPreferenceStore.reset()
@@ -74,11 +80,16 @@ final class SettingsStore: ObservableObject {
     }
 
     func show(_ route: SettingsRoute) {
+        guard isSettingsRouteSupported(route) else {
+            return
+        }
+
         if route == .renameDevice {
             renameDeviceDraft = devicePreferences.deviceName
         }
 
         self.route = route
+        loadDeviceConfiguration(for: route)
     }
 
     func dismissRoute() {
@@ -91,6 +102,56 @@ final class SettingsStore: ObservableObject {
         syncDeviceStateIfNeeded(with: device)
         knownDeviceCount = knownDevices.count
         syncDeviceSessionState(deviceSessionState)
+        loadSettingsHomeSnapshot()
+    }
+
+    func isSettingsHomeCategorySupported(_ category: SettingsHomeCategory) -> Bool {
+        settingsHomeCategorySupport[category] ?? true
+    }
+
+    func applyInitialStateSyncSnapshot(_ snapshot: DeviceStateSyncSnapshot) {
+        if let settingsHome = snapshot.sections.object("settings_home") {
+            if let deviceInfo = settingsHome.object("device_info") {
+                applySettingsHomeDeviceInfo(deviceInfo)
+            }
+            if let categories = settingsHome["categories"]?.arrayValue {
+                applySettingsHomeCategories(categories)
+            }
+        }
+
+        if let recording = snapshot.sections.object("recording"),
+           let state = Self.recordingState(from: recording) {
+            applyRecordingSettingsState(state)
+        }
+        if let storage = snapshot.sections.object("storage"),
+           let state = Self.storagePolicyState(from: storage) {
+            applyStoragePolicyState(state)
+        }
+        if let safety = snapshot.sections.object("safety"),
+           let state = Self.safetyState(from: safety) {
+            safetySettings = state
+        }
+        if let systemPreferences = snapshot.sections.object("system_preferences") {
+            devicePreferences = Self.devicePreferencesState(
+                from: systemPreferences,
+                fallback: devicePreferences
+            )
+        }
+        if let watermark = snapshot.sections.object("watermark"),
+           let state = Self.watermarkState(from: watermark) {
+            watermarkConfiguration = state
+        }
+        if let wifi = snapshot.sections.object("wifi"),
+           let ssid = wifi.string("ssid"),
+           ssid.isEmpty == false {
+            networkIdentity = NetworkIdentityState(
+                networkName: ssid,
+                password: networkIdentity.password,
+                statusCode: wifi.int("status") ?? networkIdentity.statusCode
+            )
+            networkIdentityValidationMessage = Self.networkIdentityValidationMessage(for: networkIdentity)
+            devicePreferences.connectionName = ssid
+        }
     }
 
     func setShareAnonymousLogs(_ isEnabled: Bool) {
@@ -121,29 +182,53 @@ final class SettingsStore: ObservableObject {
         _ keyPath: WritableKeyPath<StoragePolicyState, Value>,
         to value: Value
     ) {
+        guard Self.isStoragePolicyEditKeyPath(keyPath) == false || storagePolicy.canEditPolicies else {
+            return
+        }
+
         var nextState = storagePolicy
+        if keyPath == \StoragePolicyState.reservedEventSpacePercent,
+           let percent = value as? Int {
+            nextState.reservedEventSpacePercent = Self.normalizedReservedEventSpacePercent(percent)
+            submitStoragePolicy(nextState)
+            return
+        }
+        if keyPath == \StoragePolicyState.autoCleanupRetentionDays,
+           let days = value as? Int {
+            nextState.autoCleanupRetentionDays = Self.normalizedAutoCleanupRetentionDays(days)
+            submitStoragePolicy(nextState)
+            return
+        }
         nextState[keyPath: keyPath] = value
         submitStoragePolicy(nextState)
     }
 
     func retryStorageCardCheck() {
         storagePolicy.cardStatus = .ready
+        storagePolicy.formatStage = .idle
     }
 
     func formatStorageCard() {
         guard canSubmitSettingsToDevice, let deviceSession else {
             storagePolicy.cardStatus = .ready
             storagePolicy.usedSpaceGB = 74.2
+            storagePolicy.formatStage = .idle
             return
         }
 
+        storagePolicy.formatStage = .inProgress(progress: 0)
         deviceSession.formatStorage { [weak self] result in
             guard let self else {
                 return
             }
-            if case .success(let format) = result, format.formatted {
+            switch result {
+            case .success(let format) where format.formatted:
                 self.storagePolicy.cardStatus = .ready
                 self.storagePolicy.usedSpaceGB = 0
+                self.storagePolicy.formatStage = .completed
+                self.refreshStorageSourcesAfterFormat(using: deviceSession)
+            case .success, .failure:
+                self.storagePolicy.formatStage = .failed
             }
         }
     }
@@ -151,12 +236,58 @@ final class SettingsStore: ObservableObject {
     private func resetOfflineStorageCard() {
         storagePolicy.cardStatus = .ready
         storagePolicy.usedSpaceGB = 74.2
+        storagePolicy.formatStage = .idle
+    }
+
+    private func refreshStorageSourcesAfterFormat(using deviceSession: DeviceSession) {
+        deviceSession.fetchSDCardStatus { [weak self] result in
+            guard let self, case .success(let online) = result else {
+                return
+            }
+
+            self.applyStorageCardStatus(online)
+        }
+        deviceSession.fetchStorageCapacity { [weak self] result in
+            guard let self, case .success(let capacity) = result else {
+                return
+            }
+
+            self.applyStorageCapacity(capacity)
+        }
+        deviceSession.fetchFileList { _ in }
+    }
+
+    private func applyStorageCardStatus(_ online: Int) {
+        switch online {
+        case 0:
+            storagePolicy.cardStatus = .noCard
+        case 1:
+            storagePolicy.cardStatus = .ready
+            storagePolicy.formatRequired = false
+        case 2:
+            storagePolicy.cardStatus = .error
+            storagePolicy.formatRequired = true
+        default:
+            storagePolicy.cardStatus = .error
+        }
+    }
+
+    private func applyStorageCapacity(_ capacity: DeviceStorageCapacity) {
+        let usedMegabytes = max(0, capacity.totalMegabytes - capacity.remainingMegabytes)
+        storagePolicy.usedSpaceGB = Double(usedMegabytes) / 1024
+        storagePolicy.totalSpaceGB = Double(capacity.totalMegabytes) / 1024
+        storagePolicy.usagePercent = nil
     }
 
     func updateWatermarkConfiguration<Value>(
         _ keyPath: WritableKeyPath<WatermarkConfigurationState, Value>,
         to value: Value
     ) {
+        if keyPath == \WatermarkConfigurationState.licensePlate,
+           let plateNumber = value as? String {
+            watermarkConfiguration.licensePlate = Self.normalizedWatermarkPlateNumber(plateNumber)
+            return
+        }
         watermarkConfiguration[keyPath: keyPath] = value
     }
 
@@ -186,12 +317,44 @@ final class SettingsStore: ObservableObject {
         to value: Value
     ) {
         networkIdentity[keyPath: keyPath] = value
+        networkIdentityValidationMessage = Self.networkIdentityValidationMessage(for: networkIdentity)
     }
 
-    func commitNetworkIdentityChanges() {
+    func prepareNetworkIdentity() {
+        guard canSubmitSettingsToDevice, let deviceSession else {
+            return
+        }
+
+        deviceSession.fetchStateSync(scope: .wifi) { [weak self] result in
+            guard let self,
+                  case .success(let snapshot) = result,
+                  let wifi = snapshot.sections.object("wifi"),
+                  let ssid = wifi.string("ssid"),
+                  ssid.isEmpty == false else {
+                return
+            }
+
+            self.networkIdentity = NetworkIdentityState(
+                networkName: ssid,
+                password: self.networkIdentity.password,
+                statusCode: wifi.int("status") ?? self.networkIdentity.statusCode
+            )
+            self.networkIdentityValidationMessage = Self.networkIdentityValidationMessage(for: self.networkIdentity)
+            self.devicePreferences.connectionName = ssid
+        }
+    }
+
+    @discardableResult
+    func commitNetworkIdentityChanges() -> Bool {
+        if let validationMessage = Self.networkIdentityValidationMessage(for: networkIdentity) {
+            networkIdentityValidationMessage = validationMessage
+            return false
+        }
+
+        networkIdentityValidationMessage = nil
         guard canSubmitSettingsToDevice, let deviceSession else {
             devicePreferences.connectionName = networkIdentity.networkName
-            return
+            return true
         }
 
         deviceSession.updateAccessPointIdentity(ssid: networkIdentity.networkName, password: networkIdentity.password) { [weak self] result in
@@ -201,15 +364,39 @@ final class SettingsStore: ObservableObject {
             if case .success(let identity) = result {
                 self.networkIdentity = NetworkIdentityState(
                     networkName: identity.ssid,
-                    password: identity.password ?? self.networkIdentity.password
+                    password: identity.password ?? self.networkIdentity.password,
+                    statusCode: identity.isEnabled ? 1 : 0
                 )
+                self.networkIdentityValidationMessage = Self.networkIdentityValidationMessage(for: self.networkIdentity)
                 self.devicePreferences.connectionName = identity.ssid
+                self.devicePreferences.connectionStatus = "disconnected"
+                deviceSession.send(.disconnect)
             }
         }
+
+        return true
     }
 
     private func commitOfflineNetworkIdentityChanges() {
         devicePreferences.connectionName = networkIdentity.networkName
+    }
+
+    private static func networkIdentityValidationMessage(for identity: NetworkIdentityState) -> String? {
+        let trimmedNetworkName = identity.networkName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmedNetworkName.isEmpty == false else {
+            return "Wi-Fi name is required."
+        }
+        guard identity.networkName.lengthOfBytes(using: .utf8) <= 32 else {
+            return "Wi-Fi name must be 32 bytes or fewer."
+        }
+        guard (8...63).contains(identity.password.count) else {
+            return "Wi-Fi password must be 8-63 characters."
+        }
+        guard identity.password.unicodeScalars.allSatisfy({ (0x20...0x7E).contains($0.value) }) else {
+            return "Wi-Fi password must use printable ASCII characters."
+        }
+
+        return nil
     }
 
     func updateDevicePreferences<Value>(
@@ -255,6 +442,10 @@ final class SettingsStore: ObservableObject {
     }
 
     func renameDevice(dismissRoute: Bool = true) {
+        guard devicePreferences.deviceNameEditable else {
+            return
+        }
+
         let trimmedName = renameDeviceDraft.trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard trimmedName.isEmpty == false else {
@@ -271,7 +462,7 @@ final class SettingsStore: ObservableObject {
     }
 
     func startFirmwareUpdate() {
-        firmwareUpdateStage = SettingsPlaceholder.firmwareUpdateStage
+        firmwareUpdateStage = SettingsPlaceholder.firmwareCandidateUnavailableStage
     }
 
     func markFirmwareUpdateFailed() {
@@ -279,10 +470,14 @@ final class SettingsStore: ObservableObject {
     }
 
     func cancelFirmwareUpdate() {
-        firmwareUpdateStage = .available
+        firmwareUpdateStage = SettingsPlaceholder.firmwareCandidateUnavailableStage
     }
 
     func restoreDefaultDeviceConfiguration() {
+        guard devicePreferences.factoryResetSupported else {
+            return
+        }
+
         let currentName = devicePreferences.deviceName
         let currentConnectionName = networkIdentity.networkName
         recordingSettings = .defaultValue
@@ -294,7 +489,7 @@ final class SettingsStore: ObservableObject {
             connectionName: currentConnectionName
         )
         safetySettings = .defaultValue
-        firmwareUpdateStage = .available
+        firmwareUpdateStage = SettingsPlaceholder.firmwareCandidateUnavailableStage
         renameDeviceDraft = currentName
     }
 
@@ -363,7 +558,7 @@ final class SettingsStore: ObservableObject {
             connectionName: connectionName
         )
         safetySettings = .defaultValue
-        firmwareUpdateStage = .available
+        firmwareUpdateStage = SettingsPlaceholder.firmwareCandidateUnavailableStage
         renameDeviceDraft = deviceName
     }
 
@@ -372,6 +567,13 @@ final class SettingsStore: ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] state in
                 self?.syncDeviceSessionState(state)
+            }
+            .store(in: &cancellables)
+
+        deviceSession?.$deviceStatus
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] status in
+                self?.syncDeviceSessionStatus(status)
             }
             .store(in: &cancellables)
     }
@@ -421,6 +623,66 @@ final class SettingsStore: ObservableObject {
         deviceConnectionStatusTone = .neutral
     }
 
+    private func syncDeviceSessionStatus(_ status: DeviceSessionStatus) {
+        if let latestProgressEvent = status.latestProgressEvent {
+            applySettingsProgressEvent(latestProgressEvent)
+            return
+        }
+
+        if let formatProgress = status.progressEvents.values.first(where: { $0.topic == "FORMAT_PROGRESS" }) {
+            applyStorageFormatProgress(formatProgress)
+        }
+
+        if let upgradeProgress = status.progressEvents.values.first(where: { $0.topic == "UPGRADE_PROGRESS" }) {
+            applyFirmwareUpdateProgress(upgradeProgress)
+        }
+    }
+
+    private func applySettingsProgressEvent(_ progressEvent: DeviceProgressEvent) {
+        switch progressEvent.topic {
+        case "FORMAT_PROGRESS":
+            applyStorageFormatProgress(progressEvent)
+        case "UPGRADE_PROGRESS":
+            applyFirmwareUpdateProgress(progressEvent)
+        default:
+            break
+        }
+    }
+
+    private func applyFirmwareUpdateProgress(_ progressEvent: DeviceProgressEvent) {
+        switch progressEvent.status?.lowercased() {
+        case "failed":
+            firmwareUpdateStage = .failed
+        case "completed":
+            firmwareUpdateStage = .completed
+        default:
+            guard let progress = progressEvent.progress else {
+                return
+            }
+            firmwareUpdateStage = .inProgress(
+                progress: Self.progressFraction(from: progress),
+                stageTitle: Self.firmwareStageTitle(progressEvent.stage)
+            )
+        }
+    }
+
+    private func applyStorageFormatProgress(_ progressEvent: DeviceProgressEvent) {
+        switch progressEvent.status?.lowercased() {
+        case "failed":
+            storagePolicy.cardStatus = .error
+            storagePolicy.formatStage = .failed
+        case "completed":
+            storagePolicy.cardStatus = .ready
+            storagePolicy.usedSpaceGB = 0
+            storagePolicy.formatStage = .completed
+        default:
+            guard let progress = progressEvent.progress else {
+                return
+            }
+            storagePolicy.formatStage = .inProgress(progress: Self.progressFraction(from: progress))
+        }
+    }
+
     private func applyDeviceInfo(_ deviceInfo: DeviceInfo) {
         let knownDevice = knownDeviceRepository.fetchKnownDevices().first { $0.id == deviceInfo.id }
         let connectionName = knownDevice?.hotspotSSID ?? devicePreferences.connectionName
@@ -439,9 +701,247 @@ final class SettingsStore: ObservableObject {
         deviceSessionState.canSendDeviceCommand && deviceSession != nil
     }
 
+    private func loadSettingsHomeSnapshot() {
+        guard canSubmitSettingsToDevice, let deviceSession else {
+            return
+        }
+
+        deviceSession.fetchStateSync(scope: .settingsHome) { [weak self] result in
+            guard let self,
+                  case .success(let snapshot) = result,
+                  let settingsHome = snapshot.sections.object("settings_home") else {
+                return
+            }
+
+            if let deviceInfo = settingsHome.object("device_info") {
+                self.applySettingsHomeDeviceInfo(deviceInfo)
+            }
+            if let categories = settingsHome["categories"]?.arrayValue {
+                self.applySettingsHomeCategories(categories)
+            }
+        }
+    }
+
+    private func applySettingsHomeDeviceInfo(_ deviceInfo: [String: DeviceProtocolValue]) {
+        var updatedPreferences = devicePreferences
+
+        if let deviceName = deviceInfo.string("device_name") {
+            updatedPreferences.deviceName = deviceName
+            renameDeviceDraft = deviceName
+        }
+
+        if let firmwareVersion = deviceInfo.string("fw_version") {
+            updatedPreferences.firmwareVersion = firmwareVersion
+        }
+
+        devicePreferences = updatedPreferences
+    }
+
+    private func applySettingsHomeCategories(_ categories: [DeviceProtocolValue]) {
+        var support = settingsHomeCategorySupport
+        for categoryValue in categories {
+            guard let categoryObject = categoryValue.objectValue,
+                  let categoryKey = categoryObject.string("key"),
+                  let category = SettingsHomeCategory(rawValue: categoryKey) else {
+                continue
+            }
+
+            support[category] = categoryObject.bool("supported") ?? true
+        }
+        settingsHomeCategorySupport = support
+    }
+
+    private func isSettingsRouteSupported(_ route: SettingsRoute) -> Bool {
+        guard let category = Self.settingsHomeCategory(for: route) else {
+            return true
+        }
+
+        return isSettingsHomeCategorySupported(category)
+    }
+
+    private func loadDeviceConfiguration(for route: SettingsRoute) {
+        guard canSubmitSettingsToDevice else {
+            return
+        }
+
+        switch route {
+        case .recordingSettings:
+            loadRecordingConfiguration()
+        case .storagePolicy:
+            loadStoragePolicyConfiguration()
+        case .safetySettings:
+            loadSafetyConfiguration()
+        case .systemPreferences:
+            loadSystemPreferencesConfiguration()
+        case .deviceSettings:
+            loadSystemPreferencesConfiguration()
+        case .watermarkConfiguration:
+            loadWatermarkConfiguration()
+        case .firmwareUpdate,
+            .helpCenter,
+            .notificationSettings,
+            .renameDevice,
+            .statistics,
+            .systemPermissions:
+            break
+        }
+    }
+
+    private func loadRecordingConfiguration() {
+        loadStateSyncConfiguration(scope: .recording, sectionKey: "recording") { [weak self] payload in
+            guard let self, let state = Self.recordingState(from: payload) else {
+                return false
+            }
+            self.applyRecordingSettingsState(state)
+            return true
+        } fallback: { [weak self] in
+            self?.loadRecordingConfigurationFallback()
+        }
+    }
+
+    private func loadStoragePolicyConfiguration() {
+        loadStateSyncConfiguration(scope: .storage, sectionKey: "storage") { [weak self] payload in
+            guard let self, let state = Self.storagePolicyState(from: payload) else {
+                return false
+            }
+            self.applyStoragePolicyState(state)
+            return true
+        } fallback: { [weak self] in
+            self?.loadStoragePolicyConfigurationFallback()
+        }
+    }
+
+    private func loadSafetyConfiguration() {
+        loadStateSyncConfiguration(scope: .safety, sectionKey: "safety") { [weak self] payload in
+            guard let self, let state = Self.safetyState(from: payload) else {
+                return false
+            }
+            self.safetySettings = state
+            return true
+        } fallback: { [weak self] in
+            self?.loadSafetyConfigurationFallback()
+        }
+    }
+
+    private func loadSystemPreferencesConfiguration() {
+        loadStateSyncConfiguration(scope: .systemPreferences, sectionKey: "system_preferences") { [weak self] payload in
+            guard let self else {
+                return false
+            }
+            self.devicePreferences = Self.devicePreferencesState(
+                from: payload,
+                fallback: self.devicePreferences
+            )
+            return true
+        } fallback: { [weak self] in
+            self?.loadSystemPreferencesConfigurationFallback()
+        }
+    }
+
+    private func loadWatermarkConfiguration() {
+        loadStateSyncConfiguration(scope: .watermark, sectionKey: "watermark") { [weak self] payload in
+            guard let self, let state = Self.watermarkState(from: payload) else {
+                return false
+            }
+            self.watermarkConfiguration = state
+            return true
+        } fallback: { [weak self] in
+            self?.loadWatermarkConfigurationFallback()
+        }
+    }
+
+    private func loadStateSyncConfiguration(
+        scope: DeviceStateSyncScope,
+        sectionKey: String,
+        apply: @escaping ([String: DeviceProtocolValue]) -> Bool,
+        fallback: @escaping () -> Void
+    ) {
+        guard let deviceSession else {
+            return
+        }
+
+        deviceSession.fetchStateSync(scope: scope) { result in
+            if case .success(let snapshot) = result,
+               let section = snapshot.sections.object(sectionKey),
+               apply(section) {
+                return
+            }
+
+            fallback()
+        }
+    }
+
+    private func loadRecordingConfigurationFallback() {
+        guard let deviceSession else {
+            return
+        }
+
+        deviceSession.fetchRecordingConfiguration { [weak self] result in
+            guard let self, case .success(let payload) = result else {
+                return
+            }
+            self.applyRecordingSettingsState(Self.recordingState(from: payload) ?? self.recordingSettings)
+        }
+    }
+
+    private func loadStoragePolicyConfigurationFallback() {
+        guard let deviceSession else {
+            return
+        }
+
+        deviceSession.fetchStoragePolicyConfiguration { [weak self] result in
+            guard let self, case .success(let payload) = result else {
+                return
+            }
+            self.applyStoragePolicyState(Self.storagePolicyState(from: payload) ?? self.storagePolicy)
+        }
+    }
+
+    private func loadSafetyConfigurationFallback() {
+        guard let deviceSession else {
+            return
+        }
+
+        deviceSession.fetchSafetyConfiguration { [weak self] result in
+            guard let self, case .success(let payload) = result else {
+                return
+            }
+            self.safetySettings = Self.safetyState(from: payload) ?? self.safetySettings
+        }
+    }
+
+    private func loadSystemPreferencesConfigurationFallback() {
+        guard let deviceSession else {
+            return
+        }
+
+        deviceSession.fetchSystemPreferencesConfiguration { [weak self] result in
+            guard let self, case .success(let payload) = result else {
+                return
+            }
+            self.devicePreferences = Self.devicePreferencesState(
+                from: payload,
+                fallback: self.devicePreferences
+            )
+        }
+    }
+
+    private func loadWatermarkConfigurationFallback() {
+        guard let deviceSession else {
+            return
+        }
+
+        deviceSession.fetchWatermarkConfiguration { [weak self] result in
+            guard let self, case .success(let payload) = result else {
+                return
+            }
+            self.watermarkConfiguration = Self.watermarkState(from: payload) ?? self.watermarkConfiguration
+        }
+    }
+
     private func submitRecordingSettings(_ state: RecordingSettingsState) {
         guard canSubmitSettingsToDevice, let deviceSession else {
-            recordingSettings = state
+            applyRecordingSettingsState(state)
             return
         }
 
@@ -450,14 +950,14 @@ final class SettingsStore: ObservableObject {
                 return
             }
             if case .success(let payload) = result {
-                self.recordingSettings = Self.recordingState(from: payload) ?? state
+                self.applyRecordingSettingsState(Self.recordingState(from: payload) ?? state)
             }
         }
     }
 
     private func submitStoragePolicy(_ state: StoragePolicyState) {
         guard canSubmitSettingsToDevice, let deviceSession else {
-            storagePolicy = state
+            applyStoragePolicyState(state)
             return
         }
 
@@ -466,9 +966,19 @@ final class SettingsStore: ObservableObject {
                 return
             }
             if case .success(let payload) = result {
-                self.storagePolicy = Self.storagePolicyState(from: payload) ?? state
+                self.applyStoragePolicyState(Self.storagePolicyState(from: payload) ?? state)
             }
         }
+    }
+
+    private func applyRecordingSettingsState(_ state: RecordingSettingsState) {
+        recordingSettings = state
+        storagePolicy.autoOverwriteEnabled = state.autoOverwrite
+    }
+
+    private func applyStoragePolicyState(_ state: StoragePolicyState) {
+        storagePolicy = state
+        recordingSettings.autoOverwrite = state.autoOverwriteEnabled
     }
 
     private func submitSafetySettings(_ state: SafetySettingsState) {
@@ -534,31 +1044,84 @@ final class SettingsStore: ObservableObject {
 
     private static func storagePolicyParameters(from state: StoragePolicyState) -> [String: DeviceProtocolValue] {
         [
-            "auto_cleanup": .object(["enabled": .int(state.autoCleanupEnabled ? 1 : 0)]),
+            "auto_cleanup": .object([
+                "enabled": .int(state.autoCleanupEnabled ? 1 : 0),
+                "retention_days": .int(Self.normalizedAutoCleanupRetentionDays(state.autoCleanupRetentionDays))
+            ]),
             "auto_overwrite": .int(state.autoOverwriteEnabled ? 1 : 0),
             "locked_event_retention": .string(state.lockedEventRetention.protocolValue),
-            "reserved_space_for_events_percent": .int(state.reservedEventSpacePercent)
+            "reserved_space_for_events_percent": .int(Self.normalizedReservedEventSpacePercent(state.reservedEventSpacePercent))
         ]
+    }
+
+    private static func isStoragePolicyEditKeyPath<Value>(
+        _ keyPath: WritableKeyPath<StoragePolicyState, Value>
+    ) -> Bool {
+        let anyKeyPath = keyPath as AnyKeyPath
+        return anyKeyPath == (\StoragePolicyState.autoCleanupEnabled as AnyKeyPath) ||
+            anyKeyPath == (\StoragePolicyState.autoCleanupRetentionDays as AnyKeyPath) ||
+            anyKeyPath == (\StoragePolicyState.autoOverwriteEnabled as AnyKeyPath) ||
+            anyKeyPath == (\StoragePolicyState.lockedEventRetention as AnyKeyPath) ||
+            anyKeyPath == (\StoragePolicyState.reservedEventSpacePercent as AnyKeyPath)
+    }
+
+    private static let supportedAutoCleanupRetentionDays: Set<Int> = [7, 15, 30, 60]
+
+    private static func normalizedAutoCleanupRetentionDays(_ days: Int) -> Int {
+        supportedAutoCleanupRetentionDays.contains(days) ? days : StoragePolicyState.defaultValue.autoCleanupRetentionDays
+    }
+
+    private static func normalizedReservedEventSpacePercent(_ percent: Int) -> Int {
+        min(max(percent, 0), 50)
+    }
+
+    private static func storageUsagePercent(from value: DeviceProtocolValue) -> Int? {
+        if case .bool = value {
+            return nil
+        }
+        guard let percent = value.intValue, (0...100).contains(percent) else {
+            return nil
+        }
+        return percent
     }
 
     private static func watermarkParameters(from state: WatermarkConfigurationState) -> [String: DeviceProtocolValue] {
         [
             "time_enabled": .int(state.timestampEnabled ? 1 : 0),
             "plate_enabled": .int(state.licensePlateEnabled ? 1 : 0),
-            "plate_number": .string(state.licensePlate),
-            "position": .string("bottom_right")
+            "plate_number": .string(Self.normalizedWatermarkPlateNumber(state.licensePlate)),
+            "position": .string(state.position.protocolValue)
         ]
+    }
+
+    private static let watermarkPlateNumberMaxLength = 8
+
+    private static func normalizedWatermarkPlateNumber(_ plateNumber: String) -> String {
+        String(plateNumber.trimmingCharacters(in: .whitespacesAndNewlines).prefix(watermarkPlateNumberMaxLength))
     }
 
     private static func systemPreferenceParameters(from state: DevicePreferencesState) -> [String: DeviceProtocolValue] {
         [
             "device_name": .string(state.deviceName),
             "time_zone": .string(state.timeZone),
-            "language": .string("zh-CN"),
-            "date_time_auto_sync": .int(1),
+            "language": .string(state.language),
+            "date_time_auto_sync": .int(state.dateTimeAutoSyncEnabled ? 1 : 0),
             "speaker_volume": .string(state.speakerVolume.protocolValue),
             "status_sounds": .int(state.statusSoundsEnabled ? 1 : 0)
         ]
+    }
+
+    private static func unique<Value: Equatable>(_ values: [Value]) -> [Value] {
+        values.reduce(into: []) { uniqueValues, value in
+            if uniqueValues.contains(value) == false {
+                uniqueValues.append(value)
+            }
+        }
+    }
+
+    private static func estimatedStorageText(megabytes: Double) -> String {
+        let gigabytes = max(megabytes, 0) / 1024
+        return String(format: "Estimated storage per hour: ~%.1f GB", gigabytes)
     }
 
     private static func recordingState(from payload: [String: DeviceProtocolValue]) -> RecordingSettingsState? {
@@ -569,9 +1132,30 @@ final class SettingsStore: ObservableObject {
 
         var state = RecordingSettingsState.defaultValue
         state.resolution = resolution
-        state.qualityPriority = payload.object("quality_priority")?.string("current").flatMap(RecordingQualityPriorityOption.protocolValue(_:)) ?? state.qualityPriority
-        if let loopMinutes = payload.object("loop_recording")?.int("current") {
+        if let resolutionOptions = payload.object("resolution")?["options"]?.arrayValue?
+            .compactMap(\.stringValue)
+            .compactMap(RecordingResolutionOption.init(rawValue:)),
+            resolutionOptions.isEmpty == false {
+            state.resolutionOptions = unique(resolutionOptions)
+        }
+        if let qualityPriority = payload.object("quality_priority") {
+            state.qualityPriority = qualityPriority.string("current").flatMap(RecordingQualityPriorityOption.protocolValue(_:)) ?? state.qualityPriority
+            let options = qualityPriority["options"]?.arrayValue?
+                .compactMap(\.stringValue)
+                .compactMap(RecordingQualityPriorityOption.protocolValue(_:)) ?? []
+            if options.isEmpty == false {
+                state.qualityPriorityOptions = unique(options)
+            }
+        }
+        if let loopRecording = payload.object("loop_recording"),
+           let loopMinutes = loopRecording.int("current") {
             state.loopDuration = LoopRecordingDurationOption.minutes(loopMinutes) ?? state.loopDuration
+            let options = loopRecording["options"]?.arrayValue?
+                .compactMap(\.intValue)
+                .compactMap(LoopRecordingDurationOption.minutes(_:)) ?? []
+            if options.isEmpty == false {
+                state.loopDurationOptions = unique(options)
+            }
         }
         state.autoOverwrite = payload.bool("auto_overwrite") ?? state.autoOverwrite
         state.startBehavior = payload.string("start_behavior").flatMap(RecordingStartBehaviorOption.protocolValue(_:)) ?? state.startBehavior
@@ -579,6 +1163,9 @@ final class SettingsStore: ObservableObject {
         state.hdrNightRecordingEnabled = payload.bool("hdr_night_recording") ?? state.hdrNightRecordingEnabled
         state.recordingStatusIndicatorEnabled = payload.bool("status_indicator") ?? state.recordingStatusIndicatorEnabled
         state.recordingReminderEnabled = payload.bool("recording_reminder") ?? state.recordingReminderEnabled
+        if let estimatedStorageMB = payload.double("estimated_storage_per_hour_mb") {
+            state.estimatedStoragePerHour = estimatedStorageText(megabytes: estimatedStorageMB)
+        }
         return state
     }
 
@@ -591,13 +1178,28 @@ final class SettingsStore: ObservableObject {
         }
 
         var state = SafetySettingsState.defaultValue
-        state.gSensorSensitivity = collision.object("g_sensor_sensitivity")?.string("current").flatMap(SafetySensitivityOption.protocolValue(_:)) ?? state.gSensorSensitivity
+        if let gSensorSensitivity = collision.object("g_sensor_sensitivity") {
+            state.gSensorSensitivity = gSensorSensitivity.string("current").flatMap(SafetySensitivityOption.protocolValue(_:)) ?? state.gSensorSensitivity
+            let options = gSensorSensitivity["options"]?.arrayValue?
+                .compactMap(\.stringValue)
+                .compactMap(SafetySensitivityOption.protocolValue(_:)) ?? []
+            if options.isEmpty == false {
+                state.gSensorSensitivityOptions = unique(options)
+            }
+        }
         state.emergencyVideoLockEnabled = collision.bool("emergency_video_lock") ?? state.emergencyVideoLockEnabled
         state.parkingModeEnabled = parking.bool("parking_mode") ?? state.parkingModeEnabled
         state.motionDetectionEnabled = parking.bool("motion_detection") ?? state.motionDetectionEnabled
         state.impactDetectionEnabled = parking.bool("impact_detection") ?? state.impactDetectionEnabled
-        if let seconds = eventRecording.object("clip_duration_sec")?.int("current") {
+        if let clipDuration = eventRecording.object("clip_duration_sec"),
+           let seconds = clipDuration.int("current") {
             state.eventClipDuration = EventClipDurationOption.seconds(seconds) ?? state.eventClipDuration
+            let options = clipDuration["options"]?.arrayValue?
+                .compactMap(\.intValue)
+                .compactMap(EventClipDurationOption.seconds(_:)) ?? []
+            if options.isEmpty == false {
+                state.eventClipDurationOptions = unique(options)
+            }
         }
         state.eventNotificationsEnabled = notifications.bool("event_notifications") ?? state.eventNotificationsEnabled
         return state
@@ -610,21 +1212,85 @@ final class SettingsStore: ObservableObject {
         }
 
         var state = StoragePolicyState.defaultValue
-        state.cardStatus = StorageCardStatus.protocolValue(sd.string("status") ?? "normal")
+        if sd.int("online") == 0 {
+            state.cardStatus = .noCard
+        } else {
+            state.cardStatus = StorageCardStatus.protocolValue(sd.string("status") ?? "normal")
+        }
+        state.cardErrorDescription = storageCardErrorDescription(
+            code: sd.string("error_code"),
+            message: sd.string("error_message")
+        )
+        state.formatRequired = sd.bool("format_required") ?? state.formatRequired
+        state.policyEditable = sd.bool("policy_editable") ?? state.policyEditable
         state.usedSpaceGB = tf.double("used_gb") ?? state.usedSpaceGB
         state.totalSpaceGB = tf.double("total_gb") ?? state.totalSpaceGB
+        if let usageValue = tf["usage_percent"] {
+            guard let usagePercent = storageUsagePercent(from: usageValue) else {
+                return nil
+            }
+            state.usagePercent = usagePercent
+        }
         if let hours = payload.object("maintenance")?.double("estimated_remaining_recording_hours") {
-            state.estimatedHoursRemaining = String(format: "Approx. %.1f hours remaining at current quality.", hours)
+            let profile = payload.object("maintenance")?.string("estimate_profile") ?? "current quality"
+            state.estimatedHoursRemaining = String(format: "Approx. %.1f hours remaining at %@.", hours, profile)
+        }
+        if let maintenance = payload.object("maintenance") {
+            state.formatSupported = maintenance.bool("format_supported") ?? state.formatSupported
         }
         if let cleanup = payload.object("maintenance")?.object("auto_cleanup") {
             state.autoCleanupEnabled = cleanup.bool("enabled") ?? state.autoCleanupEnabled
+            if let retentionDays = cleanup.int("retention_days") {
+                state.autoCleanupRetentionDays = normalizedAutoCleanupRetentionDays(retentionDays)
+            }
         }
         if let policy = payload.object("general_policy") {
             state.autoOverwriteEnabled = policy.bool("auto_overwrite") ?? state.autoOverwriteEnabled
             state.lockedEventRetention = policy.string("locked_event_retention").flatMap(LockedEventRetentionOption.protocolValue(_:)) ?? state.lockedEventRetention
         }
-        state.reservedEventSpacePercent = payload.object("storage_allocation")?.int("reserved_space_for_events_percent") ?? state.reservedEventSpacePercent
+        if let reservedPercent = payload.object("storage_allocation")?.int("reserved_space_for_events_percent") {
+            state.reservedEventSpacePercent = normalizedReservedEventSpacePercent(reservedPercent)
+        }
         return state
+    }
+
+    private static func storageCardErrorDescription(code: String?, message: String?) -> String {
+        switch code?.lowercased() {
+        case "no_card":
+            return "No SD card was detected. Insert a card before recording."
+        case "unsupported_card":
+            return "The inserted SD card is not supported by this camera. Use a compatible card before recording."
+        case "filesystem_error", "unreadable":
+            return StoragePolicyState.defaultValue.cardErrorDescription
+        default:
+            if let message, message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false {
+                return "\(StoragePolicyState.defaultValue.cardErrorDescription) Diagnostic: \(message)"
+            }
+            return StoragePolicyState.defaultValue.cardErrorDescription
+        }
+    }
+
+    private static func settingsHomeCategory(for route: SettingsRoute) -> SettingsHomeCategory? {
+        switch route {
+        case .recordingSettings:
+            return .recording
+        case .storagePolicy:
+            return .storage
+        case .safetySettings:
+            return .safety
+        case .systemPreferences:
+            return .systemPreferences
+        case .watermarkConfiguration:
+            return .watermark
+        case .deviceSettings,
+            .firmwareUpdate,
+            .helpCenter,
+            .notificationSettings,
+            .renameDevice,
+            .statistics,
+            .systemPermissions:
+            return nil
+        }
     }
 
     private static func watermarkState(from payload: [String: DeviceProtocolValue]) -> WatermarkConfigurationState? {
@@ -636,7 +1302,10 @@ final class SettingsStore: ObservableObject {
         return WatermarkConfigurationState(
             timestampEnabled: timestampEnabled,
             licensePlateEnabled: plateEnabled,
-            licensePlate: payload.string("plate_number") ?? WatermarkConfigurationState.defaultValue.licensePlate
+            licensePlate: normalizedWatermarkPlateNumber(
+                payload.string("plate_number") ?? WatermarkConfigurationState.defaultValue.licensePlate
+            ),
+            position: payload.string("position").flatMap(WatermarkPositionOption.protocolValue(_:)) ?? WatermarkConfigurationState.defaultValue.position
         )
     }
 
@@ -647,19 +1316,39 @@ final class SettingsStore: ObservableObject {
         var state = fallback
         if let identity = payload.object("device_identity") {
             state.deviceName = identity.string("device_name") ?? state.deviceName
+            state.deviceNameEditable = identity.bool("device_name_editable") ?? state.deviceNameEditable
         }
         if let connectivity = payload.object("connectivity") {
             state.connectionName = connectivity.string("ssid") ?? state.connectionName
+            state.connectionStatus = connectivity.string("status") ?? state.connectionStatus
         }
         if let software = payload.object("software") {
             state.firmwareVersion = software.string("firmware_version") ?? state.firmwareVersion
+            state.firmwareUpdateEntryEnabled = software.bool("update_entry_enabled") ?? state.firmwareUpdateEntryEnabled
         }
         if let localization = payload.object("localization") {
             state.timeZone = localization.string("time_zone") ?? state.timeZone
+            state.language = localization.string("language") ?? state.language
+            state.dateTimeAutoSyncEnabled = localization.bool("date_time_auto_sync") ?? state.dateTimeAutoSyncEnabled
         }
         if let audio = payload.object("audio") {
-            state.speakerVolume = audio.object("speaker_volume")?.string("current").flatMap(SpeakerVolumeOption.protocolValue(_:)) ?? state.speakerVolume
+            if let speakerVolume = audio.object("speaker_volume") {
+                state.speakerVolume = speakerVolume.string("current").flatMap(SpeakerVolumeOption.protocolValue(_:)) ?? state.speakerVolume
+                let options = speakerVolume["options"]?.arrayValue?
+                    .compactMap(\.stringValue)
+                    .compactMap(SpeakerVolumeOption.protocolValue(_:)) ?? []
+                if options.isEmpty == false {
+                    state.speakerVolumeOptions = options.reduce(into: []) { uniqueOptions, option in
+                        if uniqueOptions.contains(option) == false {
+                            uniqueOptions.append(option)
+                        }
+                    }
+                }
+            }
             state.statusSoundsEnabled = audio.bool("status_sounds") ?? state.statusSoundsEnabled
+        }
+        if let maintenance = payload.object("maintenance") {
+            state.factoryResetSupported = maintenance.bool("factory_reset_supported") ?? state.factoryResetSupported
         }
         return state
     }
@@ -668,9 +1357,26 @@ final class SettingsStore: ObservableObject {
 private enum SettingsPlaceholder {
     static let deviceName = "DriveCam X Pro"
     static let connectionName = "Vigilant_Dash_4K"
-    static let firmwareUpdateStage = FirmwareUpdateStage.downloading(
-        progress: 0.45,
-        downloadedSize: "1.3 MB",
-        remainingTime: "2 mins left"
+    static let firmwareCandidateUnavailableStage = FirmwareUpdateStage.unavailable(
+        message: "升级候选版本服务尚未接入，无法发起设备固件升级。"
     )
+}
+
+private extension SettingsStore {
+    static func progressFraction(from percent: Int) -> Double {
+        min(1, max(0, Double(percent) / 100))
+    }
+
+    static func firmwareStageTitle(_ stage: String?) -> String {
+        switch stage?.lowercased() {
+        case "downloading":
+            return "Downloading firmware"
+        case "installing":
+            return "Installing firmware"
+        case "restarting":
+            return "Restarting device"
+        default:
+            return "Updating firmware"
+        }
+    }
 }

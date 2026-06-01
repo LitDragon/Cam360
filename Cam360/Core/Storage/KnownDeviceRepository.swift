@@ -47,7 +47,7 @@ final class UserDefaultsKnownDeviceRepository: KnownDeviceRepository {
         do {
             userDefaults.set(try encodeDevices(devices), forKey: Key.knownDevices)
         } catch {
-            assertionFailure("Failed to encode known devices: \(error)")
+            return
         }
     }
 

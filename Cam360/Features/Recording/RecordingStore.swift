@@ -99,6 +99,7 @@ final class RecordingStore: ObservableObject {
     @Published private(set) var shouldShowFeatureSheet: Bool
     @Published private(set) var recordingStatesByDeviceID: [RecordingDeviceItem.ID: Bool]
     @Published private(set) var deviceRecentEvents: [RecordingRecentEvent]
+    @Published private var deviceSessionStatus = DeviceSessionStatus()
 
     private let knownDeviceRepository: KnownDeviceRepository
     private let appPreferenceStore: AppPreferenceStore
@@ -107,6 +108,8 @@ final class RecordingStore: ObservableObject {
     private var deviceSessionState: DeviceSessionState = .idle
     private var lastSessionDeviceID: KnownDeviceSummary.ID?
     private var recentEventsGeneration = 0
+    private var sessionPreviewState: RecordingPreviewState?
+    private var sessionStorageSummary: RecordingStorageSummary?
     private var cancellables = Set<AnyCancellable>()
 
     init(
@@ -147,11 +150,29 @@ final class RecordingStore: ObservableObject {
     }
 
     var previewState: RecordingPreviewState {
-        selectedScenario?.previewState ?? contentProvider.scenario(forDeviceAt: 0).previewState
+        if isSelectedSessionDevice, let sessionPreviewState {
+            return sessionPreviewState
+        }
+
+        return selectedScenario?.previewState ?? contentProvider.scenario(forDeviceAt: 0).previewState
     }
 
     var storageState: RecordingStorageState {
-        selectedScenario?.storageState ?? contentProvider.scenario(forDeviceAt: 0).storageState
+        if isSelectedSessionDevice {
+            if let sessionStorageState = storageState(for: deviceSessionStatus.sdCardOnline) {
+                return sessionStorageState
+            }
+
+            if let sessionStorageSummary {
+                return .available(sessionStorageSummary)
+            }
+
+            if let storageCapacity = deviceSessionStatus.storageCapacity {
+                return .available(storageSummary(for: storageCapacity))
+            }
+        }
+
+        return selectedScenario?.storageState ?? contentProvider.scenario(forDeviceAt: 0).storageState
     }
 
     var featureSheetDeviceState: RecordingFeatureDeviceState {
@@ -224,6 +245,19 @@ final class RecordingStore: ObservableObject {
         shouldShowFeatureSheet = false
     }
 
+    func applyInitialStateSyncSnapshot(_ snapshot: DeviceStateSyncSnapshot) {
+        if let state = deviceSession?.state {
+            deviceSessionState = state
+            updateLastSessionDeviceID(from: state)
+        }
+
+        applyHomeSnapshot(snapshot)
+
+        if let events = Self.recordingEvents(fromHomeSnapshot: snapshot) {
+            deviceRecentEvents = events
+        }
+    }
+
     private var selectedScenario: RecordingDeviceScenario? {
         guard let selectedDeviceID = selectedDeviceID,
               let selectedIndex = devices.firstIndex(where: { $0.id == selectedDeviceID }) else {
@@ -243,6 +277,13 @@ final class RecordingStore: ObservableObject {
                 self?.loadRecentEventsIfNeeded(from: state)
             }
             .store(in: &cancellables)
+
+        deviceSession?.$deviceStatus
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] status in
+                self?.applyDeviceSessionStatus(status)
+            }
+            .store(in: &cancellables)
     }
 
     private func updateLastSessionDeviceID(from state: DeviceSessionState) {
@@ -252,6 +293,89 @@ final class RecordingStore: ObservableObject {
         default:
             break
         }
+    }
+
+    private func applyDeviceSessionStatus(_ status: DeviceSessionStatus) {
+        deviceSessionStatus = status
+
+        guard let activeDeviceID = activeSessionDeviceID,
+              let recordingState = status.recordingState else {
+            return
+        }
+
+        var nextStates = recordingStatesByDeviceID
+        nextStates[activeDeviceID] = recordingState.isRecording
+        recordingStatesByDeviceID = nextStates
+    }
+
+    private var activeSessionDeviceID: KnownDeviceSummary.ID? {
+        switch deviceSessionState {
+        case .ready(let deviceInfo), .busy(operation: _, deviceInfo: let deviceInfo):
+            return deviceInfo.id
+        default:
+            return nil
+        }
+    }
+
+    private var isSelectedSessionDevice: Bool {
+        guard let selectedDeviceID, let activeSessionDeviceID else {
+            return false
+        }
+
+        return selectedDeviceID == activeSessionDeviceID
+    }
+
+    private func storageState(for sdCardOnline: Int?) -> RecordingStorageState? {
+        guard let sdCardOnline else {
+            return nil
+        }
+
+        switch sdCardOnline {
+        case 1:
+            return nil
+        case 0:
+            return .unavailable(
+                title: "No SD card detected",
+                message: "Insert an SD card to store clips, or switch to cloud storage to browse history."
+            )
+        case 2:
+            return .unavailable(
+                title: "SD card requires formatting",
+                message: "The device reports the TF card must be formatted before recording."
+            )
+        default:
+            return .unavailable(
+                title: "SD card status unavailable",
+                message: "The device reported an unknown TF card state. Check the card before recording."
+            )
+        }
+    }
+
+    private func storageSummary(for capacity: DeviceStorageCapacity) -> RecordingStorageSummary {
+        let usedMegabytes = max(0, capacity.totalMegabytes - capacity.remainingMegabytes)
+        let usageFraction = capacity.totalMegabytes > 0
+            ? min(1, Double(usedMegabytes) / Double(capacity.totalMegabytes))
+            : 0
+
+        return RecordingStorageSummary(
+            usedCapacityText: Self.storageText(megabytes: usedMegabytes),
+            totalCapacityText: Self.storageText(megabytes: capacity.totalMegabytes),
+            usageFraction: usageFraction
+        )
+    }
+
+    nonisolated private static func storageText(megabytes: Int) -> String {
+        guard megabytes >= 1024 else {
+            return "\(megabytes) MB"
+        }
+
+        let gigabytes = Double(megabytes) / 1024
+        let roundedGigabytes = (gigabytes * 10).rounded() / 10
+        if roundedGigabytes == roundedGigabytes.rounded() {
+            return "\(Int(roundedGigabytes)) GB"
+        }
+
+        return String(format: "%.1f GB", roundedGigabytes)
     }
 
     private func selectedDeviceID(in devices: [KnownDeviceSummary]) -> KnownDeviceSummary.ID? {
@@ -273,14 +397,139 @@ final class RecordingStore: ObservableObject {
         }
 
         let generation = nextRecentEventsGeneration()
-        deviceSession.fetchRecentEvents(query: DeviceRecentEventsQuery(limit: 4)) { [weak self] result in
+        deviceSession.fetchStateSync(scope: .home) { [weak self] result in
             guard let self, self.recentEventsGeneration == generation else {
                 return
             }
-            if case .success(let page) = result {
+
+            if case .success(let snapshot) = result {
+                self.applyHomeSnapshot(snapshot)
+
+                if let events = Self.recordingEvents(fromHomeSnapshot: snapshot) {
+                    self.deviceRecentEvents = events
+                    return
+                }
+            }
+
+            self.loadRecentEvents(generation: generation, deviceSession: deviceSession)
+        }
+    }
+
+    private func applyHomeSnapshot(_ snapshot: DeviceStateSyncSnapshot) {
+        guard snapshot.sections.object("home") != nil else {
+            return
+        }
+
+        sessionPreviewState = Self.previewState(fromHomeSnapshot: snapshot)
+        sessionStorageSummary = Self.storageSummary(fromHomeSnapshot: snapshot)
+    }
+
+    private func loadRecentEvents(generation: Int, deviceSession: DeviceSession) {
+        loadRecentEvents(limit: 4, generation: generation, deviceSession: deviceSession)
+    }
+
+    private func loadRecentEvents(limit: Int, generation: Int, deviceSession: DeviceSession) {
+        deviceSession.fetchRecentEvents(query: DeviceRecentEventsQuery(limit: limit)) { [weak self] result in
+            guard let self, self.recentEventsGeneration == generation else {
+                return
+            }
+
+            switch result {
+            case .success(let page):
                 self.deviceRecentEvents = page.items.map(Self.recordingEvent(from:))
+            case .failure(let error):
+                guard Self.shouldReduceRecentEventsLimit(for: error, limit: limit) else {
+                    return
+                }
+
+                self.loadRecentEvents(
+                    limit: max(1, limit / 2),
+                    generation: generation,
+                    deviceSession: deviceSession
+                )
             }
         }
+    }
+
+    private static func shouldReduceRecentEventsLimit(for error: DeviceSessionReadOnlyError, limit: Int) -> Bool {
+        guard limit > 1,
+              case .protocolFailure(.deviceError(let errno, let topic, _)) = error else {
+            return false
+        }
+
+        return errno == -7 && topic == "RECENT_EVENTS"
+    }
+
+    nonisolated private static func recordingEvents(fromHomeSnapshot snapshot: DeviceStateSyncSnapshot) -> [RecordingRecentEvent]? {
+        guard let homeSection = snapshot.sections["home"]?.objectValue,
+              let eventValues = homeSection["recent_events"]?.arrayValue,
+              let page = try? DeviceAggregateResponseParser.recentEvents(from: [
+                  "items": .array(eventValues),
+                  "limit": .int(eventValues.count),
+                  "total_recent_count": .int(eventValues.count)
+              ]) else {
+            return nil
+        }
+
+        return page.items.map(Self.recordingEvent(from:))
+    }
+
+    nonisolated private static func previewState(fromHomeSnapshot snapshot: DeviceStateSyncSnapshot) -> RecordingPreviewState? {
+        guard let homeSection = snapshot.sections["home"]?.objectValue,
+              let preview = homeSection.object("preview") else {
+            return nil
+        }
+
+        let statusTitle = preview.bool("recording_status") == true ? "REC" : "READY"
+        let resolutionTitle = streamSourceTitle(preview.string("stream_source_type"))
+        let timestampText = homeSection.object("device")?.string("date_value").map(formatDeviceTimestamp) ?? "--"
+        return RecordingPreviewState(
+            statusTitle: statusTitle,
+            resolutionTitle: resolutionTitle,
+            timestampText: timestampText
+        )
+    }
+
+    nonisolated private static func storageSummary(fromHomeSnapshot snapshot: DeviceStateSyncSnapshot) -> RecordingStorageSummary? {
+        guard let homeSection = snapshot.sections["home"]?.objectValue,
+              let summary = homeSection.object("storage_summary"),
+              let totalMegabytes = summary.int("total_mb") else {
+            return nil
+        }
+
+        let remainingMegabytes = summary.int("left_mb") ?? 0
+        let usedMegabytes = max(0, totalMegabytes - remainingMegabytes)
+        let usageFraction = summary.double("usage_percent").map { min(1, max(0, $0 / 100)) }
+            ?? (totalMegabytes > 0 ? min(1, Double(usedMegabytes) / Double(totalMegabytes)) : 0)
+        return RecordingStorageSummary(
+            usedCapacityText: storageText(megabytes: usedMegabytes),
+            totalCapacityText: storageText(megabytes: totalMegabytes),
+            usageFraction: usageFraction
+        )
+    }
+
+    nonisolated private static func streamSourceTitle(_ streamSourceType: String?) -> String {
+        switch streamSourceType {
+        case "rtsp_pending_protocol":
+            return "RTSP pending"
+        case .some(let value):
+            return value.replacingOccurrences(of: "_", with: " ")
+        case .none:
+            return "Preview"
+        }
+    }
+
+    nonisolated private static func formatDeviceTimestamp(_ value: String) -> String {
+        guard value.count == 14 else {
+            return value
+        }
+
+        let yearEnd = value.index(value.startIndex, offsetBy: 4)
+        let monthEnd = value.index(yearEnd, offsetBy: 2)
+        let dayEnd = value.index(monthEnd, offsetBy: 2)
+        let hourEnd = value.index(dayEnd, offsetBy: 2)
+        let minuteEnd = value.index(hourEnd, offsetBy: 2)
+        return "\(value[..<yearEnd])-\(value[yearEnd..<monthEnd])-\(value[monthEnd..<dayEnd]) \(value[dayEnd..<hourEnd]):\(value[hourEnd..<minuteEnd]):\(value[minuteEnd...])"
     }
 
     private func nextRecentEventsGeneration() -> Int {

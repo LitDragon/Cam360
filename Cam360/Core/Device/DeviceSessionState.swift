@@ -41,6 +41,32 @@ struct DeviceInfo: Equatable {
     let capabilities: Set<DeviceCapability>
 }
 
+struct DeviceSessionStatus: Equatable {
+    var sdCardOnline: Int?
+    var batteryLevel: Int?
+    var storageCapacity: DeviceStorageCapacity?
+    var recordingState: DeviceRecordingState?
+    var progressEvents: [String: DeviceProgressEvent] = [:]
+    var latestProgressEvent: DeviceProgressEvent?
+}
+
+struct DeviceStorageCapacity: Equatable {
+    let remainingMegabytes: Int
+    let totalMegabytes: Int
+}
+
+struct DeviceProgressEvent: Equatable {
+    let topic: String
+    let taskID: String
+    let type: String?
+    let progress: Int?
+    let status: String?
+    let stage: String?
+    let path: String?
+    let speed: Int?
+    let errno: Int?
+}
+
 enum DeviceCapability: String, Equatable, Codable {
     case livePreview
     case playback

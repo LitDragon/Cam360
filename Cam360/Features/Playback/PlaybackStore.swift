@@ -157,6 +157,19 @@ final class PlaybackStore: ObservableObject {
         if let transport = resource.transport {
             parts.append("Transport \(transport)")
         }
+        if let authType = resource.authType {
+            parts.append("Auth \(authType)")
+        }
+        if let maxSessions = resource.maxSessions {
+            let suffix = maxSessions == 1 ? "session" : "sessions"
+            parts.append("\(maxSessions) \(suffix)")
+        }
+        if let seekGranularityMilliseconds = resource.seekGranularityMilliseconds {
+            parts.append("seek \(seekGranularityMilliseconds)ms")
+        }
+        if let keepaliveInterval = resource.keepaliveInterval {
+            parts.append("keepalive \(keepaliveInterval)s")
+        }
         if let duration = resource.duration {
             parts.append("\(duration)s")
         }

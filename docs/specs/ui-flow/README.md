@@ -40,8 +40,10 @@ flowchart TD
     Recording -->|View all events| Events["EventsView"]
     Recording -->|Open Full Gallery / View all| Gallery
     Recording -->|Settings icon| DeviceSettings["SettingsView(root: .deviceSettings)"]
+    DeviceSettings -->|Statistics| Statistics["StatisticsView"]
     Gallery -->|Media item| Playback
     Gallery -->|Download action| Downloads
+    Downloads -->|Local Videos| LocalVideos["LocalVideosView"]
 ```
 
 ## Onboarding 流程
@@ -68,6 +70,7 @@ flowchart TD
 - 顶部 `AppTopBar` 菜单展示设备抽屉 `RecordingDrawerOverlay`。
 - 主预览卡进入录像页（`RecordingView`）。
 - `Recent Events` 的 `View all` 进入 `EventsView`。
+- `EventsView` 作为事件型相册列表态，控制通道 ready 后读取 `MEDIA_INDEX(event_only=1)`，并按安全、停车、手动筛选实际事件项；列表项展示缩略图占位、当前项高亮和禁用态更多操作入口，详情/播放/操作菜单仍等待真实媒体链路；首页摘要仍由 `STATE_SYNC(scope=home).recent_events` 或 `RECENT_EVENTS(limit=4)` 提供。
 - 首页复用 `RecordingStore` 的设备名称、连接状态和首次功能引导状态；不直接持有 `DeviceSession`。
 
 ## 录像页（RecordingView）流程
@@ -85,7 +88,14 @@ flowchart TD
 
 - `GalleryView` 当前没有 App 级全局路由。
 - 搜索、筛选、选择模式、批量操作栏和媒体操作面板都由 `GalleryStore` 状态驱动。
+- 控制通道 ready 后，`GalleryStore` 使用 `MEDIA_INDEX` 读取视频列表，并通过 `THUMB_LIST` 消费可用缩略图数据；批量响应遗漏单项时再通过 `THUMB_GET` 补拉。这只覆盖控制协议和列表展示状态。
 - 媒体项点击通过 Gallery 的 `NavigationLink` 进入 `PlaybackView`；下载到本机进入 `DownloadsView`。
+
+## Downloads 流程
+
+- `DownloadsView` 当前只消费 `DOWNLOAD_PROGRESS` 事件展示传输进度条、速度和 `completed` 完成记录；暂停、继续、取消、完成项打开和删除只作为禁用态离线壳展示。
+- `LocalVideosView` 可从 Downloads 进入，读取 App 已确认保存的本地视频和截图索引，展示存储占用，支持已确认本地视频的系统分享入口，并支持删除前确认后移除索引记录；没有索引时保持空态，不伪造已下载或已截图记录。
+- 选择文件、暂停/继续/取消队列、真实保存路径、打开、真实文件存在性和删除本地文件实体仍等待下载任务服务与本地资源保存链路接入。
 
 ## Settings 流程
 
@@ -93,6 +103,7 @@ flowchart TD
 - 录像页设置图标进入 `SettingsView(root: .deviceSettings, embedsNavigationView: false)`，root 内容为 `SettingsOverviewView`，显示返回按钮并 pop 回录像页。
 - `SettingsOverviewView` 可进入：
   - `recordingSettings` -> `RecordingSettingsView`
+  - `statistics` -> `StatisticsView`
   - `safetySettings` -> `SafetySettingsView`
   - `storagePolicy` -> `StoragePolicyView`
   - `watermarkConfiguration` -> `WatermarkConfigurationView`
@@ -123,11 +134,13 @@ flowchart TD
 - `LivePreviewView`
 - `PlaybackView`
 - `DownloadsView`
+- `LocalVideosView`
 - `EventsView`
+- `DeviceListView`
 
-这些页面已可从 Home、录像页（`RecordingView`）或 Gallery 进入，但仍保持离线状态；不得在其中创建播放器、下载服务或底层设备连接。
+这些页面已可从 Home、录像页（`RecordingView`）或 Gallery 进入；已定义的聚合读取只到控制协议层，不代表播放器、下载服务、本地保存或真实媒体链路已完成。
 
-`DeviceListView` 当前标记为未使用页面，保留旧离线占位实现但不接导航入口。
+`DeviceListView` 从 Home 设备抽屉的 `Manage Devices` 进入，只展示本地已保存设备；设备扫描、Wi-Fi 详情和真实连接结果仍由添加设备流程承载。
 
 ## 维护规则
 

@@ -25,25 +25,33 @@ enum RecordingStartBehaviorOption: String, CaseIterable {
 
 struct RecordingSettingsState: Equatable {
     var resolution: RecordingResolutionOption
+    var resolutionOptions: [RecordingResolutionOption]
     var qualityPriority: RecordingQualityPriorityOption
+    var qualityPriorityOptions: [RecordingQualityPriorityOption]
     var loopDuration: LoopRecordingDurationOption
+    var loopDurationOptions: [LoopRecordingDurationOption]
     var autoOverwrite: Bool
     var startBehavior: RecordingStartBehaviorOption
     var audioRecordingEnabled: Bool
     var hdrNightRecordingEnabled: Bool
     var recordingStatusIndicatorEnabled: Bool
     var recordingReminderEnabled: Bool
+    var estimatedStoragePerHour: String
 
     static let defaultValue = RecordingSettingsState(
         resolution: .fullHD,
+        resolutionOptions: RecordingResolutionOption.allCases,
         qualityPriority: .balanced,
+        qualityPriorityOptions: RecordingQualityPriorityOption.allCases,
         loopDuration: .threeMinutes,
+        loopDurationOptions: LoopRecordingDurationOption.allCases,
         autoOverwrite: true,
         startBehavior: .auto,
         audioRecordingEnabled: false,
         hdrNightRecordingEnabled: true,
         recordingStatusIndicatorEnabled: true,
-        recordingReminderEnabled: false
+        recordingReminderEnabled: false,
+        estimatedStoragePerHour: "Estimated storage per hour: ~4.2 GB"
     )
 }
 
@@ -51,6 +59,22 @@ enum StorageCardStatus: String, CaseIterable {
     case ready = "Ready"
     case noCard = "No Card"
     case error = "Error"
+}
+
+enum SettingsHomeCategory: String, CaseIterable {
+    case recording
+    case safety
+    case storage
+    case watermark
+    case wifi
+    case systemPreferences = "system_preferences"
+}
+
+enum StorageFormatStage: Equatable {
+    case idle
+    case inProgress(progress: Double)
+    case completed
+    case failed
 }
 
 enum LockedEventRetentionOption: String, CaseIterable {
@@ -61,15 +85,26 @@ enum LockedEventRetentionOption: String, CaseIterable {
 
 struct StoragePolicyState: Equatable {
     var cardStatus: StorageCardStatus
+    var cardErrorDescription: String
     var usedSpaceGB: Double
     var totalSpaceGB: Double
+    var usagePercent: Int?
     var estimatedHoursRemaining: String
     var autoCleanupEnabled: Bool
+    var autoCleanupRetentionDays: Int
     var autoOverwriteEnabled: Bool
     var lockedEventRetention: LockedEventRetentionOption
     var reservedEventSpacePercent: Int
+    var formatStage: StorageFormatStage
+    var formatRequired: Bool
+    var formatSupported: Bool
+    var policyEditable: Bool
 
     var usageProgress: Double {
+        if let usagePercent {
+            return min(max(Double(usagePercent) / 100, 0), 1)
+        }
+
         guard totalSpaceGB > 0 else {
             return 0
         }
@@ -89,38 +124,64 @@ struct StoragePolicyState: Equatable {
         String(format: "%.1f GB", max(totalSpaceGB - usedSpaceGB, 0))
     }
 
+    var canFormat: Bool {
+        formatSupported && (cardStatus == .ready || formatRequired)
+    }
+
+    var canEditPolicies: Bool {
+        cardStatus == .ready && policyEditable
+    }
+
     static let defaultValue = StoragePolicyState(
         cardStatus: .ready,
+        cardErrorDescription: "The inserted SD card is unreadable or has a file system error. Formatting is required to use this card for recording.",
         usedSpaceGB: 74.2,
         totalSpaceGB: 128,
+        usagePercent: nil,
         estimatedHoursRemaining: "Approx. 5.5 hours remaining at current 1080p quality.",
         autoCleanupEnabled: false,
+        autoCleanupRetentionDays: 30,
         autoOverwriteEnabled: true,
         lockedEventRetention: .keepForever,
-        reservedEventSpacePercent: 20
+        reservedEventSpacePercent: 20,
+        formatStage: .idle,
+        formatRequired: false,
+        formatSupported: true,
+        policyEditable: true
     )
+}
+
+enum WatermarkPositionOption: String, CaseIterable {
+    case topLeft = "Top Left"
+    case topRight = "Top Right"
+    case bottomLeft = "Bottom Left"
+    case bottomRight = "Bottom Right"
 }
 
 struct WatermarkConfigurationState: Equatable {
     var timestampEnabled: Bool
     var licensePlateEnabled: Bool
     var licensePlate: String
+    var position: WatermarkPositionOption
 
     static let defaultValue = WatermarkConfigurationState(
         timestampEnabled: true,
         licensePlateEnabled: true,
-        licensePlate: "AB-123-CD"
+        licensePlate: "AB1234CD",
+        position: .bottomRight
     )
 }
 
 struct NetworkIdentityState: Equatable {
     var networkName: String
     var password: String
+    var statusCode: Int?
 
     static func defaultValue(networkName: String) -> NetworkIdentityState {
         NetworkIdentityState(
             networkName: networkName,
-            password: "dashcamsecure"
+            password: "dashcamsecure",
+            statusCode: nil
         )
     }
 }
@@ -133,21 +194,35 @@ enum SpeakerVolumeOption: String, CaseIterable {
 
 struct DevicePreferencesState: Equatable {
     var deviceName: String
+    var deviceNameEditable: Bool
     var connectionName: String
+    var connectionStatus: String
     var firmwareVersion: String
+    var firmwareUpdateEntryEnabled: Bool
+    var factoryResetSupported: Bool
     var timeZone: String
     var dateTime: String
+    var language: String
+    var dateTimeAutoSyncEnabled: Bool
     var speakerVolume: SpeakerVolumeOption
+    var speakerVolumeOptions: [SpeakerVolumeOption]
     var statusSoundsEnabled: Bool
 
     static func defaultValue(deviceName: String, connectionName: String) -> DevicePreferencesState {
         DevicePreferencesState(
             deviceName: deviceName,
+            deviceNameEditable: true,
             connectionName: connectionName,
+            connectionStatus: "connected",
             firmwareVersion: "v2.4.1",
+            firmwareUpdateEntryEnabled: true,
+            factoryResetSupported: true,
             timeZone: "UTC+8 (Asia/Shanghai)",
             dateTime: "2026-04-24 10:30",
+            language: "zh-CN",
+            dateTimeAutoSyncEnabled: true,
             speakerVolume: .medium,
+            speakerVolumeOptions: SpeakerVolumeOption.allCases,
             statusSoundsEnabled: true
         )
     }
@@ -167,27 +242,33 @@ enum EventClipDurationOption: String, CaseIterable {
 
 struct SafetySettingsState: Equatable {
     var gSensorSensitivity: SafetySensitivityOption
+    var gSensorSensitivityOptions: [SafetySensitivityOption]
     var emergencyVideoLockEnabled: Bool
     var parkingModeEnabled: Bool
     var motionDetectionEnabled: Bool
     var impactDetectionEnabled: Bool
     var eventClipDuration: EventClipDurationOption
+    var eventClipDurationOptions: [EventClipDurationOption]
     var eventNotificationsEnabled: Bool
 
     static let defaultValue = SafetySettingsState(
         gSensorSensitivity: .medium,
+        gSensorSensitivityOptions: SafetySensitivityOption.allCases,
         emergencyVideoLockEnabled: true,
         parkingModeEnabled: true,
         motionDetectionEnabled: true,
         impactDetectionEnabled: true,
         eventClipDuration: .thirtySeconds,
+        eventClipDurationOptions: EventClipDurationOption.allCases,
         eventNotificationsEnabled: true
     )
 }
 
 enum FirmwareUpdateStage: Equatable {
+    case unavailable(message: String)
     case available
-    case downloading(progress: Double, downloadedSize: String, remainingTime: String)
+    case inProgress(progress: Double, stageTitle: String)
+    case completed
     case failed
 }
 
@@ -202,7 +283,7 @@ extension RecordingQualityPriorityOption {
 }
 
 extension LoopRecordingDurationOption {
-    var minutes: Int {
+    nonisolated var minutes: Int {
         switch self {
         case .oneMinute:
             return 1
@@ -213,7 +294,7 @@ extension LoopRecordingDurationOption {
         }
     }
 
-    static func minutes(_ value: Int) -> LoopRecordingDurationOption? {
+    nonisolated static func minutes(_ value: Int) -> LoopRecordingDurationOption? {
         allCases.first { $0.minutes == value }
     }
 }
@@ -278,7 +359,7 @@ extension SafetySensitivityOption {
 }
 
 extension EventClipDurationOption {
-    var seconds: Int {
+    nonisolated var seconds: Int {
         switch self {
         case .fifteenSeconds:
             return 15
@@ -289,7 +370,7 @@ extension EventClipDurationOption {
         }
     }
 
-    static func seconds(_ value: Int) -> EventClipDurationOption? {
+    nonisolated static func seconds(_ value: Int) -> EventClipDurationOption? {
         allCases.first { $0.seconds == value }
     }
 }
@@ -300,6 +381,25 @@ extension SpeakerVolumeOption {
     }
 
     nonisolated static func protocolValue(_ value: String) -> SpeakerVolumeOption? {
+        allCases.first { $0.protocolValue == value.lowercased() }
+    }
+}
+
+extension WatermarkPositionOption {
+    nonisolated var protocolValue: String {
+        switch self {
+        case .topLeft:
+            return "top_left"
+        case .topRight:
+            return "top_right"
+        case .bottomLeft:
+            return "bottom_left"
+        case .bottomRight:
+            return "bottom_right"
+        }
+    }
+
+    nonisolated static func protocolValue(_ value: String) -> WatermarkPositionOption? {
         allCases.first { $0.protocolValue == value.lowercased() }
     }
 }

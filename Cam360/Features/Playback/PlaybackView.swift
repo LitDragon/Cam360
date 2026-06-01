@@ -37,7 +37,7 @@ struct PlaybackView: View {
     private var content: some View {
         switch selectedRoute {
         case .files:
-            PlaybackFilesView(sections: visibleSections)
+            PlaybackFilesView(store: store, sections: visibleSections)
         case .timeline:
             PlaybackTimelinePlaceholder()
         }
@@ -199,27 +199,268 @@ private struct PlaybackSegmentedControl: View {
 }
 
 private struct PlaybackFilesView: View {
+    @ObservedObject var store: PlaybackStore
     let sections: [PlaybackLogSection]
 
     var body: some View {
-        if sections.isEmpty {
-            EmptyStateView(
-                iconName: "magnifyingglass",
-                title: "No Matching Files",
-                message: "Try a different drive log keyword.",
-                style: .plain
-            )
-            .padding(.top, AppSpacing.xxxl)
-        } else {
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 48) {
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: AppSpacing.xl) {
+                playbackStateView
+
+                if sections.isEmpty {
+                    EmptyStateView(
+                        iconName: "magnifyingglass",
+                        title: "No Matching Files",
+                        message: "Try a different drive log keyword.",
+                        style: .plain
+                    )
+                    .padding(.top, AppSpacing.lg)
+                } else {
                     ForEach(sections) { section in
                         PlaybackLogSectionView(section: section)
                     }
                 }
-                .padding(.horizontal, AppSpacing.lg)
-                .padding(.bottom, AppSpacing.xxxl)
             }
+            .padding(.horizontal, AppSpacing.lg)
+            .padding(.bottom, AppSpacing.xxxl)
+        }
+    }
+
+    @ViewBuilder
+    private var playbackStateView: some View {
+        if store.isLoading {
+            InlineLoadingView(
+                title: "Loading Playback",
+                message: "Reading the first device recording and playback resource."
+            )
+        } else if let lastLoadError = store.lastLoadError {
+            ErrorStateView(
+                title: "Playback Unavailable",
+                message: lastLoadError,
+                actionTitle: nil,
+                action: nil
+            )
+        } else if let playbackResource = store.playbackResource {
+            PlaybackResourceSummaryView(
+                title: store.title,
+                message: store.message,
+                fileInfo: store.selectedFileInfo,
+                playbackResource: playbackResource
+            )
+        } else {
+            EmptyStateView(
+                iconName: "play.rectangle",
+                title: store.title,
+                message: store.message,
+                style: .plain
+            )
+        }
+    }
+}
+
+private struct PlaybackResourceSummaryView: View {
+    let title: String
+    let message: String
+    let fileInfo: DeviceFileInfo?
+    let playbackResource: DeviceFilePlaybackResource
+
+    var body: some View {
+        SectionCard(title: "Device Playback") {
+            VStack(alignment: .leading, spacing: AppSpacing.md) {
+                PlaybackOfflinePlayerSurface(
+                    durationText: Self.durationText(playbackResource.duration ?? fileInfo?.item.duration)
+                )
+
+                HStack(alignment: .top, spacing: AppSpacing.md) {
+                    Image(systemName: "play.rectangle.fill")
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundColor(AppColor.brand)
+                        .frame(width: 40, height: 40)
+                        .background(AppColor.accentSurface)
+                        .cornerRadius(AppRadius.small)
+
+                    VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                        HStack(spacing: AppSpacing.sm) {
+                            Text(title)
+                                .font(AppTypography.bodyStrong)
+                                .foregroundColor(AppColor.textPrimary)
+                                .lineLimit(1)
+
+                            StatusTag(
+                                title: playbackResource.seekable ? "READY" : "STREAM",
+                                tone: .accent,
+                                size: .compact
+                            )
+                        }
+
+                        Text(message)
+                            .font(AppTypography.caption)
+                            .foregroundColor(AppColor.textSecondary)
+                            .lineLimit(2)
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                    PlaybackMetadataRow(title: "Path", value: playbackResource.path)
+
+                    if let duration = playbackResource.duration {
+                        PlaybackMetadataRow(title: "Duration", value: "\(duration)s")
+                    } else if let duration = fileInfo?.item.duration {
+                        PlaybackMetadataRow(title: "Duration", value: "\(duration)s")
+                    }
+
+                    if let size = playbackResource.size ?? fileInfo?.item.size {
+                        PlaybackMetadataRow(title: "Size", value: Self.sizeText(size))
+                    }
+
+                    if let resolution = fileInfo?.item.resolution {
+                        PlaybackMetadataRow(title: "Resolution", value: resolution)
+                    }
+
+                    if let codec = fileInfo?.codec {
+                        PlaybackMetadataRow(title: "Codec", value: codec)
+                    }
+
+                    if let framerate = fileInfo?.framerate {
+                        PlaybackMetadataRow(title: "Frame Rate", value: "\(framerate) fps")
+                    }
+                }
+
+                PlaybackOfflineActionRow()
+            }
+        }
+    }
+
+    private static func durationText(_ seconds: Int?) -> String {
+        guard let seconds else {
+            return "--:--"
+        }
+
+        let minutes = seconds / 60
+        let remainingSeconds = seconds % 60
+        return String(format: "%02d:%02d", minutes, remainingSeconds)
+    }
+
+    private static func sizeText(_ bytes: Int) -> String {
+        let formatter = ByteCountFormatter()
+        formatter.allowedUnits = [.useKB, .useMB, .useGB]
+        formatter.countStyle = .file
+        return formatter.string(fromByteCount: Int64(bytes))
+    }
+}
+
+private struct PlaybackOfflinePlayerSurface: View {
+    let durationText: String
+
+    var body: some View {
+        VStack(spacing: AppSpacing.md) {
+            ZStack {
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color(red: 0.12, green: 0.15, blue: 0.21),
+                        Color(red: 0.22, green: 0.29, blue: 0.39)
+                    ]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+
+                VStack(spacing: AppSpacing.md) {
+                    Image(systemName: "play.circle.fill")
+                        .font(.system(size: 48, weight: .semibold))
+                        .foregroundColor(.white.opacity(0.86))
+
+                    StatusTag(
+                        title: "PLAYER PENDING",
+                        tone: .neutral,
+                        size: .compact
+                    )
+                }
+            }
+            .frame(height: 164)
+            .clipShape(RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous))
+
+            VStack(spacing: AppSpacing.sm) {
+                HStack(spacing: AppSpacing.sm) {
+                    Text("00:00")
+                    Spacer(minLength: 0)
+                    Text(durationText)
+                }
+                .font(AppTypography.caption)
+                .foregroundColor(AppColor.textSecondary)
+
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(AppColor.surfaceMuted)
+                        .frame(height: AppLayout.progressLineHeight)
+
+                    Capsule()
+                        .fill(AppColor.brand.opacity(0.35))
+                        .frame(width: 18, height: AppLayout.progressLineHeight)
+                }
+
+                Text("Playback controls are shown only as an offline shell until the real player chain is verified.")
+                    .font(AppTypography.caption)
+                    .foregroundColor(AppColor.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+}
+
+private struct PlaybackOfflineActionRow: View {
+    var body: some View {
+        HStack(spacing: AppSpacing.md) {
+            PlaybackOfflineActionButton(title: "Play", systemImage: "play.fill")
+            PlaybackOfflineActionButton(title: "Full", systemImage: "arrow.up.left.and.arrow.down.right")
+            PlaybackOfflineActionButton(title: "Download", systemImage: "arrow.down.circle")
+            PlaybackOfflineActionButton(title: "Share", systemImage: "square.and.arrow.up")
+            PlaybackOfflineActionButton(title: "Delete", systemImage: "trash")
+        }
+    }
+}
+
+private struct PlaybackOfflineActionButton: View {
+    let title: String
+    let systemImage: String
+
+    var body: some View {
+        Button(action: {}) {
+            VStack(spacing: AppSpacing.xs) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 15, weight: .semibold))
+                    .frame(width: 34, height: 34)
+                    .background(AppColor.surfaceMuted)
+                    .cornerRadius(AppRadius.small)
+
+                Text(title)
+                    .font(AppTypography.caption)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.76)
+            }
+            .foregroundColor(AppColor.textSecondary)
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .disabled(true)
+    }
+}
+
+private struct PlaybackMetadataRow: View {
+    let title: String
+    let value: String
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: AppSpacing.sm) {
+            Text(title)
+                .font(AppTypography.caption)
+                .foregroundColor(AppColor.textSecondary)
+                .frame(width: 64, alignment: .leading)
+
+            Text(value)
+                .font(AppTypography.caption)
+                .foregroundColor(AppColor.textPrimary)
+                .lineLimit(1)
+                .truncationMode(.middle)
         }
     }
 }

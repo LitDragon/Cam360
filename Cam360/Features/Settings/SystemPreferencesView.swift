@@ -4,6 +4,8 @@ private enum SystemPreferencesRoute: Hashable {
     case notificationSettings
     case systemPermissions
     case helpCenter
+    case privacyPolicy
+    case termsOfService
 }
 
 struct SystemPreferencesView: View {
@@ -96,7 +98,10 @@ struct SystemPreferencesView: View {
                             iconName: nil,
                             iconAssetName: "PrivacyPolicy",
                             title: "Privacy Policy",
-                            trailingIconAssetName: "MoreArrow"
+                            trailingIconAssetName: "MoreArrow",
+                            action: {
+                                route = .privacyPolicy
+                            }
                         )
 
                         SettingsNavigationRow(
@@ -105,7 +110,9 @@ struct SystemPreferencesView: View {
                             title: "Terms of Service",
                             trailingIconAssetName: "MoreArrow",
                             showsDivider: false
-                        )
+                        ) {
+                            route = .termsOfService
+                        }
                     }
                 }
                 .padding(.horizontal, AppSpacing.xxl)
@@ -166,6 +173,36 @@ struct SystemPreferencesView: View {
             ) {
                 EmptyView()
             }
+
+            NavigationLink(
+                destination: LegalPlaceholderView(
+                    title: "Privacy Policy",
+                    subtitle: "隐私政策",
+                    summaryTitle: "隐私正文待提供",
+                    summaryMessage: "业务文档仅明确当前产品不收集用户隐私信息；正式隐私政策正文尚未提供。",
+                    dismiss: dismissNestedRoute
+                )
+                .navigationBarHidden(true),
+                tag: .privacyPolicy,
+                selection: routeBinding
+            ) {
+                EmptyView()
+            }
+
+            NavigationLink(
+                destination: LegalPlaceholderView(
+                    title: "Terms of Service",
+                    subtitle: "服务条款",
+                    summaryTitle: "服务条款待提供",
+                    summaryMessage: "业务文档尚未提供正式服务条款正文。本页只保留入口形态，不补写法律条款。",
+                    dismiss: dismissNestedRoute
+                )
+                .navigationBarHidden(true),
+                tag: .termsOfService,
+                selection: routeBinding
+            ) {
+                EmptyView()
+            }
         }
         .hidden()
     }
@@ -179,5 +216,52 @@ struct SystemPreferencesView: View {
 
     private func dismissNestedRoute() {
         route = nil
+    }
+}
+
+private struct LegalPlaceholderView: View {
+    let title: String
+    let subtitle: String
+    let summaryTitle: String
+    let summaryMessage: String
+    let dismiss: () -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            AppTopBar(
+                title: title,
+                subtitle: subtitle,
+                leadingSystemImage: "arrow.left",
+                leadingAction: dismiss
+            )
+
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: AppSpacing.xl) {
+                    SettingsSectionHeader(title: "Document Status")
+                    SettingsGroupCard {
+                        SettingsStatusRow(
+                            iconName: "doc.text",
+                            title: "Content Source",
+                            subtitle: "Awaiting business copy",
+                            statusText: "Pending",
+                            showsDivider: false
+                        )
+                    }
+
+                    SettingsNoticeCard(
+                        title: summaryTitle,
+                        message: summaryMessage,
+                        tone: .info,
+                        iconName: "info.circle"
+                    )
+                }
+                .padding(.horizontal, AppSpacing.xxl)
+                .padding(.top, AppSpacing.xl)
+                .padding(.bottom, AppLayout.scrollBottomContentInset)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(AppColor.background.edgesIgnoringSafeArea(.all))
+        .accessibility(identifier: "screen-settings-legal-placeholder")
     }
 }

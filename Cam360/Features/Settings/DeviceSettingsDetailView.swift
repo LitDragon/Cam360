@@ -27,6 +27,7 @@ struct DeviceSettingsDetailView: View {
                             iconName: nil,
                             title: "Device Name",
                             subtitle: store.devicePreferences.deviceName,
+                            isEnabled: store.devicePreferences.deviceNameEditable,
                             action: {
                                 store.setRenameDeviceDraft(store.devicePreferences.deviceName)
                                 route = .renameDevice
@@ -36,7 +37,7 @@ struct DeviceSettingsDetailView: View {
                         SettingsValueRow(
                             iconName: nil,
                             title: "Connectivity",
-                            subtitle: "Current Wi-Fi profile",
+                            subtitle: store.devicePreferences.connectionStatus.capitalized,
                             valueText: store.devicePreferences.connectionName,
                             trailingSystemImage: "chevron.right",
                             showsDivider: false,
@@ -48,16 +49,25 @@ struct DeviceSettingsDetailView: View {
 
                     SettingsSectionHeader(title: "Software")
                     SettingsGroupCard {
-                        SettingsActionRow(
-                            iconName: nil,
-                            title: "Firmware Version",
-                            subtitle: store.devicePreferences.firmwareVersion,
-                            actionTitle: "Check for Updates",
-                            showsDivider: false,
-                            action: {
-                                route = .firmwareUpdate
-                            }
-                        )
+                        if store.devicePreferences.firmwareUpdateEntryEnabled {
+                            SettingsActionRow(
+                                iconName: nil,
+                                title: "Firmware Version",
+                                subtitle: store.devicePreferences.firmwareVersion,
+                                actionTitle: "Check for Updates",
+                                showsDivider: false,
+                                action: {
+                                    route = .firmwareUpdate
+                                }
+                            )
+                        } else {
+                            SettingsValueRow(
+                                iconName: nil,
+                                title: "Firmware Version",
+                                valueText: store.devicePreferences.firmwareVersion,
+                                showsDivider: false
+                            )
+                        }
                     }
 
                     SettingsSectionHeader(title: "Localization")
@@ -68,10 +78,16 @@ struct DeviceSettingsDetailView: View {
                             valueText: store.devicePreferences.timeZone
                         )
 
+                        SettingsToggleRow(
+                            iconName: nil,
+                            title: "Date & Time Auto-sync",
+                            isOn: deviceBinding(for: \.dateTimeAutoSyncEnabled)
+                        )
+
                         SettingsValueRow(
                             iconName: nil,
-                            title: "Date & Time",
-                            valueText: store.devicePreferences.dateTime,
+                            title: "Language",
+                            valueText: store.devicePreferences.language,
                             showsDivider: false
                         )
                     }
@@ -80,7 +96,7 @@ struct DeviceSettingsDetailView: View {
                     SettingsGroupCard {
                         SettingsSegmentedRow(
                             title: "Speaker Volume",
-                            options: SpeakerVolumeOption.allCases,
+                            options: store.devicePreferences.speakerVolumeOptions,
                             selection: deviceBinding(for: \.speakerVolume),
                             titleForOption: { $0.rawValue }
                         )
@@ -95,12 +111,17 @@ struct DeviceSettingsDetailView: View {
 
                     SettingsNoticeCard(
                         title: "Factory Reset",
-                        message: "Resets local device-facing settings in this M0 shell. It does not touch onboarding or app-level preferences.",
+                        message: store.devicePreferences.factoryResetSupported
+                            ? "Resets local device-facing settings in this M0 shell. It does not touch onboarding or app-level preferences."
+                            : "Factory reset is not declared by this device capability snapshot.",
                         tone: .danger,
                         iconName: "exclamationmark.triangle"
                     )
 
-                    DestructiveButton(title: "Factory Reset") {
+                    DestructiveButton(
+                        title: "Factory Reset",
+                        isEnabled: store.devicePreferences.factoryResetSupported
+                    ) {
                         store.restoreDefaultDeviceConfiguration()
                     }
                 }
@@ -222,9 +243,19 @@ private struct NetworkIdentityView: View {
                         iconName: "exclamationmark.triangle"
                     )
 
-                    PrimaryButton(title: "Save Changes") {
-                        store.commitNetworkIdentityChanges()
-                        dismiss()
+                    if let validationMessage = store.networkIdentityValidationMessage {
+                        SettingsNoticeCard(
+                            title: "Check Network Details",
+                            message: validationMessage,
+                            tone: .danger,
+                            iconName: "exclamationmark.circle"
+                        )
+                    }
+
+                    PrimaryButton(title: "Save Changes", isEnabled: store.canCommitNetworkIdentityChanges) {
+                        if store.commitNetworkIdentityChanges() {
+                            dismiss()
+                        }
                     }
                 }
                 .padding(.horizontal, AppSpacing.xxl)
@@ -234,6 +265,7 @@ private struct NetworkIdentityView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(AppColor.background.edgesIgnoringSafeArea(.all))
+        .onAppear(perform: store.prepareNetworkIdentity)
         .accessibility(identifier: "screen-settings-network-identity")
     }
 

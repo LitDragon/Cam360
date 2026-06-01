@@ -2,6 +2,8 @@ import Testing
 import Foundation
 @testable import Cam360
 
+private let validCam360TestSnapshotBase64 = "CQoLDA=="
+
 @MainActor
 struct Cam360Tests {
     @Test
@@ -41,6 +43,74 @@ struct Cam360Tests {
     }
 
     @Test
+    func bootstrapReadsDeviceProtocolEndpointFromSimulatorReadyFile() {
+        let readyFileData = Data(
+            """
+            {
+              "ready": true,
+              "host": "127.0.0.1",
+              "port": 8765,
+              "mode": "strict",
+              "control_host": "127.0.0.1",
+              "control_port": 18765
+            }
+            """.utf8
+        )
+        var requestedPath: String?
+
+        let endpoint = AppBootstrap.deviceProtocolEndpoint(
+            from: ["Cam360Tests", "-device-protocol-ready-file", "/tmp/device-ready.json"],
+            readReadyFileData: { url in
+                requestedPath = url.path
+                return readyFileData
+            }
+        )
+
+        #expect(requestedPath == "/tmp/device-ready.json")
+        #expect(endpoint == DeviceProtocolEndpoint(
+            host: "127.0.0.1",
+            port: 8765,
+            simulatorControlEndpoint: SimulatorControlEndpoint(host: "127.0.0.1", port: 18765)
+        ))
+    }
+
+    @Test
+    func bootstrapReadsMockPreviewAssetFromSimulatorReadyFile() {
+        let readyFileData = Data(
+            """
+            {
+              "ready": true,
+              "host": "127.0.0.1",
+              "port": 8765,
+              "asset_host": "127.0.0.1",
+              "asset_port": 18080,
+              "asset": {
+                "preview": {
+                  "base_url": "http://127.0.0.1:18080",
+                  "mjpeg_url": "http://127.0.0.1:18080/preview/live.mjpg",
+                  "hls_url": "http://127.0.0.1:18080/preview/index.m3u8",
+                  "mp4_url": "http://127.0.0.1:18080/preview/live.mp4"
+                }
+              }
+            }
+            """.utf8
+        )
+
+        let endpoint = AppBootstrap.deviceProtocolEndpoint(
+            from: ["Cam360Tests", "-device-protocol-ready-file", "/tmp/device-ready.json"],
+            readReadyFileData: { _ in readyFileData }
+        )
+
+        #expect(endpoint?.mockPreviewAsset == MockPreviewAsset(
+            baseURL: "http://127.0.0.1:18080",
+            mjpegURL: "http://127.0.0.1:18080/preview/live.mjpg",
+            hlsURL: "http://127.0.0.1:18080/preview/index.m3u8",
+            mp4URL: "http://127.0.0.1:18080/preview/live.mp4"
+        ))
+        #expect(endpoint?.simulatorAssetEndpoint == SimulatorAssetEndpoint(host: "127.0.0.1", port: 18080))
+    }
+
+    @Test
     func downloadsStoreStartsWithOfflineEmptyState() {
         let store = DownloadsStore()
 
@@ -63,11 +133,260 @@ struct Cam360Tests {
         #expect(store.title == "正在读取下载队列")
 
         #expect(await waitForOnboardingState {
-            store.queueState == .unavailable(message: "下载服务尚未接入，无法读取真实下载队列。")
+            store.queueState == .unavailable(message: "需要设备侧 DOWNLOAD_PROGRESS 或下载任务服务后才能读取队列。")
         })
         #expect(store.canRefreshQueue)
-        #expect(store.title == "下载链路未接入")
-        #expect(store.message == "请先从设备文件选择下载项；真实下载任务会在设备和本地保存链路恢复后接入。")
+        #expect(store.title == "下载队列不可用")
+        #expect(store.message == "当前只接收设备侧 DOWNLOAD_PROGRESS；开始、暂停和保存位置仍待下载服务接入。")
+    }
+
+    @Test
+    func downloadsStoreConsumesDownloadProgressEventsFromSession() async {
+        let protocolClient = OnboardingFakeProtocolClient()
+        let session = DeviceSession(protocolClient: protocolClient)
+        let store = DownloadsStore(deviceSession: session)
+
+        protocolClient.pushEvent(
+            topic: "DOWNLOAD_PROGRESS",
+            parameters: [
+                "task_id": "transfer-task-0001",
+                "type": "transfer",
+                "path": "/DCIMA/REC00001.AVI",
+                "progress": 75,
+                "speed": 2_048_000,
+                "status": "processing"
+            ]
+        )
+
+        #expect(await waitForOnboardingState { store.statusTitle == "75%" })
+        #expect(store.title == "正在下载")
+        #expect(store.queueMessage == "/DCIMA/REC00001.AVI 正在传输，进度 75%，速度 2.0 MB/s。")
+        #expect(store.canStartDownload == false)
+        #expect(store.canPauseQueue == false)
+
+        if case .transferring(let progress) = store.queueState {
+            #expect(progress.progressFraction == 0.75)
+            #expect(progress.progressText == "75%")
+            #expect(progress.speedText == "2.0 MB/s")
+        } else {
+            Issue.record("DOWNLOAD_PROGRESS 应进入 transferring 状态")
+        }
+    }
+
+    @Test
+    func downloadsStoreUsesLatestDownloadProgressEventAcrossTasks() async {
+        let protocolClient = OnboardingFakeProtocolClient()
+        let session = DeviceSession(protocolClient: protocolClient)
+        let store = DownloadsStore(deviceSession: session)
+
+        protocolClient.pushEvent(
+            topic: "DOWNLOAD_PROGRESS",
+            parameters: [
+                "task_id": "transfer-task-9999",
+                "type": "transfer",
+                "path": "/DCIMA/REC09999.AVI",
+                "progress": 10,
+                "speed": 512_000,
+                "status": "processing"
+            ]
+        )
+
+        #expect(await waitForOnboardingState {
+            store.queueMessage == "/DCIMA/REC09999.AVI 正在传输，进度 10%，速度 500 KB/s。"
+        })
+
+        protocolClient.pushEvent(
+            topic: "DOWNLOAD_PROGRESS",
+            parameters: [
+                "task_id": "transfer-task-0001",
+                "type": "transfer",
+                "path": "/DCIMA/REC00001.AVI",
+                "progress": 20,
+                "speed": 0,
+                "status": "failed"
+            ]
+        )
+
+        #expect(await waitForOnboardingState {
+            store.statusTitle == "失败"
+                && store.queueMessage == "/DCIMA/REC00001.AVI 传输失败。"
+        })
+        #expect(store.title == "下载失败")
+        #expect(store.message == "设备传输失败，开始、继续和取消仍待下载服务接入。")
+    }
+
+    @Test
+    func downloadsStoreKeepsCompletedDownloadProgressItems() async {
+        let protocolClient = OnboardingFakeProtocolClient()
+        let session = DeviceSession(protocolClient: protocolClient)
+        let store = DownloadsStore(deviceSession: session)
+
+        protocolClient.pushEvent(
+            topic: "DOWNLOAD_PROGRESS",
+            parameters: [
+                "task_id": "transfer-task-0001",
+                "type": "transfer",
+                "path": "/DCIMA/REC00001.AVI",
+                "progress": 100,
+                "speed": 0,
+                "status": "completed"
+            ]
+        )
+
+        #expect(await waitForOnboardingState {
+            store.completedTransfers.map(\.taskID) == ["transfer-task-0001"]
+        })
+        #expect(store.title == "下载完成")
+        #expect(store.message == "设备传输完成，本地保存仍等待下载服务接入。")
+        #expect(store.completedTransfers.first?.path == "/DCIMA/REC00001.AVI")
+    }
+
+    @Test
+    func localVideosStoreStartsWithLocalEmptyState() {
+        let store = LocalVideosStore()
+
+        #expect(store.items.isEmpty)
+        #expect(store.screenshots.isEmpty)
+        #expect(store.title == "暂无本地资源")
+        #expect(store.message == "本地保存路径接入前，不展示伪造的视频或截图记录。")
+        #expect(store.usedStorageText == "0 MB")
+        #expect(store.canOpenItem == false)
+        #expect(store.canShareItem == false)
+        #expect(store.canDeleteItem == false)
+        #expect(store.canDeleteScreenshot == false)
+    }
+
+    @Test
+    func localVideosStoreLoadsConfirmedLocalCatalogItems() {
+        let store = LocalVideosStore(catalog: StaticLocalVideoCatalog(items: [
+            LocalVideoItem(
+                id: "local-video-1",
+                title: "Front Camera Clip",
+                fileSizeBytes: 104_857_600,
+                durationSeconds: 125,
+                localPath: "/Documents/Cam360/FrontCameraClip.mp4"
+            ),
+            LocalVideoItem(
+                id: "local-video-2",
+                title: "Parking Incident",
+                fileSizeBytes: 52_428_800,
+                durationSeconds: 45,
+                localPath: "/Documents/Cam360/ParkingIncident.mp4"
+            )
+        ]))
+
+        store.reload()
+
+        #expect(store.items.map(\.title) == ["Front Camera Clip", "Parking Incident"])
+        #expect(store.title == "本地视频")
+        #expect(store.message == "本地视频来自已确认的 App 保存记录。")
+        #expect(store.usedStorageBytes == 157_286_400)
+        #expect(store.canOpenItem)
+        #expect(store.canShareItem)
+        #expect(store.canDeleteItem)
+    }
+
+    @Test
+    func localVideoCatalogPersistsConfirmedLocalItems() {
+        let testDefaults = makeUserDefaults()
+        defer { clear(testDefaults) }
+        let catalog = UserDefaultsLocalVideoCatalog(userDefaults: testDefaults.userDefaults)
+        let item = LocalVideoItem(
+            id: "local-video-1",
+            title: "Front Camera Clip",
+            fileSizeBytes: 104_857_600,
+            durationSeconds: 125,
+            localPath: "/Documents/Cam360/FrontCameraClip.mp4"
+        )
+
+        catalog.store(item)
+
+        #expect(UserDefaultsLocalVideoCatalog(userDefaults: testDefaults.userDefaults).loadItems() == [item])
+    }
+
+    @Test
+    func localVideosStorePreparesConfirmedItemForSystemShare() {
+        let store = LocalVideosStore(catalog: StaticLocalVideoCatalog(items: [
+            LocalVideoItem(
+                id: "local-video-1",
+                title: "Front Camera Clip",
+                fileSizeBytes: 104_857_600,
+                durationSeconds: 125,
+                localPath: "/Documents/Cam360/FrontCameraClip.mp4"
+            )
+        ]))
+
+        store.reload()
+        store.requestShare(itemID: "local-video-1")
+
+        #expect(store.pendingShare?.id == "local-video-1")
+        #expect(store.pendingShareURL == URL(fileURLWithPath: "/Documents/Cam360/FrontCameraClip.mp4"))
+
+        store.cancelPendingShare()
+
+        #expect(store.pendingShare == nil)
+        #expect(store.pendingShareURL == nil)
+    }
+
+    @Test
+    func localVideosStoreDeletesConfirmedItemAfterConfirmation() {
+        let catalog = InMemoryLocalVideoCatalog(items: [
+            LocalVideoItem(
+                id: "local-video-1",
+                title: "Front Camera Clip",
+                fileSizeBytes: 104_857_600,
+                durationSeconds: 125,
+                localPath: "/Documents/Cam360/FrontCameraClip.mp4"
+            )
+        ])
+        let store = LocalVideosStore(catalog: catalog)
+
+        store.reload()
+        store.requestDelete(itemID: "local-video-1")
+
+        #expect(store.pendingDeletion?.id == "local-video-1")
+        #expect(store.deleteConfirmationTitle == "删除本地视频？")
+
+        store.confirmPendingDeletion()
+
+        #expect(store.items.isEmpty)
+        #expect(store.pendingDeletion == nil)
+        #expect(catalog.loadItems().isEmpty)
+    }
+
+    @Test
+    func localVideosStoreLoadsAndDeletesConfirmedLocalScreenshots() {
+        let catalog = InMemoryLocalVideoCatalog(
+            items: [],
+            screenshots: [
+                LocalScreenshotItem(
+                    id: "local-screenshot-1",
+                    title: "Preview Snapshot",
+                    fileSizeBytes: 1_048_576,
+                    localPath: "/Documents/Cam360/PreviewSnapshot.jpg"
+                )
+            ]
+        )
+        let store = LocalVideosStore(catalog: catalog)
+
+        store.reload()
+
+        #expect(store.screenshots.map(\.title) == ["Preview Snapshot"])
+        #expect(store.title == "本地资源")
+        #expect(store.message == "本地视频和截图来自已确认的 App 保存记录。")
+        #expect(store.usedStorageBytes == 1_048_576)
+        #expect(store.canDeleteScreenshot)
+
+        store.requestDeleteScreenshot(itemID: "local-screenshot-1")
+
+        #expect(store.pendingScreenshotDeletion?.id == "local-screenshot-1")
+        #expect(store.deleteScreenshotConfirmationTitle == "删除本地截图？")
+
+        store.confirmPendingScreenshotDeletion()
+
+        #expect(store.screenshots.isEmpty)
+        #expect(store.pendingScreenshotDeletion == nil)
+        #expect(catalog.loadScreenshots().isEmpty)
     }
 
     @Test
@@ -87,10 +406,113 @@ struct Cam360Tests {
         #expect(store.title == "正在检查预览状态")
 
         #expect(await waitForOnboardingState {
-            store.previewState == .unavailable(reason: "真实视频流和播放器尚未接入，当前只能展示离线预览占位。")
+            store.previewState == .unavailable(reason: "真实视频流和播放器尚未接入；截图数据仅在控制通道 ready 后可获取。")
         })
         #expect(store.canRefreshPreview)
         #expect(store.title == "实时预览暂不可用")
+    }
+
+    @Test
+    func livePreviewStoreUsesMockPreviewAssetWithoutEnablingRealControls() async {
+        let store = LivePreviewStore(mockPreviewAsset: MockPreviewAsset(
+            mjpegURL: "http://127.0.0.1:18080/preview/live.mjpg",
+            hlsURL: "http://127.0.0.1:18080/preview/index.m3u8",
+            mp4URL: "http://127.0.0.1:18080/preview/live.mp4"
+        ))
+
+        store.refreshPreviewStatus()
+
+        #expect(store.previewState == .checking)
+        #expect(await waitForOnboardingState {
+            store.previewState == .mockAssetReady(url: "http://127.0.0.1:18080/preview/index.m3u8")
+        })
+        #expect(store.statusTitle == "Mock 可用")
+        #expect(store.placeholderTitle == "Mock 预览占位")
+        #expect(store.message == "已读取本地模拟器 Mock 预览资源，仅用于占位联调；真实预览流协议仍未定义。")
+        #expect(store.canCaptureSnapshot == false)
+        #expect(store.canToggleRecording == false)
+        #expect(store.canEnterFullscreen == false)
+    }
+
+    @Test
+    func livePreviewStorePreparesMockPreviewSourceOnceOnEntry() async {
+        let store = LivePreviewStore(mockPreviewAsset: MockPreviewAsset(
+            mjpegURL: "http://127.0.0.1:18080/preview/live.mjpg",
+            hlsURL: "http://127.0.0.1:18080/preview/index.m3u8",
+            mp4URL: "http://127.0.0.1:18080/preview/live.mp4"
+        ))
+
+        store.preparePreviewIfNeeded()
+
+        #expect(store.previewState == .checking)
+        #expect(await waitForOnboardingState {
+            store.previewState == .mockAssetReady(url: "http://127.0.0.1:18080/preview/index.m3u8")
+        })
+
+        store.preparePreviewIfNeeded()
+
+        #expect(store.previewState == .mockAssetReady(url: "http://127.0.0.1:18080/preview/index.m3u8"))
+    }
+
+    @Test
+    func livePreviewStoreCapturesSnapshotThroughReadySession() async {
+        let protocolClient = OnboardingFakeProtocolClient()
+        let session = DeviceSession(protocolClient: protocolClient)
+        let store = LivePreviewStore(deviceSession: session)
+
+        protocolClient.responseProvider = { command in
+            switch command.topic {
+            case "SNAPSHOT_CTRL":
+                return DeviceProtocolMessage(
+                    topic: "SNAPSHOT_CTRL",
+                    operation: .notify,
+                    messageID: "dev-snapshot-ctrl",
+                    notifyType: .response,
+                    replyTo: "ios-snapshot-ctrl",
+                    errno: 0,
+                    parameters: [
+                        "snapshot_id": .string("snap-1"),
+                        "status": .string("ok")
+                    ]
+                )
+            case "SNAPSHOT_DATA":
+                return DeviceProtocolMessage(
+                    topic: "SNAPSHOT_DATA",
+                    operation: .notify,
+                    messageID: "dev-snapshot-data",
+                    notifyType: .response,
+                    replyTo: "ios-snapshot-data",
+                    errno: 0,
+                    parameters: [
+                        "snapshot_id": .string("snap-1"),
+                        "format": .string("JPEG"),
+                        "width": .int(1280),
+                        "height": .int(720),
+                        "size": .int(4),
+                        "image_base64": .string(validCam360TestSnapshotBase64)
+                    ]
+                )
+            default:
+                return nil
+            }
+        }
+
+        session.send(.startAPConnection(ssid: "Cam360_AP"))
+        session.send(.apConnectionSucceeded)
+        session.startProtocolHandshake()
+        protocolClient.completeHandshakeSuccessfully(deviceID: "cam360-device")
+
+        #expect(await waitForOnboardingState { store.canCaptureSnapshot })
+
+        store.captureSnapshot()
+
+        #expect(store.snapshotState == .capturing)
+        #expect(await waitForOnboardingState {
+            store.snapshotState == .captured(snapshotID: "snap-1", detail: "1280x720 JPEG")
+        })
+        #expect(store.snapshotStatusTitle == "截图已获取")
+        #expect(store.snapshotStatusMessage == "已通过控制通道获取截图数据，可在本页预览；尚未保存到本地相册。")
+        #expect(store.snapshotImageBase64 == validCam360TestSnapshotBase64)
     }
 
     @Test
@@ -110,10 +532,10 @@ struct Cam360Tests {
         #expect(store.statusTitle == "刷新中")
 
         #expect(await waitForOnboardingState {
-            store.feedState == .unavailable(message: "事件推送和历史事件读取尚未接入，无法读取真实事件列表。")
+            store.feedState == .unavailable(message: "事件列表需要控制通道 ready 后读取 MEDIA_INDEX(event_only=1)，离线占位不读取真实设备文件。")
         })
         #expect(store.canRefreshEvents)
-        #expect(store.emptyTitle == "事件列表未接入")
+        #expect(store.emptyTitle == "事件索引不可用")
     }
 
     @Test
@@ -146,7 +568,7 @@ struct Cam360Tests {
     }
 
     @Test
-    func deviceSessionRecoveryReturnsToLastReadyDevice() {
+    func deviceSessionRecoveryRequiresFreshHandshake() {
         let session = DeviceSession()
         let deviceInfo = makeDeviceInfo()
 
@@ -161,7 +583,7 @@ struct Cam360Tests {
 
         session.send(.recoverySucceeded)
 
-        #expect(session.state == .ready(deviceInfo))
+        #expect(session.state == .handshaking)
     }
 
     @Test
@@ -300,6 +722,108 @@ struct Cam360Tests {
 
         #expect(await waitForOnboardingState {
             store.devices.first(where: { $0.id == "cam360-rear" })?.status == .disconnected
+        })
+    }
+
+    @Test
+    func recordingStoreConsumesSessionStatusEventsForSelectedDevice() async {
+        let testDefaults = makeUserDefaults()
+        defer { clear(testDefaults) }
+
+        let repository = UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults)
+        let preferenceStore = UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults)
+        let protocolClient = OnboardingFakeProtocolClient()
+        let session = DeviceSession(protocolClient: protocolClient)
+        repository.store([
+            makeKnownDevice(id: "cam360-main", name: "DriveCam X Pro")
+        ])
+        let store = RecordingStore(
+            knownDeviceRepository: repository,
+            appPreferenceStore: preferenceStore,
+            contentProvider: TestRecordingContentProvider(),
+            deviceSession: session
+        )
+
+        #expect(store.isRecording)
+        session.send(.startAPConnection(ssid: "Cam360_AP"))
+        session.send(.apConnectionSucceeded)
+        session.send(.handshakeSucceeded(
+            DeviceInfo(
+                id: "cam360-main",
+                name: "DriveCam X Pro",
+                firmwareVersion: "v1.2.0",
+                capabilities: [.settings]
+            )
+        ))
+
+        protocolClient.pushEvent(topic: "VIDEO_CTRL", parameters: ["status": 0])
+        protocolClient.pushEvent(topic: "SD_STATUS", parameters: ["online": 0])
+
+        #expect(await waitForOnboardingState { store.isRecording == false })
+        if case let .unavailable(title, _) = store.storageState {
+            #expect(title == "No SD card detected")
+        } else {
+            #expect(Bool(false))
+        }
+    }
+
+    @Test
+    func recordingStoreUsesSessionStorageCapacityForSelectedDevice() async {
+        let testDefaults = makeUserDefaults()
+        defer { clear(testDefaults) }
+
+        let repository = UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults)
+        let preferenceStore = UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults)
+        let protocolClient = OnboardingFakeProtocolClient()
+        protocolClient.responseProvider = { command in
+            guard command.topic == "TF_CAP" else {
+                return nil
+            }
+
+            return DeviceProtocolMessage(
+                topic: "TF_CAP",
+                operation: .notify,
+                messageID: "dev-tf-cap",
+                notifyType: .response,
+                replyTo: "ios-tf-cap",
+                errno: 0,
+                parameters: [
+                    "left": 4_000,
+                    "total": 22_222
+                ]
+            )
+        }
+        let session = DeviceSession(protocolClient: protocolClient)
+        repository.store([
+            makeKnownDevice(id: "cam360-main", name: "DriveCam X Pro")
+        ])
+        let store = RecordingStore(
+            knownDeviceRepository: repository,
+            appPreferenceStore: preferenceStore,
+            contentProvider: TestRecordingContentProvider(),
+            deviceSession: session
+        )
+
+        session.send(.startAPConnection(ssid: "Cam360_AP"))
+        session.send(.apConnectionSucceeded)
+        session.send(.handshakeSucceeded(
+            DeviceInfo(
+                id: "cam360-main",
+                name: "DriveCam X Pro",
+                firmwareVersion: "v1.2.0",
+                capabilities: [.settings]
+            )
+        ))
+
+        session.fetchStorageCapacity { _ in }
+
+        #expect(await waitForOnboardingState {
+            if case let .available(summary) = store.storageState {
+                return summary.usedCapacityText == "17.8 GB"
+                    && summary.totalCapacityText == "21.7 GB"
+                    && summary.usageText == "82% USED"
+            }
+            return false
         })
     }
 
@@ -674,20 +1198,165 @@ struct Cam360Tests {
         #expect(store.devicePreferences.connectionName == "RoadGuard_4K")
         #expect(store.devicePreferences.deviceName == "RoadGuard Pro")
         #expect(store.route == nil)
-        #expect(
-            store.firmwareUpdateStage == .downloading(
-                progress: 0.45,
-                downloadedSize: "1.3 MB",
-                remainingTime: "2 mins left"
-            )
-        )
+        #expect(store.firmwareUpdateStage == .unavailable(message: "升级候选版本服务尚未接入，无法发起设备固件升级。"))
 
         store.restoreSafetyDefaults()
         store.restoreDefaultDeviceConfiguration()
 
         #expect(store.safetySettings == .defaultValue)
         #expect(store.recordingSettings == .defaultValue)
-        #expect(store.firmwareUpdateStage == .available)
+        #expect(store.firmwareUpdateStage == .unavailable(message: "升级候选版本服务尚未接入，无法发起设备固件升级。"))
+    }
+
+    @Test
+    func settingsStoreConsumesFirmwareUpgradeProgressEventsFromSession() async {
+        let testDefaults = makeUserDefaults()
+        defer { clear(testDefaults) }
+
+        let repository = UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults)
+        let preferenceStore = UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults)
+        let protocolClient = OnboardingFakeProtocolClient()
+        let session = DeviceSession(protocolClient: protocolClient)
+        repository.store([
+            makeKnownDevice(id: "road-camera-001", name: "Road Camera")
+        ])
+        let store = SettingsStore(
+            knownDeviceRepository: repository,
+            appPreferenceStore: preferenceStore,
+            deviceSession: session
+        )
+
+        session.send(.startAPConnection(ssid: "Cam360_AP"))
+        session.send(.apConnectionSucceeded)
+        session.send(.handshakeSucceeded(
+            DeviceInfo(
+                id: "road-camera-001",
+                name: "Road Camera",
+                firmwareVersion: "v3.0.0",
+                capabilities: [.settings]
+            )
+        ))
+
+        protocolClient.pushEvent(
+            topic: "UPGRADE_PROGRESS",
+            parameters: [
+                "task_id": "upgrade-task-0001",
+                "type": "upgrade",
+                "progress": 60,
+                "stage": "installing",
+                "status": "processing"
+            ]
+        )
+
+        #expect(await waitForOnboardingState {
+            store.firmwareUpdateStage == .inProgress(progress: 0.6, stageTitle: "Installing firmware")
+        })
+
+        protocolClient.pushEvent(
+            topic: "UPGRADE_PROGRESS",
+            parameters: [
+                "task_id": "upgrade-task-0001",
+                "type": "upgrade",
+                "progress": 85,
+                "stage": "restarting",
+                "status": "processing"
+            ]
+        )
+
+        #expect(await waitForOnboardingState {
+            store.firmwareUpdateStage == .inProgress(progress: 0.85, stageTitle: "Restarting device")
+        })
+
+        protocolClient.pushEvent(
+            topic: "UPGRADE_PROGRESS",
+            parameters: [
+                "task_id": "upgrade-task-0001",
+                "type": "upgrade",
+                "progress": 100,
+                "stage": "restarting",
+                "status": "completed"
+            ]
+        )
+
+        #expect(await waitForOnboardingState {
+            store.firmwareUpdateStage == .completed
+        })
+    }
+
+    @Test
+    func settingsStoreConsumesFormatProgressEventsFromSession() async {
+        let testDefaults = makeUserDefaults()
+        defer { clear(testDefaults) }
+
+        let repository = UserDefaultsKnownDeviceRepository(userDefaults: testDefaults.userDefaults)
+        let preferenceStore = UserDefaultsAppPreferenceStore(userDefaults: testDefaults.userDefaults)
+        let protocolClient = OnboardingFakeProtocolClient()
+        let session = DeviceSession(protocolClient: protocolClient)
+        repository.store([
+            makeKnownDevice(id: "road-camera-001", name: "Road Camera")
+        ])
+        let store = SettingsStore(
+            knownDeviceRepository: repository,
+            appPreferenceStore: preferenceStore,
+            deviceSession: session
+        )
+
+        session.send(.startAPConnection(ssid: "Cam360_AP"))
+        session.send(.apConnectionSucceeded)
+        session.send(.handshakeSucceeded(
+            DeviceInfo(
+                id: "road-camera-001",
+                name: "Road Camera",
+                firmwareVersion: "v3.0.0",
+                capabilities: [.settings]
+            )
+        ))
+
+        protocolClient.pushEvent(
+            topic: "FORMAT_PROGRESS",
+            parameters: [
+                "task_id": "format-task-0001",
+                "type": "format",
+                "progress": 45,
+                "status": "processing"
+            ]
+        )
+
+        #expect(await waitForOnboardingState {
+            store.storagePolicy.formatStage == .inProgress(progress: 0.45)
+        })
+
+        protocolClient.pushEvent(
+            topic: "FORMAT_PROGRESS",
+            parameters: [
+                "task_id": "format-task-0001",
+                "type": "format",
+                "progress": 100,
+                "status": "completed"
+            ]
+        )
+
+        #expect(await waitForOnboardingState {
+            store.storagePolicy.formatStage == .completed
+                && store.storagePolicy.cardStatus == .ready
+                && store.storagePolicy.usedSpaceGB == 0
+        })
+
+        protocolClient.pushEvent(
+            topic: "FORMAT_PROGRESS",
+            parameters: [
+                "task_id": "format-task-0002",
+                "type": "format",
+                "progress": 20,
+                "status": "failed"
+            ],
+            errno: -7
+        )
+
+        #expect(await waitForOnboardingState {
+            store.storagePolicy.formatStage == .failed
+                && store.storagePolicy.cardStatus == .error
+        })
     }
 
     @Test
@@ -931,6 +1600,50 @@ private struct TestDefaults {
     let userDefaults: UserDefaults
 }
 
+final class InMemoryLocalVideoCatalog: LocalVideoCatalog {
+    private var items: [LocalVideoItem]
+    private var screenshots: [LocalScreenshotItem]
+
+    init(
+        items: [LocalVideoItem],
+        screenshots: [LocalScreenshotItem] = []
+    ) {
+        self.items = items
+        self.screenshots = screenshots
+    }
+
+    func loadItems() -> [LocalVideoItem] {
+        items
+    }
+
+    func loadScreenshots() -> [LocalScreenshotItem] {
+        screenshots
+    }
+
+    func store(_ item: LocalVideoItem) {
+        items.removeAll { $0.id == item.id }
+        items.insert(item, at: 0)
+    }
+
+    func storeScreenshot(_ item: LocalScreenshotItem) {
+        screenshots.removeAll { $0.id == item.id }
+        screenshots.insert(item, at: 0)
+    }
+
+    func deleteItem(id: String) {
+        items.removeAll { $0.id == id }
+    }
+
+    func deleteScreenshot(id: String) {
+        screenshots.removeAll { $0.id == id }
+    }
+
+    func clear() {
+        items.removeAll()
+        screenshots.removeAll()
+    }
+}
+
 private enum TestEncodingError: Error {
     case forced
 }
@@ -953,7 +1666,9 @@ private func waitForOnboardingState(
 }
 
 private final class OnboardingFakeProtocolClient: DeviceSessionProtocolClient {
+    var onEvent: ((DeviceProtocolMessage) -> Void)?
     var onDisconnect: ((DeviceProtocolError?) -> Void)?
+    var responseProvider: ((DeviceProtocolCommand) -> DeviceProtocolMessage?)?
     private var handshakeCompletion: ((Result<[DeviceProtocolMessage], DeviceProtocolError>) -> Void)?
 
     func connect(completion: @escaping (Result<Void, DeviceProtocolError>) -> Void) {
@@ -972,6 +1687,11 @@ private final class OnboardingFakeProtocolClient: DeviceSessionProtocolClient {
         _ command: DeviceProtocolCommand,
         completion: @escaping (Result<DeviceProtocolMessage, DeviceProtocolError>) -> Void
     ) {
+        if let response = responseProvider?(command) {
+            completion(.success(response))
+            return
+        }
+
         completion(.failure(.transportDisconnected))
     }
 
@@ -985,6 +1705,19 @@ private final class OnboardingFakeProtocolClient: DeviceSessionProtocolClient {
         handshakeCompletion?(.failure(error))
     }
 
+    func pushEvent(topic: String, parameters: [String: DeviceProtocolValue], errno: Int = 0) {
+        onEvent?(
+            DeviceProtocolMessage(
+                topic: topic,
+                operation: .notify,
+                messageID: "evt-\(topic.lowercased())",
+                notifyType: .event,
+                errno: errno,
+                parameters: parameters
+            )
+        )
+    }
+
     private func makeOnboardingHandshakeResponses(deviceID: String) -> [DeviceProtocolMessage] {
         [
             DeviceProtocolMessage(
@@ -995,6 +1728,27 @@ private final class OnboardingFakeProtocolClient: DeviceSessionProtocolClient {
                 replyTo: "ios-uuid",
                 errno: 0,
                 parameters: ["uuid": .string(deviceID)]
+            ),
+            DeviceProtocolMessage(
+                topic: "CAMERA_CAPABILITY",
+                operation: .notify,
+                messageID: "dev-camera-capability",
+                notifyType: .response,
+                replyTo: "ios-camera-capability",
+                errno: 0,
+                parameters: [
+                    "capabilities": .object([
+                        "protocol": .object([
+                            "inline_media_base64": true
+                        ]),
+                        "video": .object([
+                            "supported": true
+                        ]),
+                        "image": .object([
+                            "snapshot_transport": ["base64"]
+                        ])
+                    ])
+                ]
             )
         ]
     }

@@ -1,6 +1,5 @@
 import SwiftUI
 
-// 未使用页面：当前没有导航入口，保留旧离线占位实现。
 struct DeviceListView: View {
     @ObservedObject var store: DeviceListStore
     var onClose: (() -> Void)? = nil
@@ -9,7 +8,7 @@ struct DeviceListView: View {
         VStack(spacing: 0) {
             AppTopBar(
                 title: "设备",
-                subtitle: "已知设备和发现入口状态",
+                subtitle: "已保存设备和恢复入口",
                 leadingSystemImage: onClose == nil ? nil : "chevron.left",
                 leadingAction: onClose
             )

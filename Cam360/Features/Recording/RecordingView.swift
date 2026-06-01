@@ -14,7 +14,9 @@ struct RecordingView: View {
     @ObservedObject var livePreviewStore: LivePreviewStore
     @ObservedObject var playbackStore: PlaybackStore
     @ObservedObject var downloadsStore: DownloadsStore
+    @ObservedObject var localVideosStore: LocalVideosStore
     @ObservedObject var eventsStore: EventsStore
+    @ObservedObject var statisticsStore: StatisticsStore
 
     let onAddDevice: () -> Void
     let onOpenGallery: () -> Void
@@ -95,6 +97,7 @@ struct RecordingView: View {
             navigationLink(tag: .deviceSettings) {
                 SettingsView(
                     store: settingsStore,
+                    statisticsStore: statisticsStore,
                     root: .deviceSettings,
                     embedsNavigationView: false,
                     onClose: dismissRoute
@@ -119,6 +122,7 @@ struct RecordingView: View {
             navigationLink(tag: .downloads) {
                 DownloadsView(
                     store: downloadsStore,
+                    localVideosStore: localVideosStore,
                     onClose: dismissRoute
                 )
             }
@@ -842,6 +846,7 @@ struct RecordingDrawerOverlay: View {
     let selectedDeviceID: RecordingDeviceItem.ID?
     let onClose: () -> Void
     let onSelectDevice: (RecordingDeviceItem.ID) -> Void
+    let onOpenDeviceList: () -> Void
     let onAddDevice: () -> Void
 
     var body: some View {
@@ -874,6 +879,22 @@ struct RecordingDrawerOverlay: View {
                 }
 
                 Spacer(minLength: 0)
+
+                Button(action: onOpenDeviceList) {
+                    HStack(spacing: AppSpacing.sm) {
+                        Image(systemName: "list.bullet.rectangle")
+                            .font(.system(size: 16, weight: .semibold))
+
+                        Text("Manage Devices")
+                            .font(AppTypography.bodyStrong)
+                    }
+                    .foregroundColor(AppColor.textPrimary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, AppSpacing.md)
+                    .background(AppColor.background)
+                    .cornerRadius(AppRadius.medium)
+                }
+                .buttonStyle(PlainButtonStyle())
 
                 Button(action: onAddDevice) {
                     HStack(spacing: AppSpacing.sm) {

@@ -37,19 +37,26 @@ struct FirmwareUpdateView: View {
     @ViewBuilder
     private var stageCard: some View {
         switch store.firmwareUpdateStage {
+        case .unavailable(let message):
+            updateStateCard(
+                iconName: "exclamationmark.triangle.fill",
+                title: "Update Source Pending",
+                message: message,
+                tone: .warning
+            )
         case .available:
             updateStateCard(
                 iconName: "arrow.down.circle.fill",
                 title: "Update Available",
-                message: "A newer firmware package is available for your device.\nCurrent version \(store.devicePreferences.firmwareVersion) • New version v2.4.5",
+                message: "A verified firmware candidate is available for \(store.devicePreferences.firmwareVersion).",
                 tone: .accent
             )
-        case let .downloading(progress, downloadedSize, remainingTime):
+        case let .inProgress(progress, stageTitle):
             VStack(alignment: .leading, spacing: AppSpacing.lg) {
                 updateStateCard(
                     iconName: "arrow.down.circle.fill",
-                    title: "Downloading Update",
-                    message: "\(Int(progress * 100))% complete\n\(downloadedSize) downloaded • \(remainingTime)",
+                    title: stageTitle,
+                    message: "\(Int(progress * 100))% complete",
                     tone: .accent
                 )
 
@@ -62,6 +69,13 @@ struct FirmwareUpdateView: View {
             }
             .padding(AppSpacing.lg)
             .appSurface()
+        case .completed:
+            updateStateCard(
+                iconName: "checkmark.circle.fill",
+                title: "Update Complete",
+                message: "The device firmware update has completed.",
+                tone: .success
+            )
         case .failed:
             updateStateCard(
                 iconName: "exclamationmark.triangle.fill",
@@ -75,49 +89,24 @@ struct FirmwareUpdateView: View {
     @ViewBuilder
     private var actionArea: some View {
         switch store.firmwareUpdateStage {
+        case .unavailable:
+            PrimaryButton(
+                title: "Check for Updates",
+                isEnabled: false,
+                leadingSystemImageName: "arrow.clockwise",
+                action: {}
+            )
         case .available:
-            PrimaryButton(title: "Start Update") {
-                store.startFirmwareUpdate()
-            }
-        case .downloading:
-            VStack(spacing: AppSpacing.md) {
-                Button(action: {
-                    store.markFirmwareUpdateFailed()
-                }) {
-                    Text("Simulate Failure")
-                        .font(AppTypography.bodyStrong)
-                        .foregroundColor(AppColor.brand)
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(PlainButtonStyle())
-
-                Button(action: {
-                    store.cancelFirmwareUpdate()
-                    dismiss()
-                }) {
-                    Text("Cancel")
-                        .font(AppTypography.body)
-                        .foregroundColor(AppColor.textSecondary)
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(PlainButtonStyle())
+            PrimaryButton(title: "Start Update", isEnabled: false, action: {})
+        case .inProgress:
+            EmptyView()
+        case .completed:
+            PrimaryButton(title: "Done") {
+                dismiss()
             }
         case .failed:
-            VStack(spacing: AppSpacing.md) {
-                PrimaryButton(title: "Retry") {
-                    store.startFirmwareUpdate()
-                }
-
-                Button(action: {
-                    store.cancelFirmwareUpdate()
-                    dismiss()
-                }) {
-                    Text("Cancel")
-                        .font(AppTypography.body)
-                        .foregroundColor(AppColor.textSecondary)
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(PlainButtonStyle())
+            PrimaryButton(title: "Done") {
+                dismiss()
             }
         }
     }

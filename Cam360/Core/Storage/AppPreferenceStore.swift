@@ -86,7 +86,7 @@ final class UserDefaultsAppPreferenceStore: AppPreferenceStore {
             do {
                 userDefaults.set(try encodeNotificationPreferences(newValue), forKey: Key.notificationPreferences)
             } catch {
-                assertionFailure("Failed to encode notification preferences: \(error)")
+                return
             }
         }
     }
